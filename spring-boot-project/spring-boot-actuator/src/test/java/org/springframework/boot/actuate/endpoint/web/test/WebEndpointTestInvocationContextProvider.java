@@ -94,7 +94,8 @@ class WebEndpointTestInvocationContextProvider implements TestTemplateInvocation
 	public Stream<TestTemplateInvocationContext> provideTestTemplateInvocationContexts(
 			ExtensionContext extensionContext) {
 		WebEndpointTest webEndpointTest = AnnotationUtils
-				.findAnnotation(extensionContext.getRequiredTestMethod(), WebEndpointTest.class).get();
+			.findAnnotation(extensionContext.getRequiredTestMethod(), WebEndpointTest.class)
+			.get();
 		return Stream.of(webEndpointTest.infrastructure()).distinct().map(Infrastructure::createInvocationContext);
 	}
 
