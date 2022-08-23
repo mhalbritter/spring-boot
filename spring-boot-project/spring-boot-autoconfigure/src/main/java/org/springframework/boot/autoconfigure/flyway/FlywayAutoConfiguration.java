@@ -57,6 +57,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.ImportRuntimeHints;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.core.convert.converter.GenericConverter;
 import org.springframework.core.io.ResourceLoader;
@@ -90,6 +91,7 @@ import org.springframework.util.StringUtils;
 @Conditional(FlywayDataSourceCondition.class)
 @ConditionalOnProperty(prefix = "spring.flyway", name = "enabled", matchIfMissing = true)
 @Import(DatabaseInitializationDependencyConfigurer.class)
+@ImportRuntimeHints(FlywayRuntimeHints.class)
 public class FlywayAutoConfiguration {
 
 	@Bean
