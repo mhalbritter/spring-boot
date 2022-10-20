@@ -60,6 +60,8 @@ Now open the Zipkin UI at `http://localhost:9411` and press the "Run Query" butt
 You should see one trace.
 Press the "Show" button to see the details of that trace.
 
+TIP: You can include the current trace and span id in the logs by setting the `logging.pattern.level` property to `%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]`
+
 [[actuator.micrometer-tracing.tracer-implementations]]
 === Tracer implementations
 
@@ -92,3 +94,21 @@ NOTE: If your project doesn't use Spring MVC or Spring WebFlux, the `io.zipkin.r
 
 * `io.micrometer:micrometer-tracing-bridge-otel` - which is needed to bride the Micrometer Observation API to OpenTelemetry.
 * `io.micrometer:micrometer-tracing-reporter-wavefront` - which is needed to report traces to Wavefront.
+
+[[actuator.micrometer-tracing.instrumentations]]
+=== Instrumentations
+
+Spring Boot auto-configures instrumentation for the following technologies out of the box:
+
+* Incoming HTTP calls via Spring MVC.
+* Incoming HTTP calls via Spring WebFlux.
+* Outgoing HTTP calls via `RestTemplate` constructed via `RestTemplateBuilder`.
+* Outgoing HTTP calls via `WebClient` constructed via `WebClient.Builder`.
+
+[[actuator.micrometer-tracing.creating-spans]]
+=== Creating custom spans
+
+You can create your own spans by starting an observation.
+For this, inject `ObservationRegistry` into your component:
+
+include::code:CustomObservation[]
