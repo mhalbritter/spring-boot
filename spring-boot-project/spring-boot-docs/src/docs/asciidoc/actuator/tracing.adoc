@@ -104,6 +104,10 @@ Spring Boot auto-configures instrumentation for the following technologies out o
 * Incoming HTTP calls via Spring WebFlux.
 * Outgoing HTTP calls via `RestTemplate` constructed via `RestTemplateBuilder`.
 * Outgoing HTTP calls via `WebClient` constructed via `WebClient.Builder`.
+* Incoming GraphQL calls
+
+NOTE: Other Spring portfolio projects are using the Micrometer Observation, too.
+Every use of an observation gets translated into a span, so you may see even more spans reported in your project.
 
 [[actuator.micrometer-tracing.creating-spans]]
 === Creating custom spans
