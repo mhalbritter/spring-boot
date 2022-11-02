@@ -18,8 +18,11 @@ package org.springframework.boot.test.autoconfigure.actuate.observability;
 
 import java.util.Collections;
 
+import io.micrometer.tracing.Tracer;
 import org.junit.jupiter.api.Test;
 
+import org.springframework.boot.test.context.FilteredClassLoader;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.test.context.ContextCustomizer;
@@ -77,6 +80,42 @@ class ObservabilityContextCustomizerFactoryTests {
 		customizer.customizeContext(context, null);
 		assertThatMetricsAreEnabled(context);
 		assertThatTracingIsEnabled(context);
+	}
+
+	@Test
+	void shouldRegisterNoopTracerIfTracingIsDisabled() {
+		ContextCustomizer customizer = this.factory.createContextCustomizer(NoAnnotation.class,
+				Collections.emptyList());
+		ConfigurableApplicationContext context = new GenericApplicationContext();
+		customizer.customizeContext(context, null);
+		context.refresh();
+		assertThat(context.getBean(Tracer.class)).isNotNull();
+	}
+
+	@Test
+	void shouldNotRegisterNoopTracerIfTracingIsEnabled() {
+		ContextCustomizer customizer = this.factory.createContextCustomizer(WithAnnotation.class,
+				Collections.emptyList());
+		ConfigurableApplicationContext context = new GenericApplicationContext();
+		customizer.customizeContext(context, null);
+		context.refresh();
+		assertThat(context.getBeanProvider(Tracer.class).getIfAvailable()).isNull();
+	}
+
+	@Test
+	void shouldNotRegisterNoopTracerIfMicrometerTracingIsNotPresent() throws Exception {
+		try (FilteredClassLoader filteredClassLoader = new FilteredClassLoader("io.micrometer.tracing")) {
+			ContextCustomizer customizer = this.factory.createContextCustomizer(NoAnnotation.class,
+					Collections.emptyList());
+			new ApplicationContextRunner().withClassLoader(filteredClassLoader)
+					.withInitializer(applicationContext -> customizer.customizeContext(applicationContext, null))
+					.run((context) -> {
+						assertThat(context).doesNotHaveBean(Tracer.class);
+						assertThatMetricsAreDisabled(context);
+						assertThatTracingIsDisabled(context);
+					});
+
+		}
 	}
 
 	@Test

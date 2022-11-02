@@ -19,6 +19,8 @@ package org.springframework.boot.test.autoconfigure.actuate.observability;
 import java.util.List;
 import java.util.Objects;
 
+import io.micrometer.tracing.Tracer;
+
 import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.test.context.ContextConfigurationAttributes;
@@ -26,10 +28,14 @@ import org.springframework.test.context.ContextCustomizer;
 import org.springframework.test.context.ContextCustomizerFactory;
 import org.springframework.test.context.MergedContextConfiguration;
 import org.springframework.test.context.TestContextAnnotationUtils;
+import org.springframework.util.ClassUtils;
 
 /**
  * {@link ContextCustomizerFactory} that globally disables metrics export and tracing
  * unless {@link AutoConfigureObservability} is set on the test class.
+ * <p>
+ * Registers {@link Tracer#NOOP} if tracing is disabled and micrometer-tracing is on the
+ * classpath.
  *
  * @author Chris Bono
  * @author Moritz Halbritter
@@ -68,6 +74,13 @@ class ObservabilityContextCustomizerFactory implements ContextCustomizerFactory 
 			}
 			if (this.disableTracing) {
 				TestPropertyValues.of("management.tracing.enabled=false").applyTo(context);
+				registerNoopTracer(context);
+			}
+		}
+
+		private static void registerNoopTracer(ConfigurableApplicationContext context) {
+			if (ClassUtils.isPresent("io.micrometer.tracing.Tracer", context.getClassLoader())) {
+				context.getBeanFactory().registerSingleton("noopTracer", Tracer.NOOP);
 			}
 		}
 
