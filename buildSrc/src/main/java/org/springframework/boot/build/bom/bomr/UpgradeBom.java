@@ -46,6 +46,7 @@ import org.gradle.api.tasks.options.Option;
 
 import org.springframework.boot.build.bom.BomExtension;
 import org.springframework.boot.build.bom.Library;
+import org.springframework.boot.build.bom.bomr.cache.FileBasedHttpCache;
 import org.springframework.boot.build.bom.bomr.github.GitHub;
 import org.springframework.boot.build.bom.bomr.github.GitHubRepository;
 import org.springframework.boot.build.bom.bomr.github.Issue;
@@ -68,7 +69,7 @@ public class UpgradeBom extends DefaultTask {
 
 	private String libraries;
 
-	private int threads = 2;
+	private int threads = 1;
 
 	@Inject
 	public UpgradeBom(BomExtension bom) {
@@ -123,7 +124,8 @@ public class UpgradeBom extends DefaultTask {
 		Milestone milestone = determineMilestone(repository);
 		List<Issue> existingUpgradeIssues = repository.findIssues(issueLabels, milestone);
 		List<Upgrade> upgrades = new InteractiveUpgradeResolver(getServices().get(UserInputHandler.class),
-				new MultithreadedLibraryUpdateResolver(new MavenMetadataVersionResolver(this.repositoryUrls),
+				new MultithreadedLibraryUpdateResolver(
+						new MavenMetadataVersionResolver(this.repositoryUrls, FileBasedHttpCache.createDefault()),
 						this.bom.getUpgrade().getPolicy(), this.threads))
 								.resolveUpgrades(matchingLibraries(this.libraries), this.bom.getLibraries());
 		Path buildFile = getProject().getBuildFile().toPath();
