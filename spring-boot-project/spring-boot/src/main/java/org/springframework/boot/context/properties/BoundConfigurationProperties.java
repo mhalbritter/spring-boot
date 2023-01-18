@@ -81,8 +81,7 @@ public class BoundConfigurationProperties {
 	static void register(BeanDefinitionRegistry registry) {
 		Assert.notNull(registry, "Registry must not be null");
 		if (!registry.containsBeanDefinition(BEAN_NAME)) {
-			BeanDefinition definition = BeanDefinitionBuilder
-					.genericBeanDefinition(BoundConfigurationProperties.class, BoundConfigurationProperties::new)
+			BeanDefinition definition = BeanDefinitionBuilder.genericBeanDefinition(BoundConfigurationProperties.class)
 					.getBeanDefinition();
 			definition.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
 			registry.registerBeanDefinition(BEAN_NAME, definition);

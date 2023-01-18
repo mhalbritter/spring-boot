@@ -123,6 +123,7 @@ public class WebServicesAutoConfiguration {
 		private <T> void registerBeans(String location, String pattern, Class<T> type,
 				Function<Resource, T> beanSupplier, BeanDefinitionRegistry registry) {
 			for (Resource resource : getResources(location, pattern)) {
+				// TODO MH: How to fix that?
 				BeanDefinition beanDefinition = BeanDefinitionBuilder
 						.genericBeanDefinition(type, () -> beanSupplier.apply(resource)).getBeanDefinition();
 				registry.registerBeanDefinition(StringUtils.stripFilenameExtension(resource.getFilename()),

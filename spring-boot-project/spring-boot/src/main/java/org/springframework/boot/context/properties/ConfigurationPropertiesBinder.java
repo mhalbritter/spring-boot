@@ -50,6 +50,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.annotation.MergedAnnotations;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.env.PropertySources;
+import org.springframework.util.Assert;
 import org.springframework.validation.Validator;
 import org.springframework.validation.annotation.Validated;
 
@@ -63,8 +64,6 @@ import org.springframework.validation.annotation.Validated;
 class ConfigurationPropertiesBinder {
 
 	private static final String BEAN_NAME = "org.springframework.boot.context.internalConfigurationPropertiesBinder";
-
-	private static final String FACTORY_BEAN_NAME = "org.springframework.boot.context.internalConfigurationPropertiesBinderFactory";
 
 	private static final String VALIDATOR_BEAN_NAME = EnableConfigurationProperties.VALIDATOR_BEAN_NAME;
 
@@ -189,18 +188,9 @@ class ConfigurationPropertiesBinder {
 	}
 
 	static void register(BeanDefinitionRegistry registry) {
-		if (!registry.containsBeanDefinition(FACTORY_BEAN_NAME)) {
-			BeanDefinition definition = BeanDefinitionBuilder
-					.rootBeanDefinition(ConfigurationPropertiesBinder.Factory.class).getBeanDefinition();
-			definition.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
-			registry.registerBeanDefinition(ConfigurationPropertiesBinder.FACTORY_BEAN_NAME, definition);
-		}
 		if (!registry.containsBeanDefinition(BEAN_NAME)) {
 			BeanDefinition definition = BeanDefinitionBuilder
-					.rootBeanDefinition(ConfigurationPropertiesBinder.class,
-							() -> ((BeanFactory) registry)
-									.getBean(FACTORY_BEAN_NAME, ConfigurationPropertiesBinder.Factory.class).create())
-					.getBeanDefinition();
+					.rootBeanDefinition(ConfigurationPropertiesBinderFactory.class).getBeanDefinition();
 			definition.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
 			registry.registerBeanDefinition(ConfigurationPropertiesBinder.BEAN_NAME, definition);
 		}
@@ -208,27 +198,6 @@ class ConfigurationPropertiesBinder {
 
 	static ConfigurationPropertiesBinder get(BeanFactory beanFactory) {
 		return beanFactory.getBean(BEAN_NAME, ConfigurationPropertiesBinder.class);
-	}
-
-	/**
-	 * Factory bean used to create the {@link ConfigurationPropertiesBinder}. The bean
-	 * needs to be {@link ApplicationContextAware} since we can't directly inject an
-	 * {@link ApplicationContext} into the constructor without causing eager
-	 * {@link FactoryBean} initialization.
-	 */
-	static class Factory implements ApplicationContextAware {
-
-		private ApplicationContext applicationContext;
-
-		@Override
-		public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-			this.applicationContext = applicationContext;
-		}
-
-		ConfigurationPropertiesBinder create() {
-			return new ConfigurationPropertiesBinder(this.applicationContext);
-		}
-
 	}
 
 	/**
@@ -249,6 +218,29 @@ class ConfigurationPropertiesBinder {
 
 		private boolean isConfigurationProperties(Class<?> target) {
 			return target != null && MergedAnnotations.from(target).isPresent(ConfigurationProperties.class);
+		}
+
+	}
+
+	static class ConfigurationPropertiesBinderFactory
+			implements FactoryBean<ConfigurationPropertiesBinder>, ApplicationContextAware {
+
+		private ApplicationContext applicationContext;
+
+		@Override
+		public ConfigurationPropertiesBinder getObject() throws Exception {
+			Assert.notNull(this.applicationContext, "applicationContext must not be null");
+			return new ConfigurationPropertiesBinder(this.applicationContext);
+		}
+
+		@Override
+		public Class<?> getObjectType() {
+			return ConfigurationPropertiesBinder.class;
+		}
+
+		@Override
+		public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+			this.applicationContext = applicationContext;
 		}
 
 	}
