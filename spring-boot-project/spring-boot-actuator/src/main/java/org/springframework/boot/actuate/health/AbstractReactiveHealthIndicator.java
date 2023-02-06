@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import reactor.core.publisher.Mono;
 
+import org.springframework.boot.actuate.health.Health.Builder;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -76,14 +77,14 @@ public abstract class AbstractReactiveHealthIndicator implements ReactiveHealthI
 
 	@Override
 	public final Mono<Health> health() {
-		Mono<Health> result;
 		try {
-			result = doHealthCheck(new Health.Builder()).onErrorResume(this::handleFailure);
+			Health.Builder builder = new Builder();
+			Mono<Health> result = doHealthCheck(builder).onErrorResume(this::handleFailure);
+			return result.doOnNext((health) -> logExceptionIfPresent(builder.getException()));
 		}
 		catch (Exception ex) {
-			result = handleFailure(ex);
+			return handleFailure(ex);
 		}
-		return result.doOnNext((health) -> logExceptionIfPresent(health.getException()));
 	}
 
 	private void logExceptionIfPresent(Throwable ex) {
@@ -94,6 +95,7 @@ public abstract class AbstractReactiveHealthIndicator implements ReactiveHealthI
 	}
 
 	private Mono<Health> handleFailure(Throwable ex) {
+		logExceptionIfPresent(ex);
 		return Mono.just(new Health.Builder().down(ex).build());
 	}
 
