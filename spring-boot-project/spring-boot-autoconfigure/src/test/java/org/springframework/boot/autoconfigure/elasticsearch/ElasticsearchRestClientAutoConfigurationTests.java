@@ -33,6 +33,7 @@ import org.elasticsearch.client.sniff.Sniffer;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchServiceConnection.Node.Protocol;
 import org.springframework.boot.origin.Origin;
 import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -253,15 +254,22 @@ class ElasticsearchRestClientAutoConfigurationTests {
 			RestClient restClient = context.getBean(RestClient.class);
 			assertThat(restClient).hasFieldOrPropertyWithValue("pathPrefix", "/some-path");
 			assertThat(restClient.getNodes().stream().map(Node::getHost).map(HttpHost::toString))
-				.containsExactly("http://elastic.example.com");
+				.containsExactly("http://elastic.example.com:9200");
 			assertThat(restClient)
 				.extracting("client.credentialsProvider", InstanceOfAssertFactories.type(CredentialsProvider.class))
 				.satisfies((credentialsProvider) -> {
 					Credentials uriCredentials = credentialsProvider
-						.getCredentials(new AuthScope("elastic.example.com", 9200));
+						.getCredentials(new AuthScope("any.elastic.example.com", 80));
 					assertThat(uriCredentials.getUserPrincipal().getName()).isEqualTo("user-1");
 					assertThat(uriCredentials.getPassword()).isEqualTo("password-1");
+				})
+				.satisfies((credentialsProvider) -> {
+					Credentials uriCredentials = credentialsProvider
+						.getCredentials(new AuthScope("elastic.example.com", 9200));
+					assertThat(uriCredentials.getUserPrincipal().getName()).isEqualTo("node-user-1");
+					assertThat(uriCredentials.getPassword()).isEqualTo("node-password-1");
 				});
+
 		});
 	}
 
@@ -272,8 +280,9 @@ class ElasticsearchRestClientAutoConfigurationTests {
 		ElasticsearchServiceConnection elasticsearchServiceConnection() {
 			return new ElasticsearchServiceConnection() {
 				@Override
-				public List<String> getUris() {
-					return List.of("http://elastic.example.com");
+				public List<Node> getNodes() {
+					return List
+						.of(new Node("elastic.example.com", 9200, Protocol.HTTP, "node-user-1", "node-password-1"));
 				}
 
 				@Override

@@ -19,7 +19,7 @@ package org.springframework.boot.autoconfigure.elasticsearch;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
-import java.util.List;
+import java.util.stream.Stream;
 
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
@@ -38,6 +38,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnSingleCandidate;
+import org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchServiceConnection.Node;
 import org.springframework.boot.context.properties.PropertyMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -72,8 +73,7 @@ class ElasticsearchRestClientConfigurations {
 		RestClientBuilder elasticsearchRestClientBuilder(ObjectProvider<RestClientBuilderCustomizer> builderCustomizers,
 				ObjectProvider<ElasticsearchServiceConnection> serviceConnectionProvider) {
 			ElasticsearchServiceConnection serviceConnection = serviceConnectionProvider.getIfAvailable();
-			List<String> uris = (serviceConnection != null) ? serviceConnection.getUris() : this.properties.getUris();
-			HttpHost[] hosts = uris.stream().map(this::createHttpHost).toArray(HttpHost[]::new);
+			HttpHost[] hosts = (serviceConnection != null) ? getHosts(serviceConnection) : getHosts(this.properties);
 			RestClientBuilder builder = RestClient.builder(hosts);
 			builder.setHttpClientConfigCallback((httpClientBuilder) -> {
 				builderCustomizers.orderedStream().forEach((customizer) -> customizer.customize(httpClientBuilder));
@@ -90,6 +90,17 @@ class ElasticsearchRestClientConfigurations {
 			}
 			builderCustomizers.orderedStream().forEach((customizer) -> customizer.customize(builder));
 			return builder;
+		}
+
+		private HttpHost[] getHosts(ElasticsearchProperties properties) {
+			return properties.getUris().stream().map(this::createHttpHost).toArray(HttpHost[]::new);
+		}
+
+		private HttpHost[] getHosts(ElasticsearchServiceConnection serviceConnection) {
+			return serviceConnection.getNodes()
+				.stream()
+				.map((node) -> new HttpHost(node.hostname(), node.port(), node.protocol().getScheme()))
+				.toArray(HttpHost[]::new);
 		}
 
 		private HttpHost createHttpHost(String uri) {
@@ -194,12 +205,20 @@ class ElasticsearchRestClientConfigurations {
 				ElasticsearchServiceConnection serviceConnection) {
 			String username = (serviceConnection != null) ? serviceConnection.getUsername() : properties.getUsername();
 			String password = (serviceConnection != null) ? serviceConnection.getPassword() : properties.getPassword();
-			List<String> uris = (serviceConnection != null) ? serviceConnection.getUris() : properties.getUris();
 			if (StringUtils.hasText(username)) {
 				Credentials credentials = new UsernamePasswordCredentials(username, password);
 				setCredentials(AuthScope.ANY, credentials);
 			}
-			uris.stream().map(this::toUri).filter(this::hasUserInfo).forEach(this::addUserInfoCredentials);
+			Stream<URI> uris = (serviceConnection != null) ? getUris(serviceConnection) : getUris(properties);
+			uris.filter(this::hasUserInfo).forEach(this::addUserInfoCredentials);
+		}
+
+		private Stream<URI> getUris(ElasticsearchProperties properties) {
+			return properties.getUris().stream().map(this::toUri);
+		}
+
+		private Stream<URI> getUris(ElasticsearchServiceConnection serviceConnection) {
+			return serviceConnection.getNodes().stream().map(Node::toUri);
 		}
 
 		private URI toUri(String uri) {

@@ -16,6 +16,8 @@
 
 package org.springframework.boot.autoconfigure.elasticsearch;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 
 import org.springframework.boot.autoconfigure.ServiceConnection;
@@ -29,10 +31,10 @@ import org.springframework.boot.autoconfigure.ServiceConnection;
 public interface ElasticsearchServiceConnection extends ServiceConnection {
 
 	/**
-	 * Comma-separated list of the Elasticsearch instances to use.
-	 * @return comma-separated list of the Elasticsearch instances to use
+	 * Comma-separated list of the Elasticsearch nodes to use.
+	 * @return comma-separated list of the Elasticsearch nodes to use
 	 */
-	List<String> getUris();
+	List<Node> getNodes();
 
 	/**
 	 * Username for authentication with Elasticsearch.
@@ -51,5 +53,60 @@ public interface ElasticsearchServiceConnection extends ServiceConnection {
 	 * @return prefix added to the path of every request sent to Elasticsearch
 	 */
 	String getPathPrefix();
+
+	/**
+	 * An elasticsearch node.
+	 *
+	 * @param hostname the hostname
+	 * @param port the port
+	 * @param protocol the protocol
+	 * @param username the username. Can be null
+	 * @param password the password. Can be null
+	 */
+	record Node(String hostname, int port, Protocol protocol, String username, String password) {
+		public Node(String host, int port, Protocol protocol) {
+			this(host, port, protocol, null, null);
+		}
+
+		boolean hasCredentials() {
+			return this.username != null && this.password != null;
+		}
+
+		URI toUri() {
+			String userInfo = (hasCredentials()) ? this.username + ":" + this.password : null;
+			try {
+				return new URI(this.protocol.getScheme(), userInfo, this.hostname, this.port, null, null, null);
+			}
+			catch (URISyntaxException ex) {
+				throw new IllegalStateException("Can't construct URI", ex);
+			}
+		}
+
+		/**
+		 * Connection protocol.
+		 */
+		public enum Protocol {
+
+			/**
+			 * HTTP.
+			 */
+			HTTP("http"),
+			/**
+			 * HTTPS.
+			 */
+			HTTPS("https");
+
+			private final String scheme;
+
+			Protocol(String scheme) {
+				this.scheme = scheme;
+			}
+
+			String getScheme() {
+				return this.scheme;
+			}
+
+		}
+	}
 
 }
