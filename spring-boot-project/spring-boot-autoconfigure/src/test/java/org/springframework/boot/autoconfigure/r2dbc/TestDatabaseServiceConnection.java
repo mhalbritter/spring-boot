@@ -27,11 +27,6 @@ import org.springframework.boot.origin.Origin;
 class TestDatabaseServiceConnection implements DatabaseServiceConnection {
 
 	@Override
-	public DatabaseType getType() {
-		return DatabaseType.POSTGRESQL;
-	}
-
-	@Override
 	public String getHostname() {
 		return "postgres.example.com";
 	}
@@ -64,6 +59,16 @@ class TestDatabaseServiceConnection implements DatabaseServiceConnection {
 	@Override
 	public Origin getOrigin() {
 		return null;
+	}
+
+	@Override
+	public String getJdbcSubProtocol() {
+		return "postgresql";
+	}
+
+	@Override
+	public String getR2dbcSubProtocol() {
+		return "postgresql";
 	}
 
 }

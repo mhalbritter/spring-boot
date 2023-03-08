@@ -16,11 +16,8 @@
 
 package org.springframework.boot.autoconfigure.database;
 
-import java.util.Collection;
-
 import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnection;
 import org.springframework.boot.jdbc.DataSourceBuilder;
-import org.springframework.boot.jdbc.DatabaseDriver;
 
 /**
  * A connection to a database service.
@@ -30,12 +27,6 @@ import org.springframework.boot.jdbc.DatabaseDriver;
  */
 // TODO: How to name this thing?
 public interface DatabaseServiceConnection extends ServiceConnection {
-
-	/**
-	 * Type of the database.
-	 * @return the type of the database
-	 */
-	DatabaseType getType();
 
 	/**
 	 * Hostname of the database.
@@ -67,71 +58,28 @@ public interface DatabaseServiceConnection extends ServiceConnection {
 	 */
 	String getDatabase();
 
+	/**
+	 * Returns the JDBC sub protocol, e.g. 'postgresql' for PostgreSQL, etc.
+	 * @return the JDBC sub protocol
+	 */
+	String getJdbcSubProtocol();
+
+	/**
+	 * Returns the R2DBC sub protocol, e.g. 'postgresql' for PostgreSQL, etc.
+	 * @return the R2DBC sub protocol
+	 */
+	String getR2dbcSubProtocol();
+
 	default String getJdbcUrl() {
-		return "jdbc:%s://%s:%d/%s".formatted(getType().getJdbcSubProtocol(), getHostname(), getPort(), getDatabase());
+		return "jdbc:%s://%s:%d/%s".formatted(getJdbcSubProtocol(), getHostname(), getPort(), getDatabase());
 	}
 
 	default String getR2dbcUrl() {
-		return "r2dbc:%s://%s:%d/%s".formatted(getType().getR2dbcSubProtocol(), getHostname(), getPort(),
-				getDatabase());
+		return "r2dbc:%s://%s:%d/%s".formatted(getR2dbcSubProtocol(), getHostname(), getPort(), getDatabase());
 	}
 
 	default DataSourceBuilder<?> initializeDataSourceBuilder(ClassLoader classLoader) {
-		return DataSourceBuilder.create(classLoader)
-			.driverClassName(getType().getDatabaseDriver().getDriverClassName())
-			.url(getJdbcUrl())
-			.username(getUsername())
-			.password(getPassword());
-	}
-
-	/**
-	 * Database type.
-	 */
-	enum DatabaseType {
-
-		/**
-		 * MySQL.
-		 */
-		MYSQL(DatabaseDriver.MYSQL),
-		/**
-		 * Maria DB.
-		 */
-		MARIADB(DatabaseDriver.MARIADB),
-		/**
-		 * Postgres.
-		 */
-		POSTGRESQL(DatabaseDriver.POSTGRESQL);
-
-		private final DatabaseDriver databaseDriver;
-
-		DatabaseType(DatabaseDriver databaseDriver) {
-			this.databaseDriver = databaseDriver;
-		}
-
-		/**
-		 * Returns the {@link DatabaseDriver}.
-		 * @return the database driver
-		 */
-		public DatabaseDriver getDatabaseDriver() {
-			return this.databaseDriver;
-		}
-
-		String getJdbcSubProtocol() {
-			Collection<String> prefixes = this.databaseDriver.getUrlPrefixes();
-			if (prefixes.isEmpty()) {
-				throw new IllegalStateException("Unable to get JDBC sub protocol: prefixes collection is empty");
-			}
-			return prefixes.iterator().next();
-		}
-
-		String getR2dbcSubProtocol() {
-			Collection<String> prefixes = this.databaseDriver.getUrlPrefixes();
-			if (prefixes.isEmpty()) {
-				throw new IllegalStateException("Unable to get R2DBC sub protocol: prefixes collection is empty");
-			}
-			return prefixes.iterator().next();
-		}
-
+		return DataSourceBuilder.create(classLoader).url(getJdbcUrl()).username(getUsername()).password(getPassword());
 	}
 
 }

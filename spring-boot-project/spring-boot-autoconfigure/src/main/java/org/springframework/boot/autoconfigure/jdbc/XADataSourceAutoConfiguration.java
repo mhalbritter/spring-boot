@@ -84,7 +84,7 @@ public class XADataSourceAutoConfiguration implements BeanClassLoaderAware {
 			DatabaseServiceConnection serviceConnection) {
 		String className;
 		if (serviceConnection != null) {
-			className = serviceConnection.getType().getDatabaseDriver().getXaDataSourceClassName();
+			className = DatabaseDriver.fromJdbcUrl(serviceConnection.getJdbcUrl()).getXaDataSourceClassName();
 		}
 		else {
 			className = properties.getXa().getDataSourceClassName();

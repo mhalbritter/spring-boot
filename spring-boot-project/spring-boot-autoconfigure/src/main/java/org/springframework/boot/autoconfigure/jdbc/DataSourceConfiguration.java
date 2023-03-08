@@ -84,9 +84,8 @@ abstract class DataSourceConfiguration {
 					? createDataSource(serviceConnection, org.apache.tomcat.jdbc.pool.DataSource.class,
 							this.classLoader)
 					: createDataSource(properties, org.apache.tomcat.jdbc.pool.DataSource.class);
-			DatabaseDriver databaseDriver = (serviceConnection != null)
-					? serviceConnection.getType().getDatabaseDriver()
-					: DatabaseDriver.fromJdbcUrl(properties.determineUrl());
+			String url = (serviceConnection != null) ? serviceConnection.getJdbcUrl() : properties.determineUrl();
+			DatabaseDriver databaseDriver = DatabaseDriver.fromJdbcUrl(url);
 			String validationQuery = databaseDriver.getValidationQuery();
 			if (validationQuery != null) {
 				dataSource.setTestOnBorrow(true);
