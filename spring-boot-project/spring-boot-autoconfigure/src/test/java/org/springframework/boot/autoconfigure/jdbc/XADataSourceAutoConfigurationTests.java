@@ -22,8 +22,10 @@ import javax.sql.XADataSource;
 import com.ibm.db2.jcc.DB2XADataSource;
 import org.hsqldb.jdbc.pool.JDBCXADataSource;
 import org.junit.jupiter.api.Test;
+import org.postgresql.xa.PGXADataSource;
 
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.autoconfigure.database.DatabaseServiceConnection;
 import org.springframework.boot.jdbc.XADataSourceWrapper;
 import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -40,6 +42,7 @@ import static org.mockito.Mockito.mock;
  * Tests for {@link XADataSourceAutoConfiguration}.
  *
  * @author Phillip Webb
+ * @author Moritz Halbritter
  */
 class XADataSourceAutoConfigurationTests {
 
@@ -90,12 +93,36 @@ class XADataSourceAutoConfigurationTests {
 		assertThat(dataSource.getLoginTimeout()).isEqualTo(123);
 	}
 
+	@Test
+	void shouldUseServiceConnectionIfAvailable() {
+		new ApplicationContextRunner().withConfiguration(AutoConfigurations.of(XADataSourceAutoConfiguration.class))
+			.withUserConfiguration(FromProperties.class, ServiceConnectionConfiguration.class)
+			.run((context) -> {
+				MockXADataSourceWrapper wrapper = context.getBean(MockXADataSourceWrapper.class);
+				PGXADataSource dataSource = (PGXADataSource) wrapper.getXaDataSource();
+				assertThat(dataSource).isNotNull();
+				assertThat(dataSource.getUrl()).startsWith("jdbc:postgresql://postgres.example.com:12345/database-1");
+				assertThat(dataSource.getUser()).isEqualTo("user-1");
+				assertThat(dataSource.getPassword()).isEqualTo("password-1");
+			});
+	}
+
 	private ApplicationContext createContext(Class<?> configuration, String... env) {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
 		TestPropertyValues.of(env).applyTo(context);
 		context.register(configuration, XADataSourceAutoConfiguration.class);
 		context.refresh();
 		return context;
+	}
+
+	@Configuration(proxyBeanMethods = false)
+	static class ServiceConnectionConfiguration {
+
+		@Bean
+		DatabaseServiceConnection databaseServiceConnection() {
+			return new TestDatabaseServiceConnection();
+		}
+
 	}
 
 	@Configuration(proxyBeanMethods = false)

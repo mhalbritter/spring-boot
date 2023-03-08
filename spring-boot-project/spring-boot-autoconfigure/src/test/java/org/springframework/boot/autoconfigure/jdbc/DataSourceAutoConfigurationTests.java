@@ -40,6 +40,7 @@ import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.autoconfigure.database.DatabaseServiceConnection;
 import org.springframework.boot.jdbc.DatabaseDriver;
 import org.springframework.boot.jdbc.EmbeddedDatabaseConnection;
 import org.springframework.boot.jdbc.init.DataSourceScriptDatabaseInitializer;
@@ -60,6 +61,7 @@ import static org.mockito.Mockito.mock;
  *
  * @author Dave Syer
  * @author Stephane Nicoll
+ * @author Moritz Halbritter
  */
 class DataSourceAutoConfigurationTests {
 
@@ -244,6 +246,38 @@ class DataSourceAutoConfigurationTests {
 			.run((context) -> assertThat(context).doesNotHaveBean(DataSourceScriptDatabaseInitializer.class));
 	}
 
+	@Test
+	void dbcp2UsesServiceConnectionIfAvailable() {
+		ApplicationContextRunner runner = new ApplicationContextRunner()
+			.withPropertyValues("spring.datasource.type=org.apache.commons.dbcp2.BasicDataSource")
+			.withConfiguration(AutoConfigurations.of(DataSourceAutoConfiguration.class));
+		runner.withUserConfiguration(ServiceConnectionConfiguration.class).run((context) -> {
+			DataSource dataSource = context.getBean(DataSource.class);
+			assertThat(dataSource).isInstanceOf(BasicDataSource.class);
+			BasicDataSource dbcp2 = (BasicDataSource) dataSource;
+			assertThat(dbcp2.getUsername()).isEqualTo("user-1");
+			assertThat(dbcp2.getPassword()).isEqualTo("password-1");
+			assertThat(dbcp2.getDriverClassName()).isEqualTo("org.postgresql.Driver");
+			assertThat(dbcp2.getUrl()).isEqualTo("jdbc:postgresql://postgres.example.com:12345/database-1");
+		});
+	}
+
+	@Test
+	void genericUsesServiceConnectionIfAvailable() {
+		ApplicationContextRunner runner = new ApplicationContextRunner()
+			.withPropertyValues("spring.datasource.type=" + TestDataSource.class.getName())
+			.withConfiguration(AutoConfigurations.of(DataSourceAutoConfiguration.class));
+		runner.withUserConfiguration(ServiceConnectionConfiguration.class).run((context) -> {
+			DataSource dataSource = context.getBean(DataSource.class);
+			assertThat(dataSource).isInstanceOf(TestDataSource.class);
+			TestDataSource source = (TestDataSource) dataSource;
+			assertThat(source.getUsername()).isEqualTo("user-1");
+			assertThat(source.getPassword()).isEqualTo("password-1");
+			assertThat(source.getDriver().getClass().getName()).isEqualTo("org.postgresql.Driver");
+			assertThat(source.getUrl()).isEqualTo("jdbc:postgresql://postgres.example.com:12345/database-1");
+		});
+	}
+
 	private static Function<ApplicationContextRunner, ApplicationContextRunner> hideConnectionPools() {
 		return (runner) -> runner.withClassLoader(new FilteredClassLoader("org.apache.tomcat", "com.zaxxer.hikari",
 				"org.apache.commons.dbcp2", "oracle.ucp.jdbc", "com.mchange"));
@@ -257,6 +291,16 @@ class DataSourceAutoConfigurationTests {
 			assertThat(bean).isInstanceOf(expectedType);
 			consumer.accept(expectedType.cast(bean));
 		});
+	}
+
+	@Configuration(proxyBeanMethods = false)
+	static class ServiceConnectionConfiguration {
+
+		@Bean
+		DatabaseServiceConnection databaseServiceConnection() {
+			return new TestDatabaseServiceConnection();
+		}
+
 	}
 
 	@Configuration(proxyBeanMethods = false)

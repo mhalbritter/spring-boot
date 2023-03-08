@@ -28,6 +28,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.SpringBootCondition;
+import org.springframework.boot.autoconfigure.database.DatabaseServiceConnection;
 import org.springframework.boot.autoconfigure.r2dbc.R2dbcProperties.Pool;
 import org.springframework.boot.context.properties.PropertyMapper;
 import org.springframework.boot.context.properties.bind.BindResult;
@@ -51,14 +52,16 @@ import org.springframework.util.StringUtils;
  * @author Mark Paluch
  * @author Stephane Nicoll
  * @author Rodolpho S. Couto
+ * @author Moritz Halbritter
  */
 abstract class ConnectionFactoryConfigurations {
 
-	protected static ConnectionFactory createConnectionFactory(R2dbcProperties properties, ClassLoader classLoader,
+	protected static ConnectionFactory createConnectionFactory(R2dbcProperties properties,
+			DatabaseServiceConnection serviceConnection, ClassLoader classLoader,
 			List<ConnectionFactoryOptionsBuilderCustomizer> optionsCustomizers) {
 		try {
 			return org.springframework.boot.r2dbc.ConnectionFactoryBuilder
-				.withOptions(new ConnectionFactoryOptionsInitializer().initialize(properties,
+				.withOptions(new ConnectionFactoryOptionsInitializer().initialize(properties, serviceConnection,
 						() -> EmbeddedDatabaseConnection.get(classLoader)))
 				.configure((options) -> {
 					for (ConnectionFactoryOptionsBuilderCustomizer optionsCustomizer : optionsCustomizers) {
@@ -87,10 +90,12 @@ abstract class ConnectionFactoryConfigurations {
 		static class PooledConnectionFactoryConfiguration {
 
 			@Bean(destroyMethod = "dispose")
-			ConnectionPool connectionFactory(R2dbcProperties properties, ResourceLoader resourceLoader,
+			ConnectionPool connectionFactory(R2dbcProperties properties,
+					ObjectProvider<DatabaseServiceConnection> serviceConnectionProvider, ResourceLoader resourceLoader,
 					ObjectProvider<ConnectionFactoryOptionsBuilderCustomizer> customizers) {
 				ConnectionFactory connectionFactory = createConnectionFactory(properties,
-						resourceLoader.getClassLoader(), customizers.orderedStream().toList());
+						serviceConnectionProvider.getIfAvailable(), resourceLoader.getClassLoader(),
+						customizers.orderedStream().toList());
 				R2dbcProperties.Pool pool = properties.getPool();
 				PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
 				ConnectionPoolConfiguration.Builder builder = ConnectionPoolConfiguration.builder(connectionFactory);
@@ -116,10 +121,11 @@ abstract class ConnectionFactoryConfigurations {
 	static class GenericConfiguration {
 
 		@Bean
-		ConnectionFactory connectionFactory(R2dbcProperties properties, ResourceLoader resourceLoader,
+		ConnectionFactory connectionFactory(R2dbcProperties properties,
+				ObjectProvider<DatabaseServiceConnection> serviceConnectionProvider, ResourceLoader resourceLoader,
 				ObjectProvider<ConnectionFactoryOptionsBuilderCustomizer> customizers) {
-			return createConnectionFactory(properties, resourceLoader.getClassLoader(),
-					customizers.orderedStream().toList());
+			return createConnectionFactory(properties, serviceConnectionProvider.getIfAvailable(),
+					resourceLoader.getClassLoader(), customizers.orderedStream().toList());
 		}
 
 	}

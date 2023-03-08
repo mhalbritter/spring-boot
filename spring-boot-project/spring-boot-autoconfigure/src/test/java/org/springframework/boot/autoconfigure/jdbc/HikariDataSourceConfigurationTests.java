@@ -22,7 +22,10 @@ import com.zaxxer.hikari.HikariDataSource;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.autoconfigure.database.DatabaseServiceConnection;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -31,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Dave Syer
  * @author Stephane Nicoll
+ * @author Moritz Halbritter
  */
 class HikariDataSourceConfigurationTests {
 
@@ -96,6 +100,29 @@ class HikariDataSourceConfigurationTests {
 				HikariDataSource ds = context.getBean(HikariDataSource.class);
 				assertThat(ds.getPoolName()).isEqualTo("myHikariDS");
 			});
+	}
+
+	@Test
+	void usesServiceConnectionIfAvailable() {
+		this.contextRunner.withUserConfiguration(ServiceConnectionConfiguration.class).run((context) -> {
+			DataSource dataSource = context.getBean(DataSource.class);
+			assertThat(dataSource).isInstanceOf(HikariDataSource.class);
+			HikariDataSource hikari = (HikariDataSource) dataSource;
+			assertThat(hikari.getUsername()).isEqualTo("user-1");
+			assertThat(hikari.getPassword()).isEqualTo("password-1");
+			assertThat(hikari.getDriverClassName()).isEqualTo("org.postgresql.Driver");
+			assertThat(hikari.getJdbcUrl()).isEqualTo("jdbc:postgresql://postgres.example.com:12345/database-1");
+		});
+	}
+
+	@Configuration(proxyBeanMethods = false)
+	static class ServiceConnectionConfiguration {
+
+		@Bean
+		DatabaseServiceConnection databaseServiceConnection() {
+			return new TestDatabaseServiceConnection();
+		}
+
 	}
 
 }

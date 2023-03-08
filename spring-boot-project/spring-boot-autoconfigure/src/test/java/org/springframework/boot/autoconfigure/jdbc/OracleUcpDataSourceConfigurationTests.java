@@ -22,10 +22,14 @@ import javax.sql.DataSource;
 
 import oracle.ucp.jdbc.PoolDataSource;
 import oracle.ucp.jdbc.PoolDataSourceImpl;
+import oracle.ucp.util.OpaqueString;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.autoconfigure.database.DatabaseServiceConnection;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -34,6 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Fabio Grassi
  * @author Stephane Nicoll
+ * @author Moritz Halbritter
  */
 class OracleUcpDataSourceConfigurationTests {
 
@@ -106,6 +111,31 @@ class OracleUcpDataSourceConfigurationTests {
 				PoolDataSourceImpl ds = context.getBean(PoolDataSourceImpl.class);
 				assertThat(ds.getConnectionPoolName()).isEqualTo("myOracleUcpDS");
 			});
+	}
+
+	@Test
+	void usesServiceConnectionIfAvailable() {
+		this.contextRunner.withUserConfiguration(ServiceConnectionConfiguration.class).run((context) -> {
+			DataSource dataSource = context.getBean(DataSource.class);
+			assertThat(dataSource).isInstanceOf(PoolDataSourceImpl.class);
+			PoolDataSourceImpl oracleUcp = (PoolDataSourceImpl) dataSource;
+			assertThat(oracleUcp.getUser()).isEqualTo("user-1");
+			assertThat(oracleUcp).extracting("password")
+				.extracting((o) -> ((OpaqueString) o).get())
+				.isEqualTo("password-1");
+			assertThat(oracleUcp.getConnectionFactoryClassName()).isEqualTo("org.postgresql.Driver");
+			assertThat(oracleUcp.getURL()).isEqualTo("jdbc:postgresql://postgres.example.com:12345/database-1");
+		});
+	}
+
+	@Configuration(proxyBeanMethods = false)
+	static class ServiceConnectionConfiguration {
+
+		@Bean
+		DatabaseServiceConnection databaseServiceConnection() {
+			return new TestDatabaseServiceConnection();
+		}
+
 	}
 
 }
