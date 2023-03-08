@@ -72,7 +72,8 @@ public interface DatabaseServiceConnection extends ServiceConnection {
 	}
 
 	default String getR2dbcUrl() {
-		return "r2dbc:%s://%s:%d/%s".formatted(getType().getJdbcSubProtocol(), getHostname(), getPort(), getDatabase());
+		return "r2dbc:%s://%s:%d/%s".formatted(getType().getR2dbcSubProtocol(), getHostname(), getPort(),
+				getDatabase());
 	}
 
 	default DataSourceBuilder<?> initializeDataSourceBuilder(ClassLoader classLoader) {
@@ -119,6 +120,14 @@ public interface DatabaseServiceConnection extends ServiceConnection {
 			Collection<String> prefixes = this.databaseDriver.getUrlPrefixes();
 			if (prefixes.isEmpty()) {
 				throw new IllegalStateException("Unable to get JDBC sub protocol: prefixes collection is empty");
+			}
+			return prefixes.iterator().next();
+		}
+
+		String getR2dbcSubProtocol() {
+			Collection<String> prefixes = this.databaseDriver.getUrlPrefixes();
+			if (prefixes.isEmpty()) {
+				throw new IllegalStateException("Unable to get R2DBC sub protocol: prefixes collection is empty");
 			}
 			return prefixes.iterator().next();
 		}
