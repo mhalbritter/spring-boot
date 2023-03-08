@@ -29,8 +29,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.testsupport.testcontainers.DockerImageNames;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.elasticsearch.client.elc.ElasticsearchTemplate;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -45,14 +43,9 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 class DataElasticsearchTestIntegrationTests {
 
 	@Container
+	@ElasticsearchService
 	static final ElasticsearchContainer elasticsearch = new ElasticsearchContainer(DockerImageNames.elasticsearch())
-		.withStartupAttempts(5)
-		.withStartupTimeout(Duration.ofMinutes(10));
-
-	@DynamicPropertySource
-	static void elasticsearchProperties(DynamicPropertyRegistry registry) {
-		registry.add("spring.elasticsearch.uris", elasticsearch::getHttpHostAddress);
-	}
+			.withStartupAttempts(5).withStartupTimeout(Duration.ofMinutes(10));
 
 	@Autowired
 	private ElasticsearchTemplate elasticsearchTemplate;
@@ -66,7 +59,7 @@ class DataElasticsearchTestIntegrationTests {
 	@Test
 	void didNotInjectExampleService() {
 		assertThatExceptionOfType(NoSuchBeanDefinitionException.class)
-			.isThrownBy(() -> this.applicationContext.getBean(ExampleService.class));
+				.isThrownBy(() -> this.applicationContext.getBean(ExampleService.class));
 	}
 
 	@Test

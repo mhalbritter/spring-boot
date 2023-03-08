@@ -60,6 +60,7 @@ dependencies {
 	optional("org.apache.tomcat.embed:tomcat-embed-core")
 	optional("org.mongodb:mongodb-driver-reactivestreams")
 	optional("org.mongodb:mongodb-driver-sync")
+	optional("org.testcontainers:elasticsearch")
 	optional("org.testcontainers:testcontainers")
 	optional("io.micrometer:micrometer-tracing")
 

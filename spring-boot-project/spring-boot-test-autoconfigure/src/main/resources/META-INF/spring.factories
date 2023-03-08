@@ -22,4 +22,5 @@ org.springframework.boot.test.autoconfigure.serviceconnection.ServiceConnectionR
 org.springframework.boot.test.autoconfigure.testcontainers.GenericContainerServiceConnectionResolver
 
 org.springframework.boot.test.autoconfigure.testcontainers.GenericContainerServiceConnectionAdapter=\
+org.springframework.boot.test.autoconfigure.data.elasticsearch.ElasticsearchContainerServiceConnectionAdapter,\
 org.springframework.boot.test.autoconfigure.data.redis.RedisContainerServiceConnectionAdapter

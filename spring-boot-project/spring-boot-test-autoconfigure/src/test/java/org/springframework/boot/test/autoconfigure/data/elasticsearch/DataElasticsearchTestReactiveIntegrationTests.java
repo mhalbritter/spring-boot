@@ -26,8 +26,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.testsupport.testcontainers.DockerImageNames;
 import org.springframework.data.elasticsearch.client.elc.ReactiveElasticsearchTemplate;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -42,14 +40,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class DataElasticsearchTestReactiveIntegrationTests {
 
 	@Container
+	@ElasticsearchService
 	static final ElasticsearchContainer elasticsearch = new ElasticsearchContainer(DockerImageNames.elasticsearch())
-		.withStartupAttempts(5)
-		.withStartupTimeout(Duration.ofMinutes(10));
-
-	@DynamicPropertySource
-	static void elasticsearchProperties(DynamicPropertyRegistry registry) {
-		registry.add("spring.elasticsearch.uris", elasticsearch::getHttpHostAddress);
-	}
+			.withStartupAttempts(5).withStartupTimeout(Duration.ofMinutes(10));
 
 	@Autowired
 	private ReactiveElasticsearchTemplate elasticsearchTemplate;
@@ -64,7 +57,7 @@ class DataElasticsearchTestReactiveIntegrationTests {
 		exampleDocument = this.exampleReactiveRepository.save(exampleDocument).block(Duration.ofSeconds(30));
 		assertThat(exampleDocument.getId()).isNotNull();
 		assertThat(this.elasticsearchTemplate.exists(exampleDocument.getId(), ExampleDocument.class)
-			.block(Duration.ofSeconds(30))).isTrue();
+				.block(Duration.ofSeconds(30))).isTrue();
 	}
 
 }
