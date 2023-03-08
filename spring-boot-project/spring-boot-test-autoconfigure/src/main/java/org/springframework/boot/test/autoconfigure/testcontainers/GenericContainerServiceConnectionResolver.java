@@ -20,7 +20,6 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Stream;
 
 import org.testcontainers.containers.GenericContainer;
 
@@ -46,7 +45,7 @@ public class GenericContainerServiceConnectionResolver implements ServiceConnect
 
 	GenericContainerServiceConnectionResolver() {
 		this(SpringFactoriesLoader
-				.forDefaultResourceLocation(GenericContainerServiceConnectionResolver.class.getClassLoader()));
+			.forDefaultResourceLocation(GenericContainerServiceConnectionResolver.class.getClassLoader()));
 	}
 
 	GenericContainerServiceConnectionResolver(SpringFactoriesLoader loader) {
@@ -55,7 +54,16 @@ public class GenericContainerServiceConnectionResolver implements ServiceConnect
 
 	@Override
 	public Iterable<ServiceConnection> resolveConnections(Class<?> testClass) {
-		return findSources(testClass).stream().flatMap(this::adapt).toList();
+		List<ServiceConnection> connections = new ArrayList<>();
+		List<GenericContainerServiceConnectionSource> sources = findSources(testClass);
+		for (GenericContainerServiceConnectionSource source : sources) {
+			List<ServiceConnection> connectionsForSource = adapt(source);
+			if (connectionsForSource.isEmpty()) {
+				throw new IllegalStateException("No service connections could be created from source '" + source + "'");
+			}
+			connections.addAll(connectionsForSource);
+		}
+		return connections;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -64,9 +72,10 @@ public class GenericContainerServiceConnectionResolver implements ServiceConnect
 		ReflectionUtils.doWithFields(testClass, (field) -> {
 			MergedAnnotations annotations = MergedAnnotations.from(field);
 			annotations.stream(ServiceConnectionSource.class)
-					.map((serviceConnectionSource) -> (Class<? extends ServiceConnection>) serviceConnectionSource
-							.getClass("value"))
-					.map((connectionType) -> createSource(field, connectionType)).forEach(fieldSources::add);
+				.map((serviceConnectionSource) -> (Class<? extends ServiceConnection>) serviceConnectionSource
+					.getClass("value"))
+				.map((connectionType) -> createSource(field, connectionType))
+				.forEach(fieldSources::add);
 		}, (field) -> GenericContainer.class.isAssignableFrom(field.getType()));
 		return fieldSources;
 	}
@@ -79,8 +88,8 @@ public class GenericContainerServiceConnectionResolver implements ServiceConnect
 				new FieldOrigin(field), connectionType);
 	}
 
-	private Stream<ServiceConnection> adapt(GenericContainerServiceConnectionSource source) {
-		return this.adapters.stream().map((adapter) -> adapter.adapt(source)).filter(Objects::nonNull);
+	private List<ServiceConnection> adapt(GenericContainerServiceConnectionSource source) {
+		return this.adapters.stream().map((adapter) -> adapter.adapt(source)).filter(Objects::nonNull).toList();
 	}
 
 	private static class FieldOrigin implements Origin {
