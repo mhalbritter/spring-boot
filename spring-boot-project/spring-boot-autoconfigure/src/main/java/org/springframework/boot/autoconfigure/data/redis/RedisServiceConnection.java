@@ -18,7 +18,7 @@ package org.springframework.boot.autoconfigure.data.redis;
 
 import java.util.List;
 
-import org.springframework.boot.autoconfigure.ServiceConnection;
+import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnection;
 
 /**
  * A connection to a Redis service.

@@ -14,21 +14,23 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.autoconfigure;
+package org.springframework.boot.autoconfigure.serviceconnection;
 
 import org.springframework.boot.origin.OriginProvider;
 
 /**
- * A connection to an external service.
+ * Details for establishing a connection to a remote service.
  *
  * @author Moritz Halbritter
+ * @author Andy Wilkinson
  * @since 3.1.0
  */
 public interface ServiceConnection extends OriginProvider {
 
 	/**
-	 * Returns the unique name for this service connection.
-	 * @return the unique name
+	 * The name of the service connection. Should be unique within the scope of the
+	 * application.
+	 * @return the connection name.
 	 */
 	String getName();
 
