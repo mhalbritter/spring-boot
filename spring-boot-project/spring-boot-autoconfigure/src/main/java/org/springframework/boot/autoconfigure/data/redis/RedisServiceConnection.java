@@ -24,6 +24,7 @@ import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnectio
  * A connection to a Redis service.
  *
  * @author Moritz Halbritter
+ * @author Andy Wilkinson
  * @since 3.1.0
  */
 public interface RedisServiceConnection extends ServiceConnection {
