@@ -15,6 +15,6 @@
  */
 
 /**
- * Classes for databases.
+ * Classes for SQL databases.
  */
-package org.springframework.boot.autoconfigure.database;
+package org.springframework.boot.autoconfigure.sql;

@@ -38,9 +38,9 @@ import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.autoconfigure.database.DatabaseServiceConnection;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.r2dbc.SimpleConnectionFactoryProvider.SimpleTestConnectionFactory;
+import org.springframework.boot.autoconfigure.sql.SqlServiceConnection;
 import org.springframework.boot.r2dbc.EmbeddedDatabaseConnection;
 import org.springframework.boot.r2dbc.OptionsCapableConnectionFactory;
 import org.springframework.boot.test.context.FilteredClassLoader;
@@ -366,8 +366,8 @@ class R2dbcAutoConfigurationTests {
 	static class ServiceConnectionConfiguration {
 
 		@Bean
-		DatabaseServiceConnection databaseServiceConnection() {
-			return new TestDatabaseServiceConnection();
+		SqlServiceConnection sqlServiceConnection() {
+			return new TestSqlServiceConnection();
 		}
 
 	}

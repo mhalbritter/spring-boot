@@ -40,7 +40,7 @@ import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.autoconfigure.database.DatabaseServiceConnection;
+import org.springframework.boot.autoconfigure.sql.SqlServiceConnection;
 import org.springframework.boot.jdbc.DatabaseDriver;
 import org.springframework.boot.jdbc.EmbeddedDatabaseConnection;
 import org.springframework.boot.jdbc.init.DataSourceScriptDatabaseInitializer;
@@ -297,8 +297,8 @@ class DataSourceAutoConfigurationTests {
 	static class ServiceConnectionConfiguration {
 
 		@Bean
-		DatabaseServiceConnection databaseServiceConnection() {
-			return new TestDatabaseServiceConnection();
+		SqlServiceConnection sqlServiceConnection() {
+			return new TestSqlServiceConnection();
 		}
 
 	}

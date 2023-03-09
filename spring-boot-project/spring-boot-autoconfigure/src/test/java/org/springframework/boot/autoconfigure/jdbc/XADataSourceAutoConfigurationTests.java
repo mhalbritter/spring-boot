@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.postgresql.xa.PGXADataSource;
 
 import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.autoconfigure.database.DatabaseServiceConnection;
+import org.springframework.boot.autoconfigure.sql.SqlServiceConnection;
 import org.springframework.boot.jdbc.XADataSourceWrapper;
 import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -119,8 +119,8 @@ class XADataSourceAutoConfigurationTests {
 	static class ServiceConnectionConfiguration {
 
 		@Bean
-		DatabaseServiceConnection databaseServiceConnection() {
-			return new TestDatabaseServiceConnection();
+		SqlServiceConnection sqlServiceConnection() {
+			return new TestSqlServiceConnection();
 		}
 
 	}

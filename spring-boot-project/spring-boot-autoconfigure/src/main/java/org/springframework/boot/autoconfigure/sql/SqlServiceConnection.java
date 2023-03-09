@@ -14,19 +14,18 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.autoconfigure.database;
+package org.springframework.boot.autoconfigure.sql;
 
 import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnection;
-import org.springframework.boot.jdbc.DataSourceBuilder;
 
 /**
- * A connection to a database service.
+ * A connection to a SQL database service.
  *
  * @author Moritz Halbritter
+ * @author Andy Wilkinson
  * @since 3.1.0
  */
-// TODO: How to name this thing?
-public interface DatabaseServiceConnection extends ServiceConnection {
+public interface SqlServiceConnection extends ServiceConnection {
 
 	/**
 	 * Hostname of the database.
@@ -59,27 +58,9 @@ public interface DatabaseServiceConnection extends ServiceConnection {
 	String getDatabase();
 
 	/**
-	 * Returns the JDBC sub protocol, e.g. 'postgresql' for PostgreSQL, etc.
-	 * @return the JDBC sub protocol
+	 * The product name of the database.
+	 * @return the product name
 	 */
-	String getJdbcSubProtocol();
-
-	/**
-	 * Returns the R2DBC sub protocol, e.g. 'postgresql' for PostgreSQL, etc.
-	 * @return the R2DBC sub protocol
-	 */
-	String getR2dbcSubProtocol();
-
-	default String getJdbcUrl() {
-		return "jdbc:%s://%s:%d/%s".formatted(getJdbcSubProtocol(), getHostname(), getPort(), getDatabase());
-	}
-
-	default String getR2dbcUrl() {
-		return "r2dbc:%s://%s:%d/%s".formatted(getR2dbcSubProtocol(), getHostname(), getPort(), getDatabase());
-	}
-
-	default DataSourceBuilder<?> initializeDataSourceBuilder(ClassLoader classLoader) {
-		return DataSourceBuilder.create(classLoader).url(getJdbcUrl()).username(getUsername()).password(getPassword());
-	}
+	String getProductName();
 
 }

@@ -26,7 +26,7 @@ import oracle.ucp.util.OpaqueString;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.autoconfigure.database.DatabaseServiceConnection;
+import org.springframework.boot.autoconfigure.sql.SqlServiceConnection;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -132,8 +132,8 @@ class OracleUcpDataSourceConfigurationTests {
 	static class ServiceConnectionConfiguration {
 
 		@Bean
-		DatabaseServiceConnection databaseServiceConnection() {
-			return new TestDatabaseServiceConnection();
+		SqlServiceConnection sqlServiceConnection() {
+			return new TestSqlServiceConnection();
 		}
 
 	}
