@@ -16,15 +16,21 @@
 
 package org.springframework.boot.test.autoconfigure.serviceconnection;
 
-import java.util.HashMap;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.Objects;
+
+import org.testcontainers.containers.GenericContainer;
 
 import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnection;
+import org.springframework.boot.origin.Origin;
+import org.springframework.core.annotation.MergedAnnotations;
 import org.springframework.core.io.support.SpringFactoriesLoader;
 import org.springframework.test.context.ContextConfigurationAttributes;
 import org.springframework.test.context.ContextCustomizer;
 import org.springframework.test.context.ContextCustomizerFactory;
+import org.springframework.util.ReflectionUtils;
 
 /**
  * {@link ContextCustomizerFactory} to support service connections in tests.
@@ -38,7 +44,7 @@ class ServiceConnectionContextCustomizerFactory implements ContextCustomizerFact
 
 	ServiceConnectionContextCustomizerFactory() {
 		this(SpringFactoriesLoader
-			.forDefaultResourceLocation(ServiceConnectionContextCustomizerFactory.class.getClassLoader()));
+				.forDefaultResourceLocation(ServiceConnectionContextCustomizerFactory.class.getClassLoader()));
 	}
 
 	ServiceConnectionContextCustomizerFactory(SpringFactoriesLoader loader) {
@@ -46,30 +52,59 @@ class ServiceConnectionContextCustomizerFactory implements ContextCustomizerFact
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
 	public ContextCustomizer createContextCustomizer(Class<?> testClass,
 			List<ContextConfigurationAttributes> configAttributes) {
-		List<ServiceConnectionResolver> resolvers = this.loader.load(ServiceConnectionResolver.class);
-		Map<String, ResolvedConnection> resolvedConnections = new HashMap<>();
-		for (ServiceConnectionResolver resolver : resolvers) {
-			Iterable<ServiceConnection> connections = resolver.resolveConnections(testClass);
-			for (ServiceConnection connection : connections) {
-				ResolvedConnection existingConnection = resolvedConnections.putIfAbsent(connection.getName(),
-						new ResolvedConnection(connection, resolver));
-				if (existingConnection != null) {
-					throw new IllegalStateException(
-							"A service connection named '" + connection.getName() + "' from '" + connection.getOrigin()
-									+ "' has already been resolved by '" + existingConnection.resolver());
-				}
-			}
-		}
-		if (resolvedConnections.isEmpty()) {
-			return null;
-		}
-		return new ServiceConnectionContextCustomizer(
-				resolvedConnections.values().stream().map(ResolvedConnection::connection).toList());
+		List<ServiceConnectionSource<?, ?>> sources = new ArrayList<>();
+		ReflectionUtils.doWithFields(testClass, (field) -> {
+			MergedAnnotations annotations = MergedAnnotations.from(field);
+			sources.addAll(annotations.stream(ConnectableService.class).map(
+					(connectableService) -> (Class<? extends ServiceConnection>) connectableService.getClass("value"))
+					.map((connectionType) -> createSource(field, connectionType)).toList());
+		}, (field) -> GenericContainer.class.isAssignableFrom(field.getType()));
+		return (sources.isEmpty()) ? null : new ServiceConnectionContextCustomizer(sources, this.loader);
 	}
 
-	private record ResolvedConnection(ServiceConnection connection, ServiceConnectionResolver resolver) {
+	private ServiceConnectionSource<?, ?> createSource(Field field, Class<? extends ServiceConnection> connectionType) {
+		ReflectionUtils.makeAccessible(field);
+		Object input = ReflectionUtils.getField(field, null);
+		return new ServiceConnectionSource<>(input, field.getName() + "ServiceConnection", new FieldOrigin(field),
+				connectionType);
+	}
+
+	private static class FieldOrigin implements Origin {
+
+		private final Field field;
+
+		FieldOrigin(Field field) {
+			this.field = field;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj) {
+				return true;
+			}
+			if (obj == null) {
+				return false;
+			}
+			if (getClass() != obj.getClass()) {
+				return false;
+			}
+			FieldOrigin other = (FieldOrigin) obj;
+			return Objects.equals(this.field, other.field);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(this.field);
+		}
+
+		@Override
+		public String toString() {
+			return this.field.toString();
+		}
+
 	}
 
 }

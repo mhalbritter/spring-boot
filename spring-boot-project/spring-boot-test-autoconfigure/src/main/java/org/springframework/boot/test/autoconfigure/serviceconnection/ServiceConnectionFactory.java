@@ -19,22 +19,23 @@ package org.springframework.boot.test.autoconfigure.serviceconnection;
 import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnection;
 
 /**
- * A resolver of {@link ServiceConnection service connections}. Implementations should be
- * registered in {@code META-INF/spring.factories} using the fully-qualified name of this
- * interface as the key.
+ * A factory for {@link ServiceConnection} instances. Implementations should be registered
+ * in {@code META-INF/spring.factories}.
  *
+ * @param <I> the type of input consumed by the factory
+ * @param <SC> the type of {@link ServiceConnection} produced by the factory
  * @author Moritz Halbritter
  * @author Andy Wilkinson
  * @since 3.1.0
  */
-public interface ServiceConnectionResolver {
+public interface ServiceConnectionFactory<I, SC extends ServiceConnection> {
 
 	/**
-	 * Resolves the connections. If no connections can be resolved an empty iterable
-	 * should be returned.
-	 * @param testClass the test class for which connections should be resolved
-	 * @return the connections, never {@code null}
+	 * Creates a new {@link ServiceConnection} from the given {@code source}. May return
+	 * {@code null} if no connection can be created.
+	 * @param source the source
+	 * @return the service connection or {@code null}
 	 */
-	Iterable<ServiceConnection> resolveConnections(Class<?> testClass);
+	ServiceConnection createServiceConnection(ServiceConnectionSource<I, SC> source);
 
 }

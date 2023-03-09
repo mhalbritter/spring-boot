@@ -19,23 +19,22 @@ package org.springframework.boot.test.autoconfigure.data.redis;
 import org.testcontainers.containers.GenericContainer;
 
 import org.springframework.boot.autoconfigure.data.redis.RedisServiceConnection;
-import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnection;
 import org.springframework.boot.origin.Origin;
-import org.springframework.boot.test.autoconfigure.testcontainers.GenericContainerServiceConnectionAdapter;
-import org.springframework.boot.test.autoconfigure.testcontainers.GenericContainerServiceConnectionSource;
+import org.springframework.boot.test.autoconfigure.serviceconnection.ServiceConnectionFactory;
+import org.springframework.boot.test.autoconfigure.serviceconnection.ServiceConnectionSource;
 
 /**
- * An adapter from a {@link GenericContainer} to a {@link RedisServiceConnection}.
+ * A {@link ServiceConnectionFactory} for creating {@link RedisServiceConnection} from a
+ * {@link GenericContainer}.
  *
  * @author Andy Wilkinson
  */
-class RedisContainerServiceConnectionAdapter implements GenericContainerServiceConnectionAdapter {
+class RedisContainerServiceConnectionFactory
+		implements ServiceConnectionFactory<GenericContainer<?>, RedisServiceConnection> {
 
 	@Override
-	public ServiceConnection adapt(GenericContainerServiceConnectionSource source) {
-		if (!RedisServiceConnection.class.isAssignableFrom(source.connectionType())) {
-			return null;
-		}
+	public RedisServiceConnection createServiceConnection(
+			ServiceConnectionSource<GenericContainer<?>, RedisServiceConnection> source) {
 		return new RedisServiceConnection() {
 
 			@Override
@@ -69,12 +68,12 @@ class RedisContainerServiceConnectionAdapter implements GenericContainerServiceC
 
 					@Override
 					public String getHost() {
-						return source.container().getHost();
+						return source.input().getHost();
 					}
 
 					@Override
 					public int getPort() {
-						return source.container().getFirstMappedPort();
+						return source.input().getFirstMappedPort();
 					}
 
 				};

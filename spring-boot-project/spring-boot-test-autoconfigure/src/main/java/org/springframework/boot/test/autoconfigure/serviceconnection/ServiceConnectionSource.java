@@ -16,28 +16,23 @@
 
 package org.springframework.boot.test.autoconfigure.serviceconnection;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
 import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnection;
+import org.springframework.boot.origin.Origin;
 
 /**
- * A source of a {@link ServiceConnection}.
- *
+ * A source from which a {@link ServiceConnection} can be created.
+ * @param input the input from which to create the service connection
+ * @param name the name of the service connection
+ * @param origin the origin of the service connection
+ * @param connectionType the required type of the service connection
+ * @param <I> the type of the input
+ * @param <SC> the type of the service connection
  * @author Moritz Halbritter
  * @author Andy Wilkinson
+ * @see ServiceConnectionFactory
  * @since 3.1.0
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.FIELD, ElementType.TYPE })
-public @interface ServiceConnectionSource {
-
-	/**
-	 * The type of {@link ServiceConnection} that can be obtained from this source.
-	 * @return the connection type
-	 */
-	Class<? extends ServiceConnection> value();
+public record ServiceConnectionSource<I, SC extends ServiceConnection> (I input, String name, Origin origin,
+		Class<SC> connectionType) {
 
 }

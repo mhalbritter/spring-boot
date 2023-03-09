@@ -14,25 +14,31 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.test.autoconfigure.testcontainers;
+package org.springframework.boot.test.autoconfigure.serviceconnection;
 
-import org.testcontainers.containers.GenericContainer;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnection;
-import org.springframework.boot.origin.Origin;
 
 /**
- * A {@link GenericContainer}-based source for a {@link ServiceConnection}.
+ * A remote service for which a {@link ServiceConnection} can be created.
  *
- * @param container the container hosting the service
- * @param name the name to assign to the service connection
- * @param origin the origin to assign to the service connection
- * @param connectionType the required type of the service connection
  * @author Moritz Halbritter
  * @author Andy Wilkinson
  * @since 3.1.0
  */
-public record GenericContainerServiceConnectionSource(GenericContainer<?> container, String name, Origin origin,
-		Class<? extends ServiceConnection> connectionType) {
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ ElementType.FIELD, ElementType.TYPE })
+public @interface ConnectableService {
+
+	/**
+	 * The type of {@link ServiceConnection} that can describe how to connect to the
+	 * service.
+	 * @return the connection type
+	 */
+	Class<? extends ServiceConnection> value();
 
 }

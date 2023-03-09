@@ -24,8 +24,8 @@ import org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchService
 import org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchServiceConnection.Node.Protocol;
 import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnection;
 import org.springframework.boot.origin.Origin;
-import org.springframework.boot.test.autoconfigure.testcontainers.GenericContainerServiceConnectionAdapter;
-import org.springframework.boot.test.autoconfigure.testcontainers.GenericContainerServiceConnectionSource;
+import org.springframework.boot.test.autoconfigure.serviceconnection.ServiceConnectionFactory;
+import org.springframework.boot.test.autoconfigure.serviceconnection.ServiceConnectionSource;
 
 /**
  * An adapter from an {@link ElasticsearchContainer} to an
@@ -33,14 +33,12 @@ import org.springframework.boot.test.autoconfigure.testcontainers.GenericContain
  *
  * @author Andy Wilkinson
  */
-class ElasticsearchContainerServiceConnectionAdapter implements GenericContainerServiceConnectionAdapter {
+class ElasticsearchContainerServiceConnectionFactory
+		implements ServiceConnectionFactory<ElasticsearchContainer, ElasticsearchServiceConnection> {
 
 	@Override
-	public ServiceConnection adapt(GenericContainerServiceConnectionSource source) {
-		if (!ElasticsearchServiceConnection.class.isAssignableFrom(source.connectionType())) {
-			return null;
-		}
-		ElasticsearchContainer container = (ElasticsearchContainer) source.container();
+	public ServiceConnection createServiceConnection(
+			ServiceConnectionSource<ElasticsearchContainer, ElasticsearchServiceConnection> source) {
 		return new ElasticsearchServiceConnection() {
 
 			private static final int DEFAULT_PORT = 9200;
@@ -57,8 +55,8 @@ class ElasticsearchContainerServiceConnectionAdapter implements GenericContainer
 
 			@Override
 			public List<Node> getNodes() {
-				return List.of(new Node(container.getHost(), container.getMappedPort(DEFAULT_PORT), Protocol.HTTP, null,
-						null));
+				return List.of(new Node(source.input().getHost(), source.input().getMappedPort(DEFAULT_PORT),
+						Protocol.HTTP, null, null));
 			}
 
 			@Override

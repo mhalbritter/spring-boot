@@ -23,7 +23,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchServiceConnection;
-import org.springframework.boot.test.autoconfigure.serviceconnection.ServiceConnectionSource;
+import org.springframework.boot.test.autoconfigure.serviceconnection.ConnectableService;
 
 /**
  * Denotes that a field represents a Redis service from which a
@@ -36,7 +36,7 @@ import org.springframework.boot.test.autoconfigure.serviceconnection.ServiceConn
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.FIELD, ElementType.TYPE })
-@ServiceConnectionSource(ElasticsearchServiceConnection.class)
+@ConnectableService(ElasticsearchServiceConnection.class)
 public @interface ElasticsearchService {
 
 }
