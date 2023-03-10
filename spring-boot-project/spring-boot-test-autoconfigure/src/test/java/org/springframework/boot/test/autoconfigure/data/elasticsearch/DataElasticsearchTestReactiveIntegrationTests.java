@@ -42,7 +42,8 @@ class DataElasticsearchTestReactiveIntegrationTests {
 	@Container
 	@ElasticsearchService
 	static final ElasticsearchContainer elasticsearch = new ElasticsearchContainer(DockerImageNames.elasticsearch())
-			.withStartupAttempts(5).withStartupTimeout(Duration.ofMinutes(10));
+		.withStartupAttempts(5)
+		.withStartupTimeout(Duration.ofMinutes(10));
 
 	@Autowired
 	private ReactiveElasticsearchTemplate elasticsearchTemplate;
@@ -57,7 +58,7 @@ class DataElasticsearchTestReactiveIntegrationTests {
 		exampleDocument = this.exampleReactiveRepository.save(exampleDocument).block(Duration.ofSeconds(30));
 		assertThat(exampleDocument.getId()).isNotNull();
 		assertThat(this.elasticsearchTemplate.exists(exampleDocument.getId(), ExampleDocument.class)
-				.block(Duration.ofSeconds(30))).isTrue();
+			.block(Duration.ofSeconds(30))).isTrue();
 	}
 
 }

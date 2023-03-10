@@ -64,7 +64,7 @@ class SampleSessionMongoApplicationTests {
 	@Container
 	@MongoService
 	static MongoDBContainer mongo = new MongoDBContainer(DockerImageNames.mongo()).withStartupAttempts(3)
-			.withStartupTimeout(Duration.ofMinutes(2));
+		.withStartupTimeout(Duration.ofMinutes(2));
 
 	@Test
 	@SuppressWarnings("unchecked")
@@ -80,7 +80,7 @@ class SampleSessionMongoApplicationTests {
 	@Test
 	void health() {
 		ResponseEntity<String> entity = this.restTemplate
-				.getForEntity("http://localhost:" + this.port + "/actuator/health", String.class);
+			.getForEntity("http://localhost:" + this.port + "/actuator/health", String.class);
 		assertThat(entity.getBody()).contains("\"status\":\"UP\"");
 		assertThat(entity.getBody()).contains("maxWireVersion");
 	}

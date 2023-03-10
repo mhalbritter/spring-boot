@@ -44,7 +44,7 @@ class ServiceConnectionContextCustomizerFactory implements ContextCustomizerFact
 
 	ServiceConnectionContextCustomizerFactory() {
 		this(SpringFactoriesLoader
-				.forDefaultResourceLocation(ServiceConnectionContextCustomizerFactory.class.getClassLoader()));
+			.forDefaultResourceLocation(ServiceConnectionContextCustomizerFactory.class.getClassLoader()));
 	}
 
 	ServiceConnectionContextCustomizerFactory(SpringFactoriesLoader loader) {
@@ -58,9 +58,10 @@ class ServiceConnectionContextCustomizerFactory implements ContextCustomizerFact
 		List<ServiceConnectionSource<?, ?>> sources = new ArrayList<>();
 		ReflectionUtils.doWithFields(testClass, (field) -> {
 			MergedAnnotations annotations = MergedAnnotations.from(field);
-			sources.addAll(annotations.stream(ConnectableService.class).map(
-					(connectableService) -> (Class<? extends ServiceConnection>) connectableService.getClass("value"))
-					.map((connectionType) -> createSource(field, connectionType)).toList());
+			sources.addAll(annotations.stream(ConnectableService.class)
+				.map((connectableService) -> (Class<? extends ServiceConnection>) connectableService.getClass("value"))
+				.map((connectionType) -> createSource(field, connectionType))
+				.toList());
 		}, (field) -> GenericContainer.class.isAssignableFrom(field.getType()));
 		return (sources.isEmpty()) ? null : new ServiceConnectionContextCustomizer(sources, this.loader);
 	}

@@ -31,13 +31,13 @@ class ServiceConnectionFactoryRegistry {
 
 	private List<RegisteredFactory> registeredFactories = new ArrayList<>();
 
-	public <I, SC extends ServiceConnection> void addFactory(Class<I> input, Class<SC> output,
+	<I, SC extends ServiceConnection> void addFactory(Class<I> input, Class<SC> output,
 			ServiceConnectionFactory<I, SC> factory) {
 		this.registeredFactories.add(new RegisteredFactory(input, output, factory));
 	}
 
 	@SuppressWarnings("unchecked")
-	public <I, SC extends ServiceConnection> ServiceConnectionFactory<I, SC> getFactory(
+	<I, SC extends ServiceConnection> ServiceConnectionFactory<I, SC> getFactory(
 			ServiceConnectionSource<I, SC> source) {
 		Class<I> input = (Class<I>) source.input().getClass();
 		Class<SC> connectionType = source.connectionType();

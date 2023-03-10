@@ -45,7 +45,8 @@ class DataElasticsearchTestIntegrationTests {
 	@Container
 	@ElasticsearchService
 	static final ElasticsearchContainer elasticsearch = new ElasticsearchContainer(DockerImageNames.elasticsearch())
-			.withStartupAttempts(5).withStartupTimeout(Duration.ofMinutes(10));
+		.withStartupAttempts(5)
+		.withStartupTimeout(Duration.ofMinutes(10));
 
 	@Autowired
 	private ElasticsearchTemplate elasticsearchTemplate;
@@ -59,7 +60,7 @@ class DataElasticsearchTestIntegrationTests {
 	@Test
 	void didNotInjectExampleService() {
 		assertThatExceptionOfType(NoSuchBeanDefinitionException.class)
-				.isThrownBy(() -> this.applicationContext.getBean(ExampleService.class));
+			.isThrownBy(() -> this.applicationContext.getBean(ExampleService.class));
 	}
 
 	@Test

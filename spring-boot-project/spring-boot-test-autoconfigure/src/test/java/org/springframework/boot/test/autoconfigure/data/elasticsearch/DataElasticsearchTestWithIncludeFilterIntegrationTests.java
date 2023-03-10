@@ -44,7 +44,8 @@ class DataElasticsearchTestWithIncludeFilterIntegrationTests {
 	@Container
 	@ElasticsearchService
 	static final ElasticsearchContainer elasticsearch = new ElasticsearchContainer(DockerImageNames.elasticsearch())
-			.withStartupAttempts(5).withStartupTimeout(Duration.ofMinutes(10));
+		.withStartupAttempts(5)
+		.withStartupTimeout(Duration.ofMinutes(10));
 
 	@Autowired
 	private ExampleRepository exampleRepository;
