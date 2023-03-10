@@ -69,8 +69,8 @@ class ServiceConnectionContextCustomizerFactory implements ContextCustomizerFact
 	private ServiceConnectionSource<?, ?> createSource(Field field, Class<? extends ServiceConnection> connectionType) {
 		ReflectionUtils.makeAccessible(field);
 		Object input = ReflectionUtils.getField(field, null);
-		return new ServiceConnectionSource<>(input, field.getName() + "ServiceConnection", new FieldOrigin(field),
-				connectionType);
+		return new ServiceConnectionSource<>(input, field.getName() + connectionType.getSimpleName(),
+				new FieldOrigin(field), connectionType);
 	}
 
 	private static class FieldOrigin implements Origin {
