@@ -85,7 +85,7 @@ class RedisAutoConfigurationJedisTests {
 	void usesServiceConnectionIfAvailable() {
 		this.contextRunner.withUserConfiguration(ServiceConnectionConfiguration.class).run((context) -> {
 			JedisConnectionFactory cf = context.getBean(JedisConnectionFactory.class);
-			assertThat(cf.isUseSsl()).isTrue();
+			assertThat(cf.isUseSsl()).isFalse();
 		});
 	}
 
@@ -264,12 +264,6 @@ class RedisAutoConfigurationJedisTests {
 				@Override
 				public String getPassword() {
 					return null;
-				}
-
-				@Override
-				public Ssl getSsl() {
-					return new Ssl() {
-					};
 				}
 
 				@Override

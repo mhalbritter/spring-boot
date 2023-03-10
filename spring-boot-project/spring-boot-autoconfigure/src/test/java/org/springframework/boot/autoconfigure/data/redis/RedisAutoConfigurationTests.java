@@ -497,7 +497,7 @@ class RedisAutoConfigurationTests {
 	void usesStandaloneServiceConnectionIfAvailable() {
 		this.contextRunner.withUserConfiguration(ServiceConnectionStandaloneConfiguration.class).run((context) -> {
 			LettuceConnectionFactory cf = context.getBean(LettuceConnectionFactory.class);
-			assertThat(cf.isUseSsl()).isTrue();
+			assertThat(cf.isUseSsl()).isFalse();
 			RedisStandaloneConfiguration configuration = cf.getStandaloneConfiguration();
 			assertThat(configuration.getHostName()).isEqualTo("redis.example.com");
 			assertThat(configuration.getPort()).isEqualTo(16379);
@@ -511,7 +511,7 @@ class RedisAutoConfigurationTests {
 	void usesSentinelServiceConnectionIfAvailable() {
 		this.contextRunner.withUserConfiguration(ServiceConnectionSentinelConfiguration.class).run((context) -> {
 			LettuceConnectionFactory cf = context.getBean(LettuceConnectionFactory.class);
-			assertThat(cf.isUseSsl()).isTrue();
+			assertThat(cf.isUseSsl()).isFalse();
 			RedisSentinelConfiguration configuration = cf.getSentinelConfiguration();
 			assertThat(configuration).isNotNull();
 			assertThat(configuration.getSentinelUsername()).isEqualTo("sentinel-1");
@@ -528,7 +528,7 @@ class RedisAutoConfigurationTests {
 	void usesClusterServiceConnectionIfAvailable() {
 		this.contextRunner.withUserConfiguration(ServiceConnectionClusterConfiguration.class).run((context) -> {
 			LettuceConnectionFactory cf = context.getBean(LettuceConnectionFactory.class);
-			assertThat(cf.isUseSsl()).isTrue();
+			assertThat(cf.isUseSsl()).isFalse();
 			RedisClusterConfiguration configuration = cf.getClusterConfiguration();
 			assertThat(configuration).isNotNull();
 			assertThat(configuration.getUsername()).isEqualTo("user-1");
@@ -597,12 +597,6 @@ class RedisAutoConfigurationTests {
 				}
 
 				@Override
-				public Ssl getSsl() {
-					return new Ssl() {
-					};
-				}
-
-				@Override
 				public Standalone getStandalone() {
 					return new Standalone() {
 						@Override
@@ -660,12 +654,6 @@ class RedisAutoConfigurationTests {
 				@Override
 				public String getPassword() {
 					return "password-1";
-				}
-
-				@Override
-				public Ssl getSsl() {
-					return new Ssl() {
-					};
 				}
 
 				@Override
@@ -736,12 +724,6 @@ class RedisAutoConfigurationTests {
 				@Override
 				public String getPassword() {
 					return "password-1";
-				}
-
-				@Override
-				public Ssl getSsl() {
-					return new Ssl() {
-					};
 				}
 
 				@Override

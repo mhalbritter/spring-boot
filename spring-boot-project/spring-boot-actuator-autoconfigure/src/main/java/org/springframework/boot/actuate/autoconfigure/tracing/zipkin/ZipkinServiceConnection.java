@@ -45,27 +45,11 @@ public interface ZipkinServiceConnection extends ServiceConnection {
 	String getSpanPath();
 
 	/**
-	 * SSL configuration of the Zipkin service. Can be null.
-	 * @return the ssl configuration of the Zipkin service. Can be null
-	 */
-	Ssl getSsl();
-
-	/**
 	 * The endpoint for the span reporting.
 	 * @return the endpoint
 	 */
 	default String getSpanEndpoint() {
-		String protocol = (getSsl() != null) ? "https" : "http";
-		return "%s://%s:%d%s".formatted(protocol, getHost(), getPort(), getSpanPath());
-	}
-
-	/**
-	 * Zipkin SSL configuration.
-	 */
-	interface Ssl {
-
-		// TODO
-
+		return "http://%s:%d%s".formatted(getHost(), getPort(), getSpanPath());
 	}
 
 }

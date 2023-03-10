@@ -250,11 +250,6 @@ class ZipkinConfigurationsSenderConfigurationTests {
 				public String getSpanPath() {
 					return "/api/span";
 				}
-
-				@Override
-				public Ssl getSsl() {
-					return null;
-				}
 			};
 		}
 

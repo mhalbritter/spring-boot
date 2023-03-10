@@ -42,12 +42,6 @@ public interface RedisServiceConnection extends ServiceConnection {
 	String getPassword();
 
 	/**
-	 * Whether to enable SSL support. Can be null.
-	 * @return whether to enable SSL support. Can be null
-	 */
-	Ssl getSsl();
-
-	/**
 	 * Redis standalone configuration. Mutually exclusive with {@link #getSentinel()} and
 	 * {@link #getCluster()}.
 	 * @return the Redis standalone configuration
@@ -141,15 +135,6 @@ public interface RedisServiceConnection extends ServiceConnection {
 		 * @return nodes to bootstrap from
 		 */
 		List<Node> getNodes();
-
-	}
-
-	/**
-	 * Redis SSL configuration.
-	 */
-	interface Ssl {
-
-		// TODO
 
 	}
 
