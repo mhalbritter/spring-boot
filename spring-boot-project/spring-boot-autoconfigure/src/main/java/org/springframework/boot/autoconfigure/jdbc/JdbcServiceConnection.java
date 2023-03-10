@@ -27,8 +27,9 @@ import org.springframework.boot.jdbc.DatabaseDriver;
  *
  * @author Moritz Halbritter
  * @author Andy Wilkinson
+ * @since 3.1.0
  */
-final class JdbcServiceConnection {
+public final class JdbcServiceConnection {
 
 	private final SqlServiceConnection sqlServiceConnection;
 
@@ -37,6 +38,15 @@ final class JdbcServiceConnection {
 	private JdbcServiceConnection(SqlServiceConnection sqlServiceConnection, DatabaseDriver databaseDriver) {
 		this.sqlServiceConnection = sqlServiceConnection;
 		this.databaseDriver = databaseDriver;
+	}
+
+	/**
+	 * Returns the JDBC url.
+	 * @return the JDBC url
+	 */
+	public String getJdbcUrl() {
+		return "jdbc:%s://%s:%d/%s".formatted(getJdbcSubProtocol(), this.sqlServiceConnection.getHostname(),
+				this.sqlServiceConnection.getPort(), this.sqlServiceConnection.getDatabase());
 	}
 
 	/**
@@ -50,15 +60,6 @@ final class JdbcServiceConnection {
 			throw new IllegalStateException("URL prefixes for driver %s are empty".formatted(this.databaseDriver));
 		}
 		return urlPrefixes.iterator().next();
-	}
-
-	/**
-	 * Returns the JDBC url.
-	 * @return the JDBC url
-	 */
-	String getJdbcUrl() {
-		return "jdbc:%s://%s:%d/%s".formatted(getJdbcSubProtocol(), this.sqlServiceConnection.getHostname(),
-				this.sqlServiceConnection.getPort(), this.sqlServiceConnection.getDatabase());
 	}
 
 	/**
@@ -97,7 +98,7 @@ final class JdbcServiceConnection {
 	 * @throws IllegalArgumentException if no {@link DatabaseDriver} can be found to
 	 * support the {@link SqlServiceConnection}.
 	 */
-	static JdbcServiceConnection of(SqlServiceConnection serviceConnection) {
+	public static JdbcServiceConnection of(SqlServiceConnection serviceConnection) {
 		DatabaseDriver databaseDriver = DatabaseDriver.fromProductName(serviceConnection.getProductName());
 		if (databaseDriver == DatabaseDriver.UNKNOWN) {
 			throw new IllegalArgumentException("Unable to find database driver for product name '%s'"
