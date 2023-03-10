@@ -20,4 +20,5 @@ org.springframework.boot.test.autoconfigure.ConditionReportApplicationContextFai
 
 org.springframework.boot.test.autoconfigure.serviceconnection.ServiceConnectionFactory=\
 org.springframework.boot.test.autoconfigure.data.elasticsearch.ElasticsearchContainerServiceConnectionFactory,\
-org.springframework.boot.test.autoconfigure.data.redis.RedisContainerServiceConnectionFactory
+org.springframework.boot.test.autoconfigure.data.redis.RedisContainerServiceConnectionFactory,\
+org.springframework.boot.test.autoconfigure.mongo.MongoDbContainerServiceConnectionFactory

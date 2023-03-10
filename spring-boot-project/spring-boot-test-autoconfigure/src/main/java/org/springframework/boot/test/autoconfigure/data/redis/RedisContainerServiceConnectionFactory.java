@@ -24,9 +24,10 @@ import org.springframework.boot.test.autoconfigure.serviceconnection.ServiceConn
 import org.springframework.boot.test.autoconfigure.serviceconnection.ServiceConnectionSource;
 
 /**
- * A {@link ServiceConnectionFactory} for creating {@link RedisServiceConnection} from a
+ * A {@link ServiceConnectionFactory} for creating a {@link RedisServiceConnection} from a
  * {@link GenericContainer}.
  *
+ * @author Moritz Halbritter
  * @author Andy Wilkinson
  */
 class RedisContainerServiceConnectionFactory

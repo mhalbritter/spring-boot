@@ -26,12 +26,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import reactor.util.function.Tuples;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.mongo.MongoService;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.testsupport.testcontainers.DockerImageNames;
 import org.springframework.http.HttpStatus;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -47,8 +46,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SampleSessionWebFluxMongoApplicationTests {
 
 	@Container
+	@MongoService
 	private static final MongoDBContainer mongo = new MongoDBContainer(DockerImageNames.mongo()).withStartupAttempts(3)
-		.withStartupTimeout(Duration.ofMinutes(2));
+			.withStartupTimeout(Duration.ofMinutes(2));
 
 	@LocalServerPort
 	private int port;
@@ -56,33 +56,26 @@ class SampleSessionWebFluxMongoApplicationTests {
 	@Autowired
 	private WebClient.Builder webClientBuilder;
 
-	@DynamicPropertySource
-	static void applicationProperties(DynamicPropertyRegistry registry) {
-		registry.add("spring.data.mongodb.uri", mongo::getReplicaSetUrl);
-	}
-
 	@Test
 	void userDefinedMappingsSecureByDefault() {
 		WebClient client = this.webClientBuilder.baseUrl("http://localhost:" + this.port + "/").build();
 		client.get().header("Authorization", getBasicAuth()).exchangeToMono((response) -> {
 			assertThat(response.statusCode()).isEqualTo(HttpStatus.OK);
 			return response.bodyToMono(String.class)
-				.map((sessionId) -> Tuples.of(response.cookies().getFirst("SESSION").getValue(), sessionId));
+					.map((sessionId) -> Tuples.of(response.cookies().getFirst("SESSION").getValue(), sessionId));
 		}).flatMap((tuple) -> {
 			String sessionCookie = tuple.getT1();
 			return client.get().cookie("SESSION", sessionCookie).exchangeToMono((response) -> {
 				assertThat(response.statusCode()).isEqualTo(HttpStatus.OK);
 				return response.bodyToMono(String.class)
-					.doOnNext((sessionId) -> assertThat(sessionId).isEqualTo(tuple.getT2()))
-					.thenReturn(sessionCookie);
+						.doOnNext((sessionId) -> assertThat(sessionId).isEqualTo(tuple.getT2()))
+						.thenReturn(sessionCookie);
 			});
-		})
-			.delayElement(Duration.ofSeconds(10))
-			.flatMap((sessionCookie) -> client.get().cookie("SESSION", sessionCookie).exchangeToMono((response) -> {
-				assertThat(response.statusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-				return response.releaseBody();
-			}))
-			.block(Duration.ofSeconds(30));
+		}).delayElement(Duration.ofSeconds(10))
+				.flatMap((sessionCookie) -> client.get().cookie("SESSION", sessionCookie).exchangeToMono((response) -> {
+					assertThat(response.statusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+					return response.releaseBody();
+				})).block(Duration.ofSeconds(30));
 	}
 
 	private String getBasicAuth() {
