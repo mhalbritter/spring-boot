@@ -24,7 +24,6 @@ import io.r2dbc.spi.ConnectionFactoryOptions.Builder;
 import io.r2dbc.spi.Option;
 
 import org.springframework.beans.factory.BeanCreationException;
-import org.springframework.boot.autoconfigure.sql.SqlServiceConnection;
 import org.springframework.boot.r2dbc.EmbeddedDatabaseConnection;
 import org.springframework.util.StringUtils;
 
@@ -47,10 +46,9 @@ class ConnectionFactoryOptionsInitializer {
 	 * @throws ConnectionFactoryBeanCreationException if no suitable connection could be
 	 * determined
 	 */
-	ConnectionFactoryOptions.Builder initialize(R2dbcProperties properties, SqlServiceConnection serviceConnection,
+	ConnectionFactoryOptions.Builder initialize(R2dbcProperties properties, R2dbcServiceConnection serviceConnection,
 			Supplier<EmbeddedDatabaseConnection> embeddedDatabaseConnection) {
-		String url = (serviceConnection != null) ? R2dbcServiceConnection.of(serviceConnection).getR2dbcUrl()
-				: properties.getUrl();
+		String url = (serviceConnection != null) ? serviceConnection.getR2dbcUrl() : properties.getUrl();
 		if (StringUtils.hasText(url)) {
 			return initializeRegularOptions(url, properties, serviceConnection);
 		}
@@ -63,7 +61,7 @@ class ConnectionFactoryOptionsInitializer {
 	}
 
 	private ConnectionFactoryOptions.Builder initializeRegularOptions(String url, R2dbcProperties properties,
-			SqlServiceConnection serviceConnection) {
+			R2dbcServiceConnection serviceConnection) {
 		ConnectionFactoryOptions urlOptions = ConnectionFactoryOptions.parse(url);
 		Builder optionsBuilder = urlOptions.mutate();
 		String username = (serviceConnection != null) ? serviceConnection.getUsername() : properties.getUsername();
@@ -97,9 +95,9 @@ class ConnectionFactoryOptionsInitializer {
 		return builder;
 	}
 
-	private String determineDatabaseName(R2dbcProperties properties, SqlServiceConnection serviceConnection) {
+	private String determineDatabaseName(R2dbcProperties properties, R2dbcServiceConnection serviceConnection) {
 		if (serviceConnection != null) {
-			return serviceConnection.getDatabase();
+			return null;
 		}
 		if (properties.isGenerateUniqueName()) {
 			return properties.determineUniqueName();

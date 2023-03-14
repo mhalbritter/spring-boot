@@ -17,14 +17,13 @@
 package org.springframework.boot.devservices.dockercompose.database.mysql;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnection;
-import org.springframework.boot.autoconfigure.sql.SqlServiceConnection;
 import org.springframework.boot.devservices.dockercompose.RunningServiceServiceConnectionProvider;
-import org.springframework.boot.devservices.dockercompose.database.AbstractSqlServiceConnection;
+import org.springframework.boot.devservices.dockercompose.database.AbstractJdbcServiceConnection;
 import org.springframework.boot.devservices.dockercompose.interop.RunningService;
+import org.springframework.boot.jdbc.DatabaseDriver;
 import org.springframework.util.ClassUtils;
 
 /**
@@ -35,43 +34,42 @@ import org.springframework.util.ClassUtils;
  */
 class MySqlConnectionProvider implements RunningServiceServiceConnectionProvider {
 
-	private final boolean serviceConnectionPresent;
+	private final boolean jdbcServiceConnectionPresent;
 
 	MySqlConnectionProvider(ClassLoader classLoader) {
-		this.serviceConnectionPresent = ClassUtils
-			.isPresent("org.springframework.boot.autoconfigure.sql.SqlServiceConnection", classLoader);
+		this.jdbcServiceConnectionPresent = ClassUtils
+			.isPresent("org.springframework.boot.autoconfigure.jdbc.JdbcServiceConnection", classLoader);
 	}
 
 	@Override
 	public List<? extends ServiceConnection> provideServiceConnection(List<RunningService> services) {
-		if (!this.serviceConnectionPresent) {
-			return Collections.emptyList();
-		}
-		List<SqlServiceConnection> result = new ArrayList<>();
+		List<ServiceConnection> result = new ArrayList<>();
 		for (RunningService service : services) {
 			if (!MySqlService.matches(service)) {
 				continue;
 			}
 			MySqlService mySqlService = new MySqlService(service);
-			result.add(new DockerComposeMySqlSqlServiceConnection(mySqlService));
+			if (this.jdbcServiceConnectionPresent) {
+				result.add(new DockerComposeMysqlDbJdbcServiceConnection(mySqlService));
+			}
 		}
 		return result;
 	}
 
-	private static class DockerComposeMySqlSqlServiceConnection extends AbstractSqlServiceConnection {
+	private static class DockerComposeMysqlDbJdbcServiceConnection extends AbstractJdbcServiceConnection {
 
-		DockerComposeMySqlSqlServiceConnection(MySqlService service) {
+		DockerComposeMysqlDbJdbcServiceConnection(MySqlService service) {
 			super(service);
 		}
 
 		@Override
-		public String getProductName() {
-			return "MySQL";
+		protected String getJdbcSubProtocol() {
+			return DatabaseDriver.MYSQL.getUrlPrefixes().iterator().next();
 		}
 
 		@Override
 		public String getName() {
-			return "docker-compose-mysql-%s".formatted(this.service.getName());
+			return "docker-compose-mysql-jdbc-%s".formatted(this.service.getName());
 		}
 
 	}

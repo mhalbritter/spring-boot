@@ -17,14 +17,14 @@
 package org.springframework.boot.devservices.dockercompose.database.postgres;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnection;
-import org.springframework.boot.autoconfigure.sql.SqlServiceConnection;
 import org.springframework.boot.devservices.dockercompose.RunningServiceServiceConnectionProvider;
-import org.springframework.boot.devservices.dockercompose.database.AbstractSqlServiceConnection;
+import org.springframework.boot.devservices.dockercompose.database.AbstractJdbcServiceConnection;
+import org.springframework.boot.devservices.dockercompose.database.AbstractR2dbcServiceConnection;
 import org.springframework.boot.devservices.dockercompose.interop.RunningService;
+import org.springframework.boot.jdbc.DatabaseDriver;
 import org.springframework.util.ClassUtils;
 
 /**
@@ -35,43 +35,67 @@ import org.springframework.util.ClassUtils;
  */
 class PostgresConnectionProvider implements RunningServiceServiceConnectionProvider {
 
-	private final boolean serviceConnectionPresent;
+	private final boolean jdbcServiceConnectionPresent;
+
+	private final boolean r2dbcServiceConnectionPresent;
 
 	PostgresConnectionProvider(ClassLoader classLoader) {
-		this.serviceConnectionPresent = ClassUtils
-			.isPresent("org.springframework.boot.autoconfigure.sql.SqlServiceConnection", classLoader);
+		this.jdbcServiceConnectionPresent = ClassUtils
+			.isPresent("org.springframework.boot.autoconfigure.jdbc.JdbcServiceConnection", classLoader);
+		this.r2dbcServiceConnectionPresent = ClassUtils
+			.isPresent("org.springframework.boot.autoconfigure.r2dbc.R2dbcServiceConnection", classLoader);
 	}
 
 	@Override
 	public List<? extends ServiceConnection> provideServiceConnection(List<RunningService> services) {
-		if (!this.serviceConnectionPresent) {
-			return Collections.emptyList();
-		}
-		List<SqlServiceConnection> result = new ArrayList<>();
+		List<ServiceConnection> result = new ArrayList<>();
 		for (RunningService service : services) {
 			if (!PostgresService.matches(service)) {
 				continue;
 			}
 			PostgresService postgresService = new PostgresService(service);
-			result.add(new DockerComposePostgresSqlServiceConnection(postgresService));
+			if (this.jdbcServiceConnectionPresent) {
+				result.add(new DockerComposePostgresDbJdbcServiceConnection(postgresService));
+			}
+			if (this.r2dbcServiceConnectionPresent) {
+				result.add(new DockerComposePostgresDbR2dbcServiceConnection(postgresService));
+			}
 		}
 		return result;
 	}
 
-	private static class DockerComposePostgresSqlServiceConnection extends AbstractSqlServiceConnection {
+	private static class DockerComposePostgresDbJdbcServiceConnection extends AbstractJdbcServiceConnection {
 
-		DockerComposePostgresSqlServiceConnection(PostgresService service) {
+		DockerComposePostgresDbJdbcServiceConnection(PostgresService service) {
 			super(service);
 		}
 
 		@Override
-		public String getProductName() {
-			return "PostgreSQL";
+		protected String getJdbcSubProtocol() {
+			return DatabaseDriver.POSTGRESQL.getUrlPrefixes().iterator().next();
 		}
 
 		@Override
 		public String getName() {
-			return "docker-compose-postgres-%s".formatted(this.service.getName());
+			return "docker-compose-postgres-jdbc-%s".formatted(this.service.getName());
+		}
+
+	}
+
+	private static class DockerComposePostgresDbR2dbcServiceConnection extends AbstractR2dbcServiceConnection {
+
+		DockerComposePostgresDbR2dbcServiceConnection(PostgresService service) {
+			super(service);
+		}
+
+		@Override
+		protected String getR2dbcSubProtocol() {
+			return "postgresql";
+		}
+
+		@Override
+		public String getName() {
+			return "docker-compose-postgres-r2dbc-%s".formatted(this.service.getName());
 		}
 
 	}

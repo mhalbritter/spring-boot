@@ -20,7 +20,8 @@ import java.io.InputStream;
 
 import org.junit.jupiter.api.Test;
 
-import org.springframework.boot.autoconfigure.sql.SqlServiceConnection;
+import org.springframework.boot.autoconfigure.jdbc.JdbcServiceConnection;
+import org.springframework.boot.autoconfigure.r2dbc.R2dbcServiceConnection;
 import org.springframework.boot.devservices.dockercompose.AbstractIntegrationTests;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,15 +35,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 class MariaDbIntegrationTests extends AbstractIntegrationTests {
 
 	@Test
-	void test() {
-		SqlServiceConnection serviceConnection = runProvider(SqlServiceConnection.class);
-		assertThat(serviceConnection.getName()).isEqualTo("docker-compose-mariadb-database");
+	void shouldHaveJdbcServiceConnection() {
+		JdbcServiceConnection serviceConnection = runProvider(JdbcServiceConnection.class);
+		assertThat(serviceConnection.getName()).isEqualTo("docker-compose-mariadb-jdbc-database");
 		assertThat(serviceConnection.getUsername()).isEqualTo("myuser");
 		assertThat(serviceConnection.getPassword()).isEqualTo("secret");
-		assertThat(serviceConnection.getDatabase()).isEqualTo("mydatabase");
-		assertThat(serviceConnection.getHostname()).isNotNull();
-		assertThat(serviceConnection.getPort()).isGreaterThan(0);
-		assertThat(serviceConnection.getProductName()).isEqualTo("MariaDB");
+		assertThat(serviceConnection.getJdbcUrl()).startsWith("jdbc:mariadb://").endsWith("/mydatabase");
+	}
+
+	@Test
+	void shouldHaveR2dbcServiceConnection() {
+		R2dbcServiceConnection serviceConnection = runProvider(R2dbcServiceConnection.class);
+		assertThat(serviceConnection.getName()).isEqualTo("docker-compose-mariadb-r2dbc-database");
+		assertThat(serviceConnection.getUsername()).isEqualTo("myuser");
+		assertThat(serviceConnection.getPassword()).isEqualTo("secret");
+		assertThat(serviceConnection.getR2dbcUrl()).startsWith("r2dbc:mariadb://").endsWith("/mydatabase");
 	}
 
 	@Override

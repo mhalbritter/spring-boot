@@ -29,8 +29,8 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.sql.SqlServiceConnection;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.boot.jdbc.DatabaseDriver;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -53,10 +53,12 @@ abstract class DataSourceConfiguration {
 	}
 
 	@SuppressWarnings("unchecked")
-	protected static <T> T createDataSource(SqlServiceConnection serviceConnection, Class<? extends DataSource> type,
+	protected static <T> T createDataSource(JdbcServiceConnection serviceConnection, Class<? extends DataSource> type,
 			ClassLoader classLoader) {
-		return (T) JdbcServiceConnection.of(serviceConnection)
-			.initializeDataSourceBuilder(classLoader)
+		return (T) DataSourceBuilder.create(classLoader)
+			.url(serviceConnection.getJdbcUrl())
+			.username(serviceConnection.getUsername())
+			.password(serviceConnection.getPassword())
 			.type(type)
 			.build();
 	}
@@ -81,21 +83,16 @@ abstract class DataSourceConfiguration {
 		@Bean
 		@ConfigurationProperties(prefix = "spring.datasource.tomcat")
 		org.apache.tomcat.jdbc.pool.DataSource dataSource(DataSourceProperties properties,
-				ObjectProvider<SqlServiceConnection> serviceConnectionProvider) {
-			SqlServiceConnection serviceConnection = serviceConnectionProvider.getIfAvailable();
+				ObjectProvider<JdbcServiceConnection> serviceConnectionProvider) {
+			JdbcServiceConnection serviceConnection = serviceConnectionProvider.getIfAvailable();
 			org.apache.tomcat.jdbc.pool.DataSource dataSource = (serviceConnection != null)
 					? createDataSource(serviceConnection, org.apache.tomcat.jdbc.pool.DataSource.class,
 							this.classLoader)
 					: createDataSource(properties, org.apache.tomcat.jdbc.pool.DataSource.class);
 			String validationQuery;
-			if (serviceConnection == null) {
-				String url = properties.determineUrl();
-				DatabaseDriver databaseDriver = DatabaseDriver.fromJdbcUrl(url);
-				validationQuery = databaseDriver.getValidationQuery();
-			}
-			else {
-				validationQuery = JdbcServiceConnection.of(serviceConnection).getValidationQuery();
-			}
+			String url = (serviceConnection != null) ? serviceConnection.getJdbcUrl() : properties.determineUrl();
+			DatabaseDriver databaseDriver = DatabaseDriver.fromJdbcUrl(url);
+			validationQuery = databaseDriver.getValidationQuery();
 			if (validationQuery != null) {
 				dataSource.setTestOnBorrow(true);
 				dataSource.setValidationQuery(validationQuery);
@@ -125,8 +122,8 @@ abstract class DataSourceConfiguration {
 		@Bean
 		@ConfigurationProperties(prefix = "spring.datasource.hikari")
 		HikariDataSource dataSource(DataSourceProperties properties,
-				ObjectProvider<SqlServiceConnection> serviceConnectionProvider) {
-			SqlServiceConnection serviceConnection = serviceConnectionProvider.getIfAvailable();
+				ObjectProvider<JdbcServiceConnection> serviceConnectionProvider) {
+			JdbcServiceConnection serviceConnection = serviceConnectionProvider.getIfAvailable();
 			HikariDataSource dataSource = (serviceConnection != null)
 					? createDataSource(serviceConnection, HikariDataSource.class, this.classLoader)
 					: createDataSource(properties, HikariDataSource.class);
@@ -158,8 +155,8 @@ abstract class DataSourceConfiguration {
 		@Bean
 		@ConfigurationProperties(prefix = "spring.datasource.dbcp2")
 		org.apache.commons.dbcp2.BasicDataSource dataSource(DataSourceProperties properties,
-				ObjectProvider<SqlServiceConnection> serviceConnectionProvider) {
-			SqlServiceConnection serviceConnection = serviceConnectionProvider.getIfAvailable();
+				ObjectProvider<JdbcServiceConnection> serviceConnectionProvider) {
+			JdbcServiceConnection serviceConnection = serviceConnectionProvider.getIfAvailable();
 			return (serviceConnection != null)
 					? createDataSource(serviceConnection, org.apache.commons.dbcp2.BasicDataSource.class,
 							this.classLoader)
@@ -188,8 +185,8 @@ abstract class DataSourceConfiguration {
 		@Bean
 		@ConfigurationProperties(prefix = "spring.datasource.oracleucp")
 		PoolDataSourceImpl dataSource(DataSourceProperties properties,
-				ObjectProvider<SqlServiceConnection> serviceConnectionProvider) throws SQLException {
-			SqlServiceConnection serviceConnection = serviceConnectionProvider.getIfAvailable();
+				ObjectProvider<JdbcServiceConnection> serviceConnectionProvider) throws SQLException {
+			JdbcServiceConnection serviceConnection = serviceConnectionProvider.getIfAvailable();
 			PoolDataSourceImpl dataSource = (serviceConnection != null)
 					? createDataSource(serviceConnection, PoolDataSourceImpl.class, this.classLoader)
 					: createDataSource(properties, PoolDataSourceImpl.class);
@@ -219,12 +216,17 @@ abstract class DataSourceConfiguration {
 
 		@Bean
 		DataSource dataSource(DataSourceProperties properties,
-				ObjectProvider<SqlServiceConnection> serviceConnectionProvider) {
-			SqlServiceConnection serviceConnection = serviceConnectionProvider.getIfAvailable();
-			return (serviceConnection != null) ? JdbcServiceConnection.of(serviceConnection)
-				.initializeDataSourceBuilder(this.classLoader)
-				.type(properties.getType())
-				.build() : properties.initializeDataSourceBuilder().build();
+				ObjectProvider<JdbcServiceConnection> serviceConnectionProvider) {
+			JdbcServiceConnection serviceConnection = serviceConnectionProvider.getIfAvailable();
+			if (serviceConnection != null) {
+				return DataSourceBuilder.create(this.classLoader)
+					.url(serviceConnection.getJdbcUrl())
+					.username(serviceConnection.getUsername())
+					.password(serviceConnection.getPassword())
+					.type(properties.getType())
+					.build();
+			}
+			return properties.initializeDataSourceBuilder().build();
 		}
 
 	}

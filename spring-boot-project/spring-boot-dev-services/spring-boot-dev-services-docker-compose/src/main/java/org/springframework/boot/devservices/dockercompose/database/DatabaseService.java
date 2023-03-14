@@ -16,6 +16,8 @@
 
 package org.springframework.boot.devservices.dockercompose.database;
 
+import java.util.Map;
+
 import org.springframework.boot.devservices.dockercompose.interop.Port;
 import org.springframework.boot.devservices.dockercompose.interop.RunningService;
 import org.springframework.boot.origin.Origin;
@@ -89,6 +91,14 @@ public abstract class DatabaseService {
 	 */
 	public String getName() {
 		return this.service.name();
+	}
+
+	/**
+	 * Returns the labels for this service.
+	 * @return the labels for this service
+	 */
+	public Map<String, String> getLabels() {
+		return this.service.labels();
 	}
 
 }

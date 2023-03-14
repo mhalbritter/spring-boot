@@ -16,95 +16,33 @@
 
 package org.springframework.boot.autoconfigure.jdbc;
 
-import java.util.Collection;
-
-import org.springframework.boot.autoconfigure.sql.SqlServiceConnection;
-import org.springframework.boot.jdbc.DataSourceBuilder;
-import org.springframework.boot.jdbc.DatabaseDriver;
+import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnection;
 
 /**
- * Adds JDBC operations onto {@link SqlServiceConnection}.
+ * A connection to a SQL database service through JDBC.
  *
  * @author Moritz Halbritter
  * @author Andy Wilkinson
  * @since 3.1.0
  */
-public final class JdbcServiceConnection {
-
-	private final SqlServiceConnection sqlServiceConnection;
-
-	private final DatabaseDriver databaseDriver;
-
-	private JdbcServiceConnection(SqlServiceConnection sqlServiceConnection, DatabaseDriver databaseDriver) {
-		this.sqlServiceConnection = sqlServiceConnection;
-		this.databaseDriver = databaseDriver;
-	}
+public interface JdbcServiceConnection extends ServiceConnection {
 
 	/**
-	 * Returns the JDBC url.
-	 * @return the JDBC url
+	 * Hostname for the database.
+	 * @return the username for the database
 	 */
-	public String getJdbcUrl() {
-		return "jdbc:%s://%s:%d/%s".formatted(getJdbcSubProtocol(), this.sqlServiceConnection.getHostname(),
-				this.sqlServiceConnection.getPort(), this.sqlServiceConnection.getDatabase());
-	}
+	String getUsername();
 
 	/**
-	 * Returns the JDBC subprotocol (the part following the 'jdbc:' in a JDBC url).
-	 * @return the JDBC subprotocol
-	 * @throws IllegalStateException if no URL prefixes could be found
+	 * Password for the database.
+	 * @return the password for the database
 	 */
-	String getJdbcSubProtocol() {
-		Collection<String> urlPrefixes = this.databaseDriver.getUrlPrefixes();
-		if (urlPrefixes.isEmpty()) {
-			throw new IllegalStateException("URL prefixes for driver %s are empty".formatted(this.databaseDriver));
-		}
-		return urlPrefixes.iterator().next();
-	}
+	String getPassword();
 
 	/**
-	 * Initializes a {@link DataSourceBuilder} for this connection.
-	 * @param classLoader the classloader to use
-	 * @return the inialized datasource builder
+	 * JDBC url for the database.
+	 * @return the JDBC url for the database
 	 */
-	DataSourceBuilder<?> initializeDataSourceBuilder(ClassLoader classLoader) {
-		return DataSourceBuilder.create(classLoader)
-			.url(getJdbcUrl())
-			.username(this.sqlServiceConnection.getUsername())
-			.password(this.sqlServiceConnection.getPassword());
-	}
-
-	/**
-	 * Return the validation query.
-	 * @return the validation query or {@code null}
-	 */
-	String getValidationQuery() {
-		return this.databaseDriver.getValidationQuery();
-	}
-
-	/**
-	 * Return the XA driver source class name.
-	 * @return the class name or {@code null}
-	 */
-	String getXaDataSourceClassName() {
-		return this.databaseDriver.getXaDataSourceClassName();
-	}
-
-	/**
-	 * Creates a new {@link JdbcServiceConnection} for the given
-	 * {@link SqlServiceConnection}.
-	 * @param serviceConnection the SQL service connection
-	 * @return the JDBC service connection
-	 * @throws IllegalArgumentException if no {@link DatabaseDriver} can be found to
-	 * support the {@link SqlServiceConnection}.
-	 */
-	public static JdbcServiceConnection of(SqlServiceConnection serviceConnection) {
-		DatabaseDriver databaseDriver = DatabaseDriver.fromProductName(serviceConnection.getProductName());
-		if (databaseDriver == DatabaseDriver.UNKNOWN) {
-			throw new IllegalArgumentException("Unable to find database driver for product name '%s'"
-				.formatted(serviceConnection.getProductName()));
-		}
-		return new JdbcServiceConnection(serviceConnection, databaseDriver);
-	}
+	String getJdbcUrl();
 
 }

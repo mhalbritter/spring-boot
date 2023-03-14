@@ -29,7 +29,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.SpringBootCondition;
 import org.springframework.boot.autoconfigure.r2dbc.R2dbcProperties.Pool;
-import org.springframework.boot.autoconfigure.sql.SqlServiceConnection;
 import org.springframework.boot.context.properties.PropertyMapper;
 import org.springframework.boot.context.properties.bind.BindResult;
 import org.springframework.boot.context.properties.bind.Bindable;
@@ -57,7 +56,7 @@ import org.springframework.util.StringUtils;
 abstract class ConnectionFactoryConfigurations {
 
 	protected static ConnectionFactory createConnectionFactory(R2dbcProperties properties,
-			SqlServiceConnection serviceConnection, ClassLoader classLoader,
+			R2dbcServiceConnection serviceConnection, ClassLoader classLoader,
 			List<ConnectionFactoryOptionsBuilderCustomizer> optionsCustomizers) {
 		try {
 			return org.springframework.boot.r2dbc.ConnectionFactoryBuilder
@@ -91,7 +90,7 @@ abstract class ConnectionFactoryConfigurations {
 
 			@Bean(destroyMethod = "dispose")
 			ConnectionPool connectionFactory(R2dbcProperties properties,
-					ObjectProvider<SqlServiceConnection> serviceConnectionProvider, ResourceLoader resourceLoader,
+					ObjectProvider<R2dbcServiceConnection> serviceConnectionProvider, ResourceLoader resourceLoader,
 					ObjectProvider<ConnectionFactoryOptionsBuilderCustomizer> customizers) {
 				ConnectionFactory connectionFactory = createConnectionFactory(properties,
 						serviceConnectionProvider.getIfAvailable(), resourceLoader.getClassLoader(),
@@ -122,7 +121,7 @@ abstract class ConnectionFactoryConfigurations {
 
 		@Bean
 		ConnectionFactory connectionFactory(R2dbcProperties properties,
-				ObjectProvider<SqlServiceConnection> serviceConnectionProvider, ResourceLoader resourceLoader,
+				ObjectProvider<R2dbcServiceConnection> serviceConnectionProvider, ResourceLoader resourceLoader,
 				ObjectProvider<ConnectionFactoryOptionsBuilderCustomizer> customizers) {
 			return createConnectionFactory(properties, serviceConnectionProvider.getIfAvailable(),
 					resourceLoader.getClassLoader(), customizers.orderedStream().toList());

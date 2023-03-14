@@ -16,64 +16,33 @@
 
 package org.springframework.boot.autoconfigure.r2dbc;
 
-import java.util.Collection;
-
-import org.springframework.boot.autoconfigure.sql.SqlServiceConnection;
+import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnection;
 
 /**
- * Adds R2DBC operations onto {@link SqlServiceConnection}.
+ * A connection to a SQL database service through R2DBC.
  *
  * @author Moritz Halbritter
  * @author Andy Wilkinson
+ * @since 3.1.0
  */
-final class R2dbcServiceConnection {
-
-	private final SqlServiceConnection sqlServiceConnection;
-
-	private final DatabaseDriver databaseDriver;
-
-	private R2dbcServiceConnection(SqlServiceConnection sqlServiceConnection, DatabaseDriver databaseDriver) {
-		this.sqlServiceConnection = sqlServiceConnection;
-		this.databaseDriver = databaseDriver;
-	}
+public interface R2dbcServiceConnection extends ServiceConnection {
 
 	/**
-	 * Returns the R2DBC subprotocol (the part following the 'jdbc:' in a R2DBC url).
-	 * @return the R2DBC subprotocol
-	 * @throws IllegalStateException if no URL prefixes could be found
+	 * Hostname for the database.
+	 * @return the username for the database
 	 */
-	String getR2dbcSubProtocol() {
-		Collection<String> urlPrefixes = this.databaseDriver.getUrlPrefixes();
-		if (urlPrefixes.isEmpty()) {
-			throw new IllegalStateException("URL prefixes for driver %s are empty".formatted(this.databaseDriver));
-		}
-		return urlPrefixes.iterator().next();
-	}
+	String getUsername();
 
 	/**
-	 * Returns the R2DBC url.
-	 * @return the R2DBC url
+	 * Password for the database.
+	 * @return the password for the database
 	 */
-	String getR2dbcUrl() {
-		return "r2dbc:%s://%s:%d/%s".formatted(getR2dbcSubProtocol(), this.sqlServiceConnection.getHostname(),
-				this.sqlServiceConnection.getPort(), this.sqlServiceConnection.getDatabase());
-	}
+	String getPassword();
 
 	/**
-	 * Creates a new {@link R2dbcServiceConnection} for the given
-	 * {@link SqlServiceConnection}.
-	 * @param serviceConnection the SQL service connection
-	 * @return the JDBC service connection
-	 * @throws IllegalArgumentException if no {@link DatabaseDriver} can be found to
-	 * support the {@link SqlServiceConnection}.
+	 * R2DBC url for the database.
+	 * @return the R2DBC url for the database
 	 */
-	static R2dbcServiceConnection of(SqlServiceConnection serviceConnection) {
-		DatabaseDriver databaseDriver = DatabaseDriver.fromProductName(serviceConnection.getProductName());
-		if (databaseDriver == DatabaseDriver.UNKNOWN) {
-			throw new IllegalArgumentException("Unable to find database driver for product name '%s'"
-				.formatted(serviceConnection.getProductName()));
-		}
-		return new R2dbcServiceConnection(serviceConnection, databaseDriver);
-	}
+	String getR2dbcUrl();
 
 }

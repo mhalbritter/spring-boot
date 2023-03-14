@@ -25,7 +25,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.autoconfigure.sql.SqlServiceConnection;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.jdbc.DataSourceBuilder;
@@ -132,8 +131,8 @@ class TomcatDataSourceConfigurationTests {
 	static class ServiceConnectionConfiguration {
 
 		@Bean
-		SqlServiceConnection sqlServiceConnection() {
-			return new TestSqlServiceConnection();
+		JdbcServiceConnection sqlServiceConnection() {
+			return new TestJdbcServiceConnection();
 		}
 
 	}

@@ -14,26 +14,20 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.autoconfigure.jdbc;
+package org.springframework.boot.autoconfigure.r2dbc;
 
-import org.springframework.boot.autoconfigure.sql.SqlServiceConnection;
 import org.springframework.boot.origin.Origin;
 
 /**
- * {@link SqlServiceConnection} used in tests.
+ * {@link R2dbcServiceConnection} used in tests.
  *
  * @author Moritz Halbritter
  */
-class TestSqlServiceConnection implements SqlServiceConnection {
+class TestR2dbcServiceConnection implements R2dbcServiceConnection {
 
 	@Override
-	public String getHostname() {
-		return "postgres.example.com";
-	}
-
-	@Override
-	public int getPort() {
-		return 12345;
+	public String getR2dbcUrl() {
+		return "r2dbc:postgresql://postgres.example.com:12345/database-1";
 	}
 
 	@Override
@@ -47,11 +41,6 @@ class TestSqlServiceConnection implements SqlServiceConnection {
 	}
 
 	@Override
-	public String getDatabase() {
-		return "database-1";
-	}
-
-	@Override
 	public String getName() {
 		return "test-service-connection";
 	}
@@ -59,11 +48,6 @@ class TestSqlServiceConnection implements SqlServiceConnection {
 	@Override
 	public Origin getOrigin() {
 		return null;
-	}
-
-	@Override
-	public String getProductName() {
-		return "PostgreSQL";
 	}
 
 }

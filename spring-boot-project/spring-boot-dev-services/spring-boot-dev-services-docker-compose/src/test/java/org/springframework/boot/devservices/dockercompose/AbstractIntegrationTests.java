@@ -23,7 +23,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -51,29 +52,26 @@ public abstract class AbstractIntegrationTests {
 	@TempDir
 	static Path tempDir;
 
-	private List<Runnable> shutdownHandler;
+	private static List<Runnable> shutdownHandler;
 
-	@BeforeEach
-	void setUp() throws IOException {
-		this.shutdownHandler = new ArrayList<>();
-		createComposeYaml();
+	@BeforeAll
+	static void beforeAll() {
+		shutdownHandler = new ArrayList<>();
 	}
 
-	@AfterEach
-	void tearDown() {
-		for (Runnable runnable : this.shutdownHandler) {
+	@AfterAll
+	static void afterAll() {
+		for (Runnable runnable : shutdownHandler) {
 			runnable.run();
 		}
 	}
 
-	protected abstract InputStream getComposeContent();
-
-	private void createComposeYaml() throws IOException {
-		try (InputStream stream = getComposeContent()) {
-			byte[] content = stream.readAllBytes();
-			Files.write(tempDir.resolve("compose.yaml"), content);
-		}
+	@BeforeEach
+	void setUp() throws IOException {
+		createComposeYaml();
 	}
+
+	protected abstract InputStream getComposeContent();
 
 	protected final <T extends ServiceConnection> T runProvider(Class<T> serviceConnectionClass) {
 		return runProvider(new MockEnvironment(), serviceConnectionClass);
@@ -98,7 +96,7 @@ public abstract class AbstractIntegrationTests {
 				new SpringApplicationShutdownHandlers() {
 					@Override
 					public void add(Runnable action) {
-						AbstractIntegrationTests.this.shutdownHandler.add(action);
+						shutdownHandler.add(action);
 					}
 
 					@Override
@@ -106,6 +104,13 @@ public abstract class AbstractIntegrationTests {
 
 					}
 				});
+	}
+
+	private void createComposeYaml() throws IOException {
+		try (InputStream stream = getComposeContent()) {
+			byte[] content = stream.readAllBytes();
+			Files.write(tempDir.resolve("compose.yaml"), content);
+		}
 	}
 
 }

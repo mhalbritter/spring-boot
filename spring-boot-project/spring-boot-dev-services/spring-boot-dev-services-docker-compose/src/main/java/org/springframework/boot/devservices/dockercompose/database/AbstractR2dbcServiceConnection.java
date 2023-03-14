@@ -16,33 +16,38 @@
 
 package org.springframework.boot.devservices.dockercompose.database;
 
-import org.springframework.boot.autoconfigure.sql.SqlServiceConnection;
+import org.springframework.boot.autoconfigure.r2dbc.R2dbcServiceConnection;
 import org.springframework.boot.origin.Origin;
 
 /**
- * Abstract base class for {@link SqlServiceConnection} implementations.
+ * Abstract base class for {@link R2dbcServiceConnection} implementations.
  *
  * @author Moritz Halbritter
  * @author Andy Wilkinson
  * @since 3.1.0
  */
-public abstract class AbstractSqlServiceConnection implements SqlServiceConnection {
+public abstract class AbstractR2dbcServiceConnection implements R2dbcServiceConnection {
 
 	protected final DatabaseService service;
 
-	public AbstractSqlServiceConnection(DatabaseService service) {
+	public AbstractR2dbcServiceConnection(DatabaseService service) {
 		this.service = service;
 	}
 
 	@Override
-	public String getHostname() {
-		return this.service.getHost();
+	public String getR2dbcUrl() {
+		String parameters = getParameters();
+		parameters = (parameters != null) ? "?" + parameters : "";
+		return "r2dbc:%s://%s:%d/%s%s".formatted(getR2dbcSubProtocol(), this.service.getHost(), this.service.getPort(),
+				this.service.getDatabase(), parameters);
 	}
 
-	@Override
-	public int getPort() {
-		return this.service.getPort();
-	}
+	/**
+	 * Returns the name of the R2DBC sub-protocol (the part after 'r2dbc:'), e.g. 'mysql'
+	 * for MySQL or 'postgresql' for PostgreSQL.
+	 * @return the name of the R2DBC sub-protocol
+	 */
+	protected abstract String getR2dbcSubProtocol();
 
 	@Override
 	public String getUsername() {
@@ -55,19 +60,18 @@ public abstract class AbstractSqlServiceConnection implements SqlServiceConnecti
 	}
 
 	@Override
-	public String getDatabase() {
-		return this.service.getDatabase();
-	}
-
-	@Override
 	public Origin getOrigin() {
 		return this.service.getOrigin();
 	}
 
 	@Override
 	public String toString() {
-		return "DockerCompose[host='%s',port=%d,username='%s',database='%s']".formatted(getHostname(), getPort(),
-				getUsername(), getDatabase());
+		return "DockerCompose[host='%s',port=%d,database='%s',username='%s']".formatted(this.service.getHost(),
+				this.service.getPort(), this.service.getDatabase(), this.service.getUsername());
+	}
+
+	private String getParameters() {
+		return this.service.getLabels().get("org.springframework.boot.r2dbc.parameters");
 	}
 
 }
