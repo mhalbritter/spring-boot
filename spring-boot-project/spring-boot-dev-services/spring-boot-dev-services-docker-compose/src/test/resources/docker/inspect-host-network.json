@@ -162,7 +162,7 @@
       "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
       "GOSU_VERSION=1.16",
       "REDIS_VERSION=7.0.8",
-      "REDIS_DOWNLOAD_URL=http://download.redis.io/releases/redis-7.0.8.tar.gz",
+      "REDIS_DOWNLOAD_URL=https://download.redis.io/releases/redis-7.0.8.tar.gz",
       "REDIS_DOWNLOAD_SHA=06a339e491306783dcf55b97f15a5dbcbdc01ccbde6dc23027c475cab735e914"
     ],
     "Cmd": [

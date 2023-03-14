@@ -21,6 +21,7 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.boot.devservices.dockercompose.configuration.DockerComposeDevServiceConfigurationProperties;
+import org.springframework.boot.testsupport.testcontainers.DisabledIfDockerUnavailable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -30,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Moritz Halbritter
  * @author Andy Wilkinson
  */
+@DisabledIfDockerUnavailable
 class DefaultDockerComposeFactoryTests {
 
 	@Test

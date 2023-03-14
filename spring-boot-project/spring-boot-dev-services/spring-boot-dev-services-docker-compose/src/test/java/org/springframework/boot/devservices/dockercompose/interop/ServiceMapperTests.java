@@ -132,7 +132,7 @@ class ServiceMapperTests {
 
 	@Test
 	void dockerContextWithHostname() throws Exception {
-		DockerContextOutput currentContext = new DockerContextOutput("default", true, "http://192.168.1.1:3267");
+		DockerContextOutput currentContext = new DockerContextOutput("default", true, "https://192.168.1.1:3267");
 		DockerEnvironment environment = new DockerEnvironment(currentContext, null, null, null);
 		ServiceMapper serviceMapper = new ServiceMapper(environment);
 		RunningService service1 = mapToSingleService(serviceMapper, "/docker/inspect-bridge-network.json");
