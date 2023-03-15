@@ -23,9 +23,10 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnection;
+import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnectionFactories;
+import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnectionFactory;
+import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnectionSource;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.core.ResolvableType;
-import org.springframework.core.io.support.SpringFactoriesLoader;
 import org.springframework.test.context.ContextCustomizer;
 import org.springframework.test.context.MergedContextConfiguration;
 
@@ -39,36 +40,12 @@ import org.springframework.test.context.MergedContextConfiguration;
 @SuppressWarnings("rawtypes")
 class ServiceConnectionContextCustomizer implements ContextCustomizer {
 
-	private final ServiceConnectionFactoryRegistry factoryRegistry = new ServiceConnectionFactoryRegistry();
+	private final ServiceConnectionFactories serviceConnectionFactories = new ServiceConnectionFactories();
 
 	private final List<ServiceConnectionSource<?, ?>> sources;
 
-	ServiceConnectionContextCustomizer(List<ServiceConnectionSource<?, ?>> sources, SpringFactoriesLoader loader) {
+	ServiceConnectionContextCustomizer(List<ServiceConnectionSource<?, ?>> sources) {
 		this.sources = sources;
-		List<ServiceConnectionFactory> factories = loader.load(ServiceConnectionFactory.class);
-		for (ServiceConnectionFactory<?, ?> factory : factories) {
-			ResolvableType type = ResolvableType.forClass(factory.getClass());
-			try {
-				ResolvableType[] interfaces = type.getInterfaces();
-				for (ResolvableType iface : interfaces) {
-					if (iface.getRawClass().equals(ServiceConnectionFactory.class)) {
-						ResolvableType input = iface.getGeneric(0);
-						ResolvableType output = iface.getGeneric(1);
-						registerFactory(input.getRawClass(), output.getRawClass(), factory);
-					}
-				}
-			}
-			catch (TypeNotPresentException ex) {
-				// A type referenced by the factory is not present. Skip it.
-			}
-		}
-	}
-
-	@SuppressWarnings("unchecked")
-	private <I, SC extends ServiceConnection> void registerFactory(Class<?> input, Class<?> connectionType,
-			ServiceConnectionFactory<?, ?> factory) {
-		this.factoryRegistry.addFactory((Class<I>) input, (Class<SC>) connectionType,
-				(ServiceConnectionFactory<I, SC>) factory);
 	}
 
 	@Override
@@ -87,7 +64,7 @@ class ServiceConnectionContextCustomizer implements ContextCustomizer {
 
 	@SuppressWarnings("unchecked")
 	private void registerServiceConnection(ServiceConnectionSource source, BeanDefinitionRegistry registry) {
-		ServiceConnectionFactory factory = this.factoryRegistry.getFactory(source);
+		ServiceConnectionFactory factory = this.serviceConnectionFactories.getFactory(source);
 		ServiceConnection connection = factory.createServiceConnection(source);
 		registerBean(connection.getName(), connection.getClass(), (Supplier) () -> connection, registry);
 	}

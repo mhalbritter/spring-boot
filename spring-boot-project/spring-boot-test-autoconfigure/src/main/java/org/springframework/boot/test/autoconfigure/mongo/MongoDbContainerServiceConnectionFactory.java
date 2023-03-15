@@ -24,9 +24,9 @@ import org.testcontainers.containers.MongoDBContainer;
 
 import org.springframework.boot.autoconfigure.mongo.MongoServiceConnection;
 import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnection;
+import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnectionFactory;
+import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnectionSource;
 import org.springframework.boot.origin.Origin;
-import org.springframework.boot.test.autoconfigure.serviceconnection.ServiceConnectionFactory;
-import org.springframework.boot.test.autoconfigure.serviceconnection.ServiceConnectionSource;
 
 /**
  * A {@link ServiceConnectionFactory} for creating a {@link MongoServiceConnection} from a

@@ -24,9 +24,9 @@ import java.util.Objects;
 import org.testcontainers.containers.GenericContainer;
 
 import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnection;
+import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnectionSource;
 import org.springframework.boot.origin.Origin;
 import org.springframework.core.annotation.MergedAnnotations;
-import org.springframework.core.io.support.SpringFactoriesLoader;
 import org.springframework.test.context.ContextConfigurationAttributes;
 import org.springframework.test.context.ContextCustomizer;
 import org.springframework.test.context.ContextCustomizerFactory;
@@ -40,17 +40,6 @@ import org.springframework.util.ReflectionUtils;
  */
 class ServiceConnectionContextCustomizerFactory implements ContextCustomizerFactory {
 
-	private final SpringFactoriesLoader loader;
-
-	ServiceConnectionContextCustomizerFactory() {
-		this(SpringFactoriesLoader
-			.forDefaultResourceLocation(ServiceConnectionContextCustomizerFactory.class.getClassLoader()));
-	}
-
-	ServiceConnectionContextCustomizerFactory(SpringFactoriesLoader loader) {
-		this.loader = loader;
-	}
-
 	@Override
 	@SuppressWarnings("unchecked")
 	public ContextCustomizer createContextCustomizer(Class<?> testClass,
@@ -58,12 +47,11 @@ class ServiceConnectionContextCustomizerFactory implements ContextCustomizerFact
 		List<ServiceConnectionSource<?, ?>> sources = new ArrayList<>();
 		ReflectionUtils.doWithFields(testClass, (field) -> {
 			MergedAnnotations annotations = MergedAnnotations.from(field);
-			sources.addAll(annotations.stream(ConnectableService.class)
-				.map((connectableService) -> (Class<? extends ServiceConnection>) connectableService.getClass("value"))
-				.map((connectionType) -> createSource(field, connectionType))
-				.toList());
+			sources.addAll(annotations.stream(ConnectableService.class).map(
+					(connectableService) -> (Class<? extends ServiceConnection>) connectableService.getClass("value"))
+					.map((connectionType) -> createSource(field, connectionType)).toList());
 		}, (field) -> GenericContainer.class.isAssignableFrom(field.getType()));
-		return (sources.isEmpty()) ? null : new ServiceConnectionContextCustomizer(sources, this.loader);
+		return (sources.isEmpty()) ? null : new ServiceConnectionContextCustomizer(sources);
 	}
 
 	private ServiceConnectionSource<?, ?> createSource(Field field, Class<? extends ServiceConnection> connectionType) {

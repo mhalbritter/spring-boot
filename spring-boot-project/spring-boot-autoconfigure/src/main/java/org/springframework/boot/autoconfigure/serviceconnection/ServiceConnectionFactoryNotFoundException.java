@@ -14,7 +14,19 @@
  * limitations under the License.
  */
 
-/**
- * General support for auto-configuration of service connections in tests.
- */
 package org.springframework.boot.autoconfigure.serviceconnection;
+
+/**
+ * {@link RuntimeException} thrown when a {@link ServiceConnectionFactory} could not be
+ * found.
+ *
+ * @author Andy Wilkinson
+ * @since 3.1.0
+ */
+public class ServiceConnectionFactoryNotFoundException extends RuntimeException {
+
+	public ServiceConnectionFactoryNotFoundException(ServiceConnectionSource<?, ?> source) {
+		super("No ServiceConnectionFactory found for source '" + source + "'");
+	}
+
+}

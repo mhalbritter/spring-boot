@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.test.autoconfigure.serviceconnection;
+package org.springframework.boot.autoconfigure.serviceconnection;
 
-import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnection;
 import org.springframework.boot.origin.Origin;
 
 /**
  * A source from which a {@link ServiceConnection} can be created.
- *
  * @param input the input from which to create the service connection
  * @param name the name of the service connection
  * @param origin the origin of the service connection
@@ -33,7 +31,7 @@ import org.springframework.boot.origin.Origin;
  * @see ServiceConnectionFactory
  * @since 3.1.0
  */
-public record ServiceConnectionSource<I, SC extends ServiceConnection>(I input, String name, Origin origin,
+public record ServiceConnectionSource<I, SC extends ServiceConnection> (I input, String name, Origin origin,
 		Class<SC> connectionType) {
 
 }

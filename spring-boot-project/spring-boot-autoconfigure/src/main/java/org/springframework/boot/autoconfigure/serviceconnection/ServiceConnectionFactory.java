@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.test.autoconfigure.serviceconnection;
-
-import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnection;
+package org.springframework.boot.autoconfigure.serviceconnection;
 
 /**
  * A factory for {@link ServiceConnection} instances. Implementations should be registered
