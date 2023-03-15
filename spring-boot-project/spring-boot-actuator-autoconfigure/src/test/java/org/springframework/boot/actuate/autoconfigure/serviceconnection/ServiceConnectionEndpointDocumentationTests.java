@@ -297,7 +297,7 @@ class ServiceConnectionEndpointDocumentationTests extends MockMvcEndpointDocumen
 
 				@Override
 				public String getJdbcUrl() {
-					return "jdbc:mysql:foo";
+					return "jdbc:mysql:localhost/database-1";
 				}
 
 				@Override
@@ -327,7 +327,7 @@ class ServiceConnectionEndpointDocumentationTests extends MockMvcEndpointDocumen
 
 				@Override
 				public String getR2dbcUrl() {
-					return "jdbc:postgresql:foo";
+					return "jdbc:postgresql:localhost/database-1";
 				}
 
 				@Override

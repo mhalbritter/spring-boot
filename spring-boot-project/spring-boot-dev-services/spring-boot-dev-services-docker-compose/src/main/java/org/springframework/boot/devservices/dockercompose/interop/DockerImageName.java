@@ -19,8 +19,8 @@ package org.springframework.boot.devservices.dockercompose.interop;
 /**
  * A docker image name.
  *
- * @param tag tag. Can be null
- * @param project project. Can be null
+ * @param tag tag or {@code null}
+ * @param project project or {@code null}
  * @param image image
  * @author Moritz Halbritter
  * @author Andy Wilkinson

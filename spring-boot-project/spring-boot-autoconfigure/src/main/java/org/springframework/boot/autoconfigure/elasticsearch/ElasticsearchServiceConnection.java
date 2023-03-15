@@ -37,21 +37,21 @@ public interface ElasticsearchServiceConnection extends ServiceConnection {
 	List<Node> getNodes();
 
 	/**
-	 * Username for authentication with Elasticsearch. Can be null.
-	 * @return username for authentication with Elasticsearch. Can be null
+	 * Username for authentication with Elasticsearch.
+	 * @return username for authentication with Elasticsearch or {@code null}
 	 */
 	String getUsername();
 
 	/**
-	 * Password for authentication with Elasticsearch. Can be null.
-	 * @return password for authentication with Elasticsearch. Can be null
+	 * Password for authentication with Elasticsearch.
+	 * @return password for authentication with Elasticsearch or {@code null}
 	 */
 	String getPassword();
 
 	/**
-	 * Prefix added to the path of every request sent to Elasticsearch. Can be null.
-	 * @return prefix added to the path of every request sent to Elasticsearch. Can be
-	 * null
+	 * Prefix added to the path of every request sent to Elasticsearch.
+	 * @return prefix added to the path of every request sent to Elasticsearch or
+	 * {@code null}
 	 */
 	String getPathPrefix();
 
@@ -61,8 +61,8 @@ public interface ElasticsearchServiceConnection extends ServiceConnection {
 	 * @param hostname the hostname
 	 * @param port the port
 	 * @param protocol the protocol
-	 * @param username the username. Can be null
-	 * @param password the password. Can be null
+	 * @param username the username or {@code null}
+	 * @param password the password or {@code null}
 	 */
 	record Node(String hostname, int port, Protocol protocol, String username, String password) {
 		public Node(String host, int port, Protocol protocol) {

@@ -39,8 +39,8 @@ class ConnectionFactoryOptionsInitializer {
 	 * Initialize a {@link Builder ConnectionFactoryOptions.Builder} using the specified
 	 * properties.
 	 * @param properties the properties to use to initialize the builder
-	 * @param serviceConnection the service connection to use to initialize the builder.
-	 * Can be null
+	 * @param serviceConnection the service connection to use to initialize the builder or
+	 * {@code null}
 	 * @param embeddedDatabaseConnection the embedded connection to use as a fallback
 	 * @return an initialized builder
 	 * @throws ConnectionFactoryBeanCreationException if no suitable connection could be

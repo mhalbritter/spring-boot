@@ -41,8 +41,8 @@ class ElasticsearchService {
 	}
 
 	/**
-	 * Returns the password. Can be null.
-	 * @return the password. Can be null
+	 * Returns the password.
+	 * @return the password or {@code null}
 	 */
 	String getPassword() {
 		if (this.service.env().containsKey("ELASTIC_PASSWORD")) {

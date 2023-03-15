@@ -37,8 +37,8 @@ class MongoService {
 	}
 
 	/**
-	 * Returns the username. Can be null.
-	 * @return the username. Can be null
+	 * Returns the username.
+	 * @return the username or {@code null}
 	 */
 	String getUsername() {
 		if (this.service.env().containsKey("MONGO_INITDB_ROOT_USERNAME")) {
@@ -51,8 +51,8 @@ class MongoService {
 	}
 
 	/**
-	 * Returns the password. Can be null.
-	 * @return the password. Can be null
+	 * Returns the password.
+	 * @return the password or {@code null}
 	 */
 	String getPassword() {
 		if (this.service.env().containsKey("MONGO_INITDB_ROOT_PASSWORD")) {
@@ -69,8 +69,8 @@ class MongoService {
 	}
 
 	/**
-	 * Returns the database. Can be null
-	 * @return the database. Can be null
+	 * Returns the database.
+	 * @return the database or {@code null}
 	 */
 	String getDatabase() {
 		if (this.service.env().containsKey("MONGO_INITDB_DATABASE")) {

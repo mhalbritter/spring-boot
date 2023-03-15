@@ -82,7 +82,7 @@ public record DockerInspectOutput(@JsonProperty("Id") String id, @JsonProperty("
 		/**
 		 * Port.
 		 *
-		 * @param hostIp host ip. Can be null
+		 * @param hostIp host ip or {@code null}
 		 * @param hostPort host port
 		 */
 		public record PortDto(@JsonProperty("HostIp") String hostIp, @JsonProperty("HostPort") String hostPort) {

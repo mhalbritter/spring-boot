@@ -30,20 +30,20 @@ import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnectio
 public interface RabbitServiceConnection extends ServiceConnection {
 
 	/**
-	 * Login user to authenticate to the broker. Can be null.
-	 * @return the login user to authenticate to the broker
+	 * Login user to authenticate to the broker.
+	 * @return the login user to authenticate to the broker or {@code null}
 	 */
 	String getUsername();
 
 	/**
-	 * Login to authenticate against the broker. Can be null.
-	 * @return the login to authenticate against the broker
+	 * Login to authenticate against the broker.
+	 * @return the login to authenticate against the broker or {@code null}
 	 */
 	String getPassword();
 
 	/**
-	 * Virtual host to use when connecting to the broker. Can be null.
-	 * @return the virtual host to use when connecting to the broker
+	 * Virtual host to use when connecting to the broker.
+	 * @return the virtual host to use when connecting to the broker or {@code null}
 	 */
 	String getVirtualHost();
 

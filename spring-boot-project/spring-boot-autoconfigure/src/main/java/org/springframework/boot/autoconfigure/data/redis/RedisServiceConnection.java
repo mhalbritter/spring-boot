@@ -111,14 +111,14 @@ public interface RedisServiceConnection extends ServiceConnection {
 		List<Node> getNodes();
 
 		/**
-		 * Login username for authenticating with sentinel(s). Can be null.
-		 * @return the login username for authenticating with sentinel(s). Can be null
+		 * Login username for authenticating with sentinel(s).
+		 * @return the login username for authenticating with sentinel(s) or {@code null}
 		 */
 		String getUsername();
 
 		/**
-		 * Password for authenticating with sentinel(s). Can be null.
-		 * @return the password for authenticating with sentinel(s). Can be null
+		 * Password for authenticating with sentinel(s).
+		 * @return the password for authenticating with sentinel(s) or {@code null}
 		 */
 		String getPassword();
 

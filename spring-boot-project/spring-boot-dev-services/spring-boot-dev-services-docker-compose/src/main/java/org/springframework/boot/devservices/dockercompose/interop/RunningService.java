@@ -23,7 +23,7 @@ import java.util.Map;
  * A running docker compose service.
  *
  * @param composeConfigFile docker compose config file in which the service has been
- * defined. Can be null
+ * defined or {@code null}
  * @param name name of the service
  * @param image image of the service
  * @param host host of the service
@@ -75,7 +75,7 @@ public record RunningService(Path composeConfigFile, String name, DockerImageNam
 
 	/**
 	 * {@link DockerComposeOrigin Origin} for this service.
-	 * @return origin. Can be null
+	 * @return origin or {@code null}
 	 */
 	public DockerComposeOrigin origin() {
 		if (this.composeConfigFile == null) {

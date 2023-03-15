@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.actuate.autoconfigure.tracing.zipkin.ZipkinServiceConnection;
+import org.springframework.boot.actuate.endpoint.OperationResponseBody;
 import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
 import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
 import org.springframework.boot.autoconfigure.amqp.RabbitServiceConnection;
@@ -86,7 +87,7 @@ class ServiceConnectionEndpoint {
 	record ServiceConnectionsDto(List<RedisServiceConnectionDto> redis, List<ZipkinServiceConnectionDto> zipkin,
 			List<JdbcServiceConnectionDto> jdbc, List<R2dbcServiceConnectionDto> r2dbc,
 			List<RabbitServiceConnectionDto> rabbit, List<ElasticsearchServiceConnectionDto> elasticsearch,
-			List<MongoServiceConnectionDto> mongo) {
+			List<MongoServiceConnectionDto> mongo) implements OperationResponseBody {
 	}
 
 	@JsonInclude(Include.NON_NULL)

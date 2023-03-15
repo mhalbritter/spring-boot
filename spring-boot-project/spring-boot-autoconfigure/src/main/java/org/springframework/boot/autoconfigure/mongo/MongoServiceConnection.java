@@ -54,32 +54,32 @@ public interface MongoServiceConnection extends ServiceConnection {
 	String getDatabase();
 
 	/**
-	 * Authentication database name. Can be null.
-	 * @return the Authentication database name. Can be null
+	 * Authentication database name.
+	 * @return the Authentication database name or {@code null}
 	 */
 	String getAuthenticationDatabase();
 
 	/**
-	 * Login user of the mongo server. Can be null.
-	 * @return the login user of the mongo server. Can be null
+	 * Login user of the mongo server.
+	 * @return the login user of the mongo server or {@code null}
 	 */
 	String getUsername();
 
 	/**
-	 * Login password of the mongo server. Can be null.
-	 * @return the login password of the mongo server. Can be null
+	 * Login password of the mongo server.
+	 * @return the login password of the mongo server or {@code null}
 	 */
 	String getPassword();
 
 	/**
-	 * Replica set name for the cluster. Can be null.
-	 * @return the required replica set name for the cluster. Can be null
+	 * Replica set name for the cluster.
+	 * @return the required replica set name for the cluster or {@code null}
 	 */
 	String getReplicaSetName();
 
 	/**
-	 * GridFS configuration. Can be null.
-	 * @return the GridFS configuration. Can be null
+	 * GridFS configuration.
+	 * @return the GridFS configuration or {@code null}
 	 */
 	GridFs getGridFs();
 
@@ -89,8 +89,8 @@ public interface MongoServiceConnection extends ServiceConnection {
 	interface GridFs {
 
 		/**
-		 * GridFS database name. Can be null.
-		 * @return the GridFS database name. Can be null
+		 * GridFS database name.
+		 * @return the GridFS database name or {@code null}
 		 */
 		String getDatabase();
 

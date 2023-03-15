@@ -67,7 +67,7 @@ public record Port(int number, Protocol protocol) {
 
 		/**
 		 * Parses the given string into a {@link Protocol}.
-		 * @param input input. Can be null
+		 * @param input input or {@code null}
 		 * @return parsed {@link Protocol}
 		 */
 		public static Protocol parse(String input) {

@@ -38,14 +38,15 @@ public class DockerComposeDevServiceConfigurationProperties {
 	public static final String PREFIX = "spring.dev-services.docker-compose";
 
 	/**
-	 * Path to the docker compose configuration file to use. Can be null.
+	 * Path to the docker compose configuration file to use or {@code null}.
 	 */
 	private String configFile;
 
 	private Readiness readiness = new Readiness();
 
 	/**
-	 * Hostname or IP of the machine where the docker containers are started. Can be null.
+	 * Hostname or IP of the machine where the docker containers are started or
+	 * {@code null}.
 	 */
 	private String dockerHostname;
 

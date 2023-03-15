@@ -55,7 +55,7 @@ class DefaultDockerCompose implements DockerCompose {
 	 * Creates a new instance.
 	 * @param configFile path to the docker compose config file
 	 * @param dockerExec docker execution
-	 * @param dockerHostname hostname of the docker daemon. Can be null
+	 * @param dockerHostname hostname of the docker daemon or {@code null}
 	 */
 	DefaultDockerCompose(Path configFile, DockerExec dockerExec, String dockerHostname) {
 		this.dockerHostname = dockerHostname;
