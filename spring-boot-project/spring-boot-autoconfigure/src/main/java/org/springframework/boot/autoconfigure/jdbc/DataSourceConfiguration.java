@@ -26,6 +26,7 @@ import oracle.ucp.jdbc.PoolDataSourceImpl;
 
 import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -81,6 +82,12 @@ abstract class DataSourceConfiguration {
 		}
 
 		@Bean
+		@ConditionalOnBean(JdbcServiceConnection.class)
+		static JdbcServiceConnectionTomcatBeanPostProcessor jdbcServiceConnectionTomcatBeanPostProcessor() {
+			return new JdbcServiceConnectionTomcatBeanPostProcessor();
+		}
+
+		@Bean
 		@ConfigurationProperties(prefix = "spring.datasource.tomcat")
 		org.apache.tomcat.jdbc.pool.DataSource dataSource(DataSourceProperties properties,
 				ObjectProvider<JdbcServiceConnection> serviceConnectionProvider) {
@@ -120,6 +127,12 @@ abstract class DataSourceConfiguration {
 		}
 
 		@Bean
+		@ConditionalOnBean(JdbcServiceConnection.class)
+		static JdbcServiceConnectionHikariBeanPostProcessor jdbcServiceConnectionHikariBeanPostProcessor() {
+			return new JdbcServiceConnectionHikariBeanPostProcessor();
+		}
+
+		@Bean
 		@ConfigurationProperties(prefix = "spring.datasource.hikari")
 		HikariDataSource dataSource(DataSourceProperties properties,
 				ObjectProvider<JdbcServiceConnection> serviceConnectionProvider) {
@@ -153,6 +166,12 @@ abstract class DataSourceConfiguration {
 		}
 
 		@Bean
+		@ConditionalOnBean(JdbcServiceConnection.class)
+		static JdbcServiceConnectionDbcp2BeanPostProcessor jdbcServiceConnectionDbcp2BeanPostProcessor() {
+			return new JdbcServiceConnectionDbcp2BeanPostProcessor();
+		}
+
+		@Bean
 		@ConfigurationProperties(prefix = "spring.datasource.dbcp2")
 		org.apache.commons.dbcp2.BasicDataSource dataSource(DataSourceProperties properties,
 				ObjectProvider<JdbcServiceConnection> serviceConnectionProvider) {
@@ -180,6 +199,12 @@ abstract class DataSourceConfiguration {
 		@Override
 		public void setBeanClassLoader(ClassLoader classLoader) {
 			this.classLoader = classLoader;
+		}
+
+		@Bean
+		@ConditionalOnBean(JdbcServiceConnection.class)
+		static JdbcServiceConnectionOracleUcpBeanPostProcessor jdbcServiceConnectionOracleUcpBeanPostProcessor() {
+			return new JdbcServiceConnectionOracleUcpBeanPostProcessor();
 		}
 
 		@Bean
