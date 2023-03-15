@@ -37,6 +37,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class HikariDataSourceConfigurationTests {
 
+	private static final String PREFIX = "spring.datasource.hikari.";
+
 	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
 		.withConfiguration(AutoConfigurations.of(DataSourceAutoConfiguration.class))
 		.withPropertyValues("spring.datasource.type=" + HikariDataSource.class.getName());
@@ -52,8 +54,7 @@ class HikariDataSourceConfigurationTests {
 	@Test
 	void testDataSourcePropertiesOverridden() {
 		this.contextRunner
-			.withPropertyValues("spring.datasource.hikari.jdbc-url=jdbc:foo//bar/spam",
-					"spring.datasource.hikari.max-lifetime=1234")
+			.withPropertyValues(PREFIX + "jdbc-url=jdbc:foo//bar/spam", "spring.datasource.hikari.max-lifetime=1234")
 			.run((context) -> {
 				HikariDataSource ds = context.getBean(HikariDataSource.class);
 				assertThat(ds.getJdbcUrl()).isEqualTo("jdbc:foo//bar/spam");
@@ -64,8 +65,7 @@ class HikariDataSourceConfigurationTests {
 	@Test
 	void testDataSourceGenericPropertiesOverridden() {
 		this.contextRunner
-			.withPropertyValues(
-					"spring.datasource.hikari.data-source-properties.dataSourceClassName=org.h2.JDBCDataSource")
+			.withPropertyValues(PREFIX + "data-source-properties.dataSourceClassName=org.h2.JDBCDataSource")
 			.run((context) -> {
 				HikariDataSource ds = context.getBean(HikariDataSource.class);
 				assertThat(ds.getDataSourceProperties().getProperty("dataSourceClassName"))
@@ -93,8 +93,7 @@ class HikariDataSourceConfigurationTests {
 
 	@Test
 	void poolNameTakesPrecedenceOverName() {
-		this.contextRunner
-			.withPropertyValues("spring.datasource.name=myDS", "spring.datasource.hikari.pool-name=myHikariDS")
+		this.contextRunner.withPropertyValues("spring.datasource.name=myDS", PREFIX + "pool-name=myHikariDS")
 			.run((context) -> {
 				HikariDataSource ds = context.getBean(HikariDataSource.class);
 				assertThat(ds.getPoolName()).isEqualTo("myHikariDS");
@@ -103,15 +102,17 @@ class HikariDataSourceConfigurationTests {
 
 	@Test
 	void usesServiceConnectionIfAvailable() {
-		this.contextRunner.withUserConfiguration(ServiceConnectionConfiguration.class).run((context) -> {
-			DataSource dataSource = context.getBean(DataSource.class);
-			assertThat(dataSource).isInstanceOf(HikariDataSource.class);
-			HikariDataSource hikari = (HikariDataSource) dataSource;
-			assertThat(hikari.getUsername()).isEqualTo("user-1");
-			assertThat(hikari.getPassword()).isEqualTo("password-1");
-			assertThat(hikari.getDriverClassName()).isEqualTo("org.postgresql.Driver");
-			assertThat(hikari.getJdbcUrl()).isEqualTo("jdbc:postgresql://postgres.example.com:12345/database-1");
-		});
+		this.contextRunner.withUserConfiguration(ServiceConnectionConfiguration.class)
+			.withPropertyValues(PREFIX + "url=jdbc:broken", PREFIX + "username=alice", PREFIX + "password=secret")
+			.run((context) -> {
+				DataSource dataSource = context.getBean(DataSource.class);
+				assertThat(dataSource).isInstanceOf(HikariDataSource.class);
+				HikariDataSource hikari = (HikariDataSource) dataSource;
+				assertThat(hikari.getUsername()).isEqualTo("user-1");
+				assertThat(hikari.getPassword()).isEqualTo("password-1");
+				assertThat(hikari.getDriverClassName()).isEqualTo("org.postgresql.Driver");
+				assertThat(hikari.getJdbcUrl()).isEqualTo("jdbc:postgresql://postgres.example.com:12345/database-1");
+			});
 	}
 
 	@Configuration(proxyBeanMethods = false)

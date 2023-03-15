@@ -248,7 +248,9 @@ class DataSourceAutoConfigurationTests {
 	@Test
 	void dbcp2UsesServiceConnectionIfAvailable() {
 		ApplicationContextRunner runner = new ApplicationContextRunner()
-			.withPropertyValues("spring.datasource.type=org.apache.commons.dbcp2.BasicDataSource")
+			.withPropertyValues("spring.datasource.type=org.apache.commons.dbcp2.BasicDataSource",
+					"spring.datasource.dbcp2.url=jdbc:broken", "spring.datasource.dbcp2.username=alice",
+					"spring.datasource.dbcp2.password=secret")
 			.withConfiguration(AutoConfigurations.of(DataSourceAutoConfiguration.class));
 		runner.withUserConfiguration(ServiceConnectionConfiguration.class).run((context) -> {
 			DataSource dataSource = context.getBean(DataSource.class);

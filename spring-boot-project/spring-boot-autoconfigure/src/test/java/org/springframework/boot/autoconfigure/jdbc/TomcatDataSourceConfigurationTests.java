@@ -115,16 +115,18 @@ class TomcatDataSourceConfigurationTests {
 
 	@Test
 	void usesServiceConnectionIfAvailable() {
-		this.contextRunner.withUserConfiguration(ServiceConnectionConfiguration.class).run((context) -> {
-			DataSource dataSource = context.getBean(DataSource.class);
-			assertThat(dataSource).isInstanceOf(org.apache.tomcat.jdbc.pool.DataSource.class);
-			org.apache.tomcat.jdbc.pool.DataSource tomcat = (org.apache.tomcat.jdbc.pool.DataSource) dataSource;
-			assertThat(tomcat.getPoolProperties().getUsername()).isEqualTo("user-1");
-			assertThat(tomcat.getPoolProperties().getPassword()).isEqualTo("password-1");
-			assertThat(tomcat.getPoolProperties().getDriverClassName()).isEqualTo("org.postgresql.Driver");
-			assertThat(tomcat.getPoolProperties().getUrl())
-				.isEqualTo("jdbc:postgresql://postgres.example.com:12345/database-1");
-		});
+		this.contextRunner.withUserConfiguration(ServiceConnectionConfiguration.class)
+			.withPropertyValues(PREFIX + "url=jdbc:broken", PREFIX + "username=alice", PREFIX + "password=secret")
+			.run((context) -> {
+				DataSource dataSource = context.getBean(DataSource.class);
+				assertThat(dataSource).isInstanceOf(org.apache.tomcat.jdbc.pool.DataSource.class);
+				org.apache.tomcat.jdbc.pool.DataSource tomcat = (org.apache.tomcat.jdbc.pool.DataSource) dataSource;
+				assertThat(tomcat.getPoolProperties().getUsername()).isEqualTo("user-1");
+				assertThat(tomcat.getPoolProperties().getPassword()).isEqualTo("password-1");
+				assertThat(tomcat.getPoolProperties().getDriverClassName()).isEqualTo("org.postgresql.Driver");
+				assertThat(tomcat.getPoolProperties().getUrl())
+					.isEqualTo("jdbc:postgresql://postgres.example.com:12345/database-1");
+			});
 	}
 
 	@Configuration(proxyBeanMethods = false)
