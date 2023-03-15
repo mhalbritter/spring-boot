@@ -31,26 +31,27 @@ import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnectio
 public interface ElasticsearchServiceConnection extends ServiceConnection {
 
 	/**
-	 * Comma-separated list of the Elasticsearch nodes to use.
-	 * @return comma-separated list of the Elasticsearch nodes to use
+	 * List of the Elasticsearch nodes to use.
+	 * @return list of the Elasticsearch nodes to use
 	 */
 	List<Node> getNodes();
 
 	/**
-	 * Username for authentication with Elasticsearch.
-	 * @return username for authentication with Elasticsearch
+	 * Username for authentication with Elasticsearch. Can be null.
+	 * @return username for authentication with Elasticsearch. Can be null
 	 */
 	String getUsername();
 
 	/**
-	 * Password for authentication with Elasticsearch.
-	 * @return password for authentication with Elasticsearch
+	 * Password for authentication with Elasticsearch. Can be null.
+	 * @return password for authentication with Elasticsearch. Can be null
 	 */
 	String getPassword();
 
 	/**
-	 * Prefix added to the path of every request sent to Elasticsearch.
-	 * @return prefix added to the path of every request sent to Elasticsearch
+	 * Prefix added to the path of every request sent to Elasticsearch. Can be null.
+	 * @return prefix added to the path of every request sent to Elasticsearch. Can be
+	 * null
 	 */
 	String getPathPrefix();
 

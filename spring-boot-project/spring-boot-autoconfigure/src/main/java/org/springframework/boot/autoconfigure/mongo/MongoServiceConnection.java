@@ -72,8 +72,8 @@ public interface MongoServiceConnection extends ServiceConnection {
 	String getPassword();
 
 	/**
-	 * Required replica set name for the cluster.
-	 * @return the required replica set name for the cluster
+	 * Replica set name for the cluster. Can be null.
+	 * @return the required replica set name for the cluster. Can be null
 	 */
 	String getReplicaSetName();
 
