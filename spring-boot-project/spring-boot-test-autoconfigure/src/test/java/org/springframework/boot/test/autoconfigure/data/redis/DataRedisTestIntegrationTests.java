@@ -29,7 +29,6 @@ import org.springframework.boot.testsupport.testcontainers.RedisContainer;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.RedisOperations;
-import org.springframework.test.context.DynamicPropertyRegistry;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
