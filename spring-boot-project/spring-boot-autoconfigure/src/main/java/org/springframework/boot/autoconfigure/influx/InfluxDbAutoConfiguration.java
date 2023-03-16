@@ -54,7 +54,7 @@ public class InfluxDbAutoConfiguration {
 			ObjectProvider<InfluxDbCustomizer> customizers,
 			ObjectProvider<InfluxDbServiceConnection> serviceConnectionProvider) {
 		InfluxDbServiceConnection serviceConnection = serviceConnectionProvider.getIfAvailable();
-		String url = (serviceConnection != null) ? serviceConnection.getUrl() : properties.getUrl();
+		String url = (serviceConnection != null) ? serviceConnection.getUrl().toString() : properties.getUrl();
 		String user = (serviceConnection != null) ? serviceConnection.getUsername() : properties.getUser();
 		String password = (serviceConnection != null) ? serviceConnection.getPassword() : properties.getPassword();
 		InfluxDB influxDb = new InfluxDBImpl(url, user, password, determineBuilder(builder.getIfAvailable()));

@@ -16,6 +16,8 @@
 
 package org.springframework.boot.autoconfigure.influx;
 
+import java.net.URI;
+
 import org.springframework.boot.autoconfigure.serviceconnection.ServiceConnection;
 
 /**
@@ -29,9 +31,9 @@ public interface InfluxDbServiceConnection extends ServiceConnection {
 
 	/**
 	 * URL of the InfluxDB instance to which to connect.
-	 * @return the uRL of the InfluxDB instance to which to connect
+	 * @return the URL of the InfluxDB instance to which to connect
 	 */
-	String getUrl();
+	URI getUrl();
 
 	/**
 	 * Login user.

@@ -16,6 +16,7 @@
 
 package org.springframework.boot.autoconfigure.influx;
 
+import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.OkHttpClient;
@@ -122,8 +123,8 @@ class InfluxDbAutoConfigurationTests {
 	private InfluxDbServiceConnection influxDbServiceConnection() {
 		return new InfluxDbServiceConnection() {
 			@Override
-			public String getUrl() {
-				return "http://localhost";
+			public URI getUrl() {
+				return URI.create("http://localhost");
 			}
 
 			@Override
