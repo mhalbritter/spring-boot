@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.test.autoconfigure.data.elasticsearch;
+package org.springframework.boot.test.autoconfigure.elasticsearch;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
