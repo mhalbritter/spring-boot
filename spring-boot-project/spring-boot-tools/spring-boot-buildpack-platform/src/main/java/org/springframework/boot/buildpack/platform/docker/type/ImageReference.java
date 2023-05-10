@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -140,6 +140,15 @@ public final class ImageReference {
 	 */
 	public ImageReference withDigest(String digest) {
 		return new ImageReference(this.name, null, digest);
+	}
+
+	/**
+	 * Create a new {@link ImageReference} with an updated tag.
+	 * @param tag the new tag
+	 * @return an updated image reference
+	 */
+	public ImageReference withTag(String tag) {
+		return new ImageReference(this.name, tag, null);
 	}
 
 	/**

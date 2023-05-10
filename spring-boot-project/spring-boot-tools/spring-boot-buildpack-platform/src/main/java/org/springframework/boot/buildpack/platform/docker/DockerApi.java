@@ -346,7 +346,8 @@ public class DockerApi {
 		public void tag(ImageReference sourceReference, ImageReference targetReference) throws IOException {
 			Assert.notNull(sourceReference, "SourceReference must not be null");
 			Assert.notNull(targetReference, "TargetReference must not be null");
-			URI uri = buildUrl("/images/" + sourceReference + "/tag", "repo", targetReference.toString());
+			URI uri = buildUrl("/images/" + sourceReference + "/tag", "repo", targetReference.withTag(null).toString(),
+					"tag", targetReference.getTag());
 			http().post(uri).close();
 		}
 

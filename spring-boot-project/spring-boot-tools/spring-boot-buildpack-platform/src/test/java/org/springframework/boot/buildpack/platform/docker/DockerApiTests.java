@@ -419,7 +419,7 @@ class DockerApiTests {
 		void tagTagsImage() throws Exception {
 			ImageReference sourceReference = ImageReference.of("localhost:5000/ubuntu");
 			ImageReference targetReference = ImageReference.of("localhost:5000/ubuntu:tagged");
-			URI tagURI = new URI(IMAGES_URL + "/localhost:5000/ubuntu/tag?repo=localhost%3A5000%2Fubuntu%3Atagged");
+			URI tagURI = new URI(IMAGES_URL + "/localhost:5000/ubuntu/tag?repo=localhost%3A5000%2Fubuntu&tag=tagged");
 			given(http().post(tagURI)).willReturn(emptyResponse());
 			this.api.tag(sourceReference, targetReference);
 			then(http()).should().post(tagURI);
