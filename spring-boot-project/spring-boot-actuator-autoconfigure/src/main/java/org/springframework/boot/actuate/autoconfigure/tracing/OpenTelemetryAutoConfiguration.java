@@ -16,6 +16,7 @@
 
 package org.springframework.boot.actuate.autoconfigure.tracing;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -101,15 +102,26 @@ public class OpenTelemetryAutoConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean
-	SdkTracerProvider otelSdkTracerProvider(Environment environment, ObjectProvider<SpanProcessor> spanProcessors,
-			Sampler sampler, ObjectProvider<SdkTracerProviderBuilderCustomizer> customizers) {
+	SdkTracerProvider otelSdkTracerProvider(Environment environment, SpanProcessors spanProcessors, Sampler sampler,
+			ObjectProvider<SdkTracerProviderBuilderCustomizer> customizers) {
 		String applicationName = environment.getProperty("spring.application.name", DEFAULT_APPLICATION_NAME);
 		SdkTracerProviderBuilder builder = SdkTracerProvider.builder()
 			.setSampler(sampler)
 			.setResource(Resource.create(Attributes.of(ResourceAttributes.SERVICE_NAME, applicationName)));
-		spanProcessors.orderedStream().forEach(builder::addSpanProcessor);
+		spanProcessors.values().forEach(builder::addSpanProcessor);
 		customizers.orderedStream().forEach((customizer) -> customizer.customize(builder));
 		return builder.build();
+	}
+
+	@Bean
+	@ConditionalOnMissingBean
+	SpanProcessors spanProcessors(ObjectProvider<SpanProcessor> spanProcessorProvider,
+			ObjectProvider<SpanProcessors.Customizer> customizers) {
+		List<SpanProcessor> list = new ArrayList<>();
+		spanProcessorProvider.orderedStream().forEach(list::add);
+		SpanProcessors spanProcessors = () -> list;
+		customizers.orderedStream().forEach((customizer) -> customizer.customize(spanProcessors));
+		return spanProcessors;
 	}
 
 	@Bean
@@ -126,14 +138,24 @@ public class OpenTelemetryAutoConfiguration {
 	}
 
 	@Bean
-	SpanProcessor otelSpanProcessor(ObjectProvider<SpanExporter> spanExporters,
+	SpanProcessor otelSpanProcessor(SpanExporters spanExporters,
 			ObjectProvider<SpanExportingPredicate> spanExportingPredicates, ObjectProvider<SpanReporter> spanReporters,
 			ObjectProvider<SpanFilter> spanFilters) {
 		return BatchSpanProcessor
-			.builder(new CompositeSpanExporter(spanExporters.orderedStream().toList(),
-					spanExportingPredicates.orderedStream().toList(), spanReporters.orderedStream().toList(),
-					spanFilters.orderedStream().toList()))
+			.builder(new CompositeSpanExporter(spanExporters.values(), spanExportingPredicates.orderedStream().toList(),
+					spanReporters.orderedStream().toList(), spanFilters.orderedStream().toList()))
 			.build();
+	}
+
+	@Bean
+	@ConditionalOnMissingBean
+	SpanExporters spanExporters(ObjectProvider<SpanExporter> spanExporterProvider,
+			ObjectProvider<SpanExporters.Customizer> customizers) {
+		List<SpanExporter> list = new ArrayList<>();
+		spanExporterProvider.orderedStream().forEach(list::add);
+		SpanExporters spanExporters = () -> list;
+		customizers.orderedStream().forEach((customizer) -> customizer.customize(spanExporters));
+		return spanExporters;
 	}
 
 	@Bean
