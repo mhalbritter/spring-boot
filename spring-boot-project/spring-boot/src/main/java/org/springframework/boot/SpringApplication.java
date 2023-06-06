@@ -74,6 +74,7 @@ import org.springframework.core.env.CommandLinePropertySource;
 import org.springframework.core.env.CompositePropertySource;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
+import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.env.SimpleCommandLinePropertySource;
@@ -162,6 +163,7 @@ import org.springframework.util.function.ThrowingSupplier;
  * @author Brian Clozel
  * @author Ethan Rubinson
  * @author Chris Bono
+ * @author Moritz Halbritter
  * @since 1.0.0
  * @see #run(Class, String[])
  * @see #run(Class[], String[])
@@ -232,6 +234,8 @@ public class SpringApplication {
 	private boolean isCustomEnvironment = false;
 
 	private boolean lazyInitialization = false;
+
+	private boolean useVirtualThreads = false;
 
 	private String environmentPrefix;
 
@@ -517,6 +521,10 @@ public class SpringApplication {
 			else {
 				sources.addFirst(new SimpleCommandLinePropertySource(args));
 			}
+		}
+		if (this.useVirtualThreads) {
+			sources.addLast(new MapPropertySource("springApplicationUseVirtualThreads",
+					Map.of("spring.main.use-virtual-threads", "true")));
 		}
 	}
 
@@ -958,6 +966,15 @@ public class SpringApplication {
 	 */
 	public void setLazyInitialization(boolean lazyInitialization) {
 		this.lazyInitialization = lazyInitialization;
+	}
+
+	/**
+	 * Sets if virtual threads should be used. Defaults to {@code false}.
+	 * @param useVirtualThreads if virtual threads should be used
+	 * @since 3.2.0
+	 */
+	public void setUseVirtualThreads(boolean useVirtualThreads) {
+		this.useVirtualThreads = useVirtualThreads;
 	}
 
 	/**

@@ -69,6 +69,7 @@ import org.springframework.util.StringUtils;
  *
  * @author Dave Syer
  * @author Andy Wilkinson
+ * @author Moritz Halbritter
  * @since 1.0.0
  * @see SpringApplication
  */
@@ -336,6 +337,17 @@ public class SpringApplicationBuilder {
 
 	public SpringApplicationBuilder bannerMode(Banner.Mode bannerMode) {
 		this.application.setBannerMode(bannerMode);
+		return this;
+	}
+
+	/**
+	 * Sets whether virtual threads should be used.
+	 * @param useVirtualThreads if virtual threads should be used
+	 * @return the current builder
+	 * @since 3.2.0
+	 */
+	public SpringApplicationBuilder useVirtualThreads(boolean useVirtualThreads) {
+		this.application.setUseVirtualThreads(useVirtualThreads);
 		return this;
 	}
 

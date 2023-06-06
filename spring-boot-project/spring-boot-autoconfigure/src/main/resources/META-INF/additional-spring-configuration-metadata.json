@@ -2853,7 +2853,7 @@
       "defaultValue": ".html"
     },
     {
-      "name": "spring.use-virtual-threads",
+      "name": "spring.main.use-virtual-threads",
       "type": "java.lang.Boolean",
       "description": "Whether to use virtual threads.",
       "defaultValue": false

@@ -37,7 +37,7 @@ import org.springframework.context.annotation.Conditional;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @ConditionalOnJava(JavaVersion.TWENTY_ONE)
-@ConditionalOnProperty(name = "spring.use-virtual-threads", havingValue = "true")
+@ConditionalOnProperty(name = "spring.main.use-virtual-threads", havingValue = "true")
 public @interface ConditionalOnVirtualThreads {
 
 }
