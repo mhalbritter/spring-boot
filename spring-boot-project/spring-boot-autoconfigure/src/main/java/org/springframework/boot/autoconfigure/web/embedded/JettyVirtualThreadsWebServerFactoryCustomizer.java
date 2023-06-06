@@ -46,7 +46,6 @@ public class JettyVirtualThreadsWebServerFactoryCustomizer
 		QueuedThreadPool threadPool = JettyThreadPool.create(this.serverProperties.getJetty().getThreads());
 		threadPool.setVirtualThreadsExecutor(VirtualThreads.getDefaultVirtualThreadsExecutor());
 		factory.setThreadPool(threadPool);
-		factory.setMaxConnections(JettyThreadPool.maxThreadCount(this.serverProperties.getJetty().getThreads()));
 	}
 
 	@Override
