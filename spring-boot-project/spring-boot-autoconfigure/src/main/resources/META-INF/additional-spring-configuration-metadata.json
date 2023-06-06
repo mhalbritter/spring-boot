@@ -2853,6 +2853,12 @@
       "defaultValue": ".html"
     },
     {
+      "name": "spring.use-virtual-threads",
+      "type": "java.lang.Boolean",
+      "description": "Whether to use virtual threads.",
+      "defaultValue": false
+    },
+    {
       "name": "spring.web.locale-resolver",
       "defaultValue": "accept-header"
     },
