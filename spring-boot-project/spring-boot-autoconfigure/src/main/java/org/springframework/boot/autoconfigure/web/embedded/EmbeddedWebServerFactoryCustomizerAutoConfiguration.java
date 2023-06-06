@@ -80,8 +80,9 @@ public class EmbeddedWebServerFactoryCustomizerAutoConfiguration {
 
 		@Bean
 		@ConditionalOnVirtualThreads
-		JettyVirtualThreadsWebServerFactoryCustomizer jettyVirtualThreadsWebServerFactoryCustomizer() {
-			return new JettyVirtualThreadsWebServerFactoryCustomizer();
+		JettyVirtualThreadsWebServerFactoryCustomizer jettyVirtualThreadsWebServerFactoryCustomizer(
+				ServerProperties serverProperties) {
+			return new JettyVirtualThreadsWebServerFactoryCustomizer(serverProperties);
 		}
 
 	}
