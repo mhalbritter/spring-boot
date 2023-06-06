@@ -60,6 +60,8 @@ import org.springframework.util.unit.DataSize;
 public class JettyWebServerFactoryCustomizer
 		implements WebServerFactoryCustomizer<ConfigurableJettyWebServerFactory>, Ordered {
 
+	static final int ORDER = 0;
+
 	private final Environment environment;
 
 	private final ServerProperties serverProperties;
@@ -71,7 +73,7 @@ public class JettyWebServerFactoryCustomizer
 
 	@Override
 	public int getOrder() {
-		return 0;
+		return ORDER;
 	}
 
 	@Override
