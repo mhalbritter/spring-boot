@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,8 +60,16 @@ public class HttpHandlerAutoConfiguration {
 		}
 
 		@Bean
-		public HttpHandler httpHandler(ObjectProvider<WebFluxProperties> propsProvider) {
-			HttpHandler httpHandler = WebHttpHandlerBuilder.applicationContext(this.applicationContext).build();
+		WebHttpHandlerBuilder webHttpHandlerBuilder(ObjectProvider<WebHttpHandlerBuilderCustomizer> customizers) {
+			WebHttpHandlerBuilder builder = WebHttpHandlerBuilder.applicationContext(this.applicationContext);
+			customizers.orderedStream().forEach((customizer) -> customizer.customize(builder));
+			return builder;
+		}
+
+		@Bean
+		public HttpHandler httpHandler(ObjectProvider<WebFluxProperties> propsProvider,
+				WebHttpHandlerBuilder webHttpHandlerBuilder) {
+			HttpHandler httpHandler = webHttpHandlerBuilder.build();
 			WebFluxProperties properties = propsProvider.getIfAvailable();
 			if (properties != null && StringUtils.hasText(properties.getBasePath())) {
 				Map<String, HttpHandler> handlersMap = Collections.singletonMap(properties.getBasePath(), httpHandler);

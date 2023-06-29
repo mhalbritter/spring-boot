@@ -16,12 +16,11 @@
 
 package org.springframework.boot.actuate.autoconfigure.observation.web.reactive;
 
-import java.util.List;
-
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.observation.ObservationRegistry;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import reactor.core.publisher.Mono;
 
 import org.springframework.boot.actuate.autoconfigure.metrics.MetricsAutoConfiguration;
 import org.springframework.boot.actuate.autoconfigure.metrics.test.MetricsRun;
@@ -29,22 +28,20 @@ import org.springframework.boot.actuate.autoconfigure.metrics.web.TestController
 import org.springframework.boot.actuate.autoconfigure.observation.ObservationAutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.web.reactive.WebFluxAutoConfiguration;
+import org.springframework.boot.autoconfigure.web.reactive.WebHttpHandlerBuilderCustomizer;
 import org.springframework.boot.test.context.assertj.AssertableReactiveWebApplicationContext;
 import org.springframework.boot.test.context.runner.ReactiveWebApplicationContextRunner;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
 import org.springframework.http.server.reactive.observation.DefaultServerRequestObservationConvention;
 import org.springframework.test.web.reactive.server.WebTestClient;
-import org.springframework.web.filter.reactive.ServerHttpObservationFilter;
-import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.server.WebFilter;
-import org.springframework.web.server.WebFilterChain;
+import org.springframework.web.server.WebHandler;
+import org.springframework.web.server.adapter.WebHttpHandlerBuilder;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 /**
  * Tests for {@link WebFluxObservationAutoConfiguration}
@@ -55,7 +52,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Moritz Halbritter
  */
 @ExtendWith(OutputCaptureExtension.class)
-@SuppressWarnings("removal")
 class WebFluxObservationAutoConfigurationTests {
 
 	private final ReactiveWebApplicationContextRunner contextRunner = new ReactiveWebApplicationContextRunner()
@@ -64,27 +60,29 @@ class WebFluxObservationAutoConfigurationTests {
 				AutoConfigurations.of(ObservationAutoConfiguration.class, WebFluxObservationAutoConfiguration.class));
 
 	@Test
-	void shouldProvideWebFluxObservationFilter() {
-		this.contextRunner.run((context) -> assertThat(context).hasSingleBean(ServerHttpObservationFilter.class));
-	}
-
-	@Test
-	void shouldProvideWebFluxObservationFilterOrdered() {
-		this.contextRunner.withBean(FirstWebFilter.class).withBean(ThirdWebFilter.class).run((context) -> {
-			List<WebFilter> webFilters = context.getBeanProvider(WebFilter.class).orderedStream().toList();
-			assertThat(webFilters.get(0)).isInstanceOf(FirstWebFilter.class);
-			assertThat(webFilters.get(1)).isInstanceOf(ServerHttpObservationFilter.class);
-			assertThat(webFilters.get(2)).isInstanceOf(ThirdWebFilter.class);
+	void shouldConfigureObservationRegistryOnHttpHandler() {
+		this.contextRunner.run((context) -> {
+			assertThat(context).hasSingleBean(ObservationRegistry.class);
+			ObservationRegistry observationRegistry = context.getBean(ObservationRegistry.class);
+			WebHttpHandlerBuilder builder = runCustomizer(context);
+			assertThat(builder).extracting("observationRegistry").isEqualTo(observationRegistry);
 		});
 	}
 
 	@Test
-	void shouldUseCustomConventionWhenAvailable() {
+	void shouldConfigureDefaultConventionOnHttpHandler() {
+		this.contextRunner.run((context) -> {
+			WebHttpHandlerBuilder builder = runCustomizer(context);
+			assertThat(builder).extracting("observationConvention")
+				.isInstanceOf(DefaultServerRequestObservationConvention.class);
+		});
+	}
+
+	@Test
+	void shouldConfigureCustomConventionOnHttpHandlerWhenAvailable() {
 		this.contextRunner.withUserConfiguration(CustomConventionConfiguration.class).run((context) -> {
-			assertThat(context).hasSingleBean(ServerHttpObservationFilter.class);
-			assertThat(context).getBean(ServerHttpObservationFilter.class)
-				.extracting("observationConvention")
-				.isInstanceOf(CustomConvention.class);
+			WebHttpHandlerBuilder builder = runCustomizer(context);
+			assertThat(builder).extracting("observationConvention").isInstanceOf(CustomConvention.class);
 		});
 	}
 
@@ -128,28 +126,24 @@ class WebFluxObservationAutoConfigurationTests {
 			});
 	}
 
-	@Test
-	void shouldUsePropertyForServerHttpObservationFilterOrder() {
-		this.contextRunner.withPropertyValues("management.observations.http.server.filter.order=1000")
-			.run((context) -> {
-				OrderedServerHttpObservationFilter bean = context.getBean(OrderedServerHttpObservationFilter.class);
-				assertThat(bean.getOrder()).isEqualTo(1000);
-			});
-	}
-
-	private MeterRegistry getInitializedMeterRegistry(AssertableReactiveWebApplicationContext context)
-			throws Exception {
+	private MeterRegistry getInitializedMeterRegistry(AssertableReactiveWebApplicationContext context) {
 		return getInitializedMeterRegistry(context, "/test0", "/test1", "/test2");
 	}
 
-	private MeterRegistry getInitializedMeterRegistry(AssertableReactiveWebApplicationContext context, String... urls)
-			throws Exception {
-		assertThat(context).hasSingleBean(ServerHttpObservationFilter.class);
+	private MeterRegistry getInitializedMeterRegistry(AssertableReactiveWebApplicationContext context, String... urls) {
 		WebTestClient client = WebTestClient.bindToApplicationContext(context).build();
 		for (String url : urls) {
 			client.get().uri(url).exchange().expectStatus().isOk();
 		}
 		return context.getBean(MeterRegistry.class);
+	}
+
+	private static WebHttpHandlerBuilder runCustomizer(AssertableReactiveWebApplicationContext context) {
+		assertThat(context).hasSingleBean(WebHttpHandlerBuilderCustomizer.class);
+		WebHttpHandlerBuilderCustomizer customizer = context.getBean(WebHttpHandlerBuilderCustomizer.class);
+		WebHttpHandlerBuilder builder = WebHttpHandlerBuilder.webHandler(mock(WebHandler.class));
+		customizer.customize(builder);
+		return builder;
 	}
 
 	@Configuration(proxyBeanMethods = false)
@@ -163,26 +157,6 @@ class WebFluxObservationAutoConfigurationTests {
 	}
 
 	static class CustomConvention extends DefaultServerRequestObservationConvention {
-
-	}
-
-	@Order(Ordered.HIGHEST_PRECEDENCE)
-	static class FirstWebFilter implements WebFilter {
-
-		@Override
-		public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-			return chain.filter(exchange);
-		}
-
-	}
-
-	@Order(Ordered.HIGHEST_PRECEDENCE + 2)
-	static class ThirdWebFilter implements WebFilter {
-
-		@Override
-		public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-			return chain.filter(exchange);
-		}
 
 	}
 

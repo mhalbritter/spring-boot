@@ -33,15 +33,15 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.boot.autoconfigure.web.reactive.WebHttpHandlerBuilderCustomizer;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.server.reactive.observation.DefaultServerRequestObservationConvention;
 import org.springframework.http.server.reactive.observation.ServerRequestObservationConvention;
-import org.springframework.web.filter.reactive.ServerHttpObservationFilter;
+import org.springframework.web.server.adapter.WebHttpHandlerBuilder;
 
 /**
  * {@link EnableAutoConfiguration Auto-configuration} for instrumentation of Spring
@@ -59,7 +59,6 @@ import org.springframework.web.filter.reactive.ServerHttpObservationFilter;
 @ConditionalOnBean(ObservationRegistry.class)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
 @EnableConfigurationProperties({ MetricsProperties.class, ObservationProperties.class })
-@SuppressWarnings("removal")
 public class WebFluxObservationAutoConfiguration {
 
 	private final ObservationProperties observationProperties;
@@ -69,14 +68,12 @@ public class WebFluxObservationAutoConfiguration {
 	}
 
 	@Bean
-	@ConditionalOnMissingBean(ServerHttpObservationFilter.class)
-	public OrderedServerHttpObservationFilter webfluxObservationFilter(ObservationRegistry registry,
+	WebFluxObservationWebHttpHandlerBuilderCustomizer webfluxObservation(ObservationRegistry registry,
 			ObjectProvider<ServerRequestObservationConvention> customConvention) {
 		String name = this.observationProperties.getHttp().getServer().getRequests().getName();
 		ServerRequestObservationConvention convention = customConvention
 			.getIfAvailable(() -> new DefaultServerRequestObservationConvention(name));
-		int order = this.observationProperties.getHttp().getServer().getFilter().getOrder();
-		return new OrderedServerHttpObservationFilter(registry, convention, order);
+		return new WebFluxObservationWebHttpHandlerBuilderCustomizer(registry, convention);
 	}
 
 	@Configuration(proxyBeanMethods = false)
@@ -93,6 +90,26 @@ public class WebFluxObservationAutoConfiguration {
 					() -> "Reached the maximum number of URI tags for '%s'.".formatted(name));
 			return MeterFilter.maximumAllowableTags(name, "uri", metricsProperties.getWeb().getServer().getMaxUriTags(),
 					filter);
+		}
+
+	}
+
+	private static final class WebFluxObservationWebHttpHandlerBuilderCustomizer
+			implements WebHttpHandlerBuilderCustomizer {
+
+		private final ObservationRegistry observationRegistry;
+
+		private final ServerRequestObservationConvention convention;
+
+		WebFluxObservationWebHttpHandlerBuilderCustomizer(ObservationRegistry observationRegistry,
+				ServerRequestObservationConvention convention) {
+			this.observationRegistry = observationRegistry;
+			this.convention = convention;
+		}
+
+		@Override
+		public void customize(WebHttpHandlerBuilder builder) {
+			builder.observationRegistry(this.observationRegistry).observationConvention(this.convention);
 		}
 
 	}
