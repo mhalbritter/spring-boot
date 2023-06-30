@@ -119,7 +119,8 @@ class WarIntegrationTests extends AbstractArchiveIntegrationTests {
 	void whenWarIsRepackagedWithOutputTimestampConfiguredThenLibrariesAreSorted(MavenBuild mavenBuild) {
 		mavenBuild.project("war-output-timestamp").execute((project) -> {
 			File repackaged = new File(project, "target/war-output-timestamp-0.0.1.BUILD-SNAPSHOT.war");
-			List<String> sortedLibs = Arrays.asList(
+			List<String> sortedLibs = Arrays.asList("WEB-INF/lib/micrometer-commons",
+					"WEB-INF/lib/micrometer-observation",
 					// these libraries are copied from the original war, sorted when
 					// packaged by Maven
 					"WEB-INF/lib/spring-aop", "WEB-INF/lib/spring-beans", "WEB-INF/lib/spring-context",

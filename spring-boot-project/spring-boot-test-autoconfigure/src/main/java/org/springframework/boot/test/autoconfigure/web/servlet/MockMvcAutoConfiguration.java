@@ -128,6 +128,7 @@ public class MockMvcAutoConfiguration {
 		}
 
 		@Override
+		@SuppressWarnings("removal")
 		public void customize(DispatcherServlet dispatcherServlet) {
 			dispatcherServlet.setDispatchOptionsRequest(this.webMvcProperties.isDispatchOptionsRequest());
 			dispatcherServlet.setDispatchTraceRequest(this.webMvcProperties.isDispatchTraceRequest());
