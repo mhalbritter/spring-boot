@@ -33,4 +33,6 @@ include::actuator/process-monitoring.adoc[]
 
 include::actuator/cloud-foundry.adoc[]
 
+include::actuator/opentelemetry.adoc[]
+
 include::actuator/whats-next.adoc[]
