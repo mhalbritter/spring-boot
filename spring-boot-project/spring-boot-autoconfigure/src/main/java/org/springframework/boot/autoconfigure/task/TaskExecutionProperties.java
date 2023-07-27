@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2019 the original author or authors.
+ * Copyright 2012-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,12 +32,18 @@ public class TaskExecutionProperties {
 
 	private final Pool pool = new Pool();
 
+	private final Simple simple = new Simple();
+
 	private final Shutdown shutdown = new Shutdown();
 
 	/**
 	 * Prefix to use for the names of newly created threads.
 	 */
 	private String threadNamePrefix = "task-";
+
+	public Simple getSimple() {
+		return this.simple;
+	}
 
 	public Pool getPool() {
 		return this.pool;
@@ -53,6 +59,37 @@ public class TaskExecutionProperties {
 
 	public void setThreadNamePrefix(String threadNamePrefix) {
 		this.threadNamePrefix = threadNamePrefix;
+	}
+
+	public static class Simple {
+
+		/**
+		 * Set the maximum number of parallel accesses allowed. -1 indicates no
+		 * concurrency limit at all.
+		 */
+		private Integer concurrencyLimit;
+
+		/**
+		 * Whether to use virtual threads.
+		 */
+		private Boolean virtualThreads;
+
+		public Integer getConcurrencyLimit() {
+			return this.concurrencyLimit;
+		}
+
+		public void setConcurrencyLimit(Integer concurrencyLimit) {
+			this.concurrencyLimit = concurrencyLimit;
+		}
+
+		public Boolean getVirtualThreads() {
+			return this.virtualThreads;
+		}
+
+		public void setVirtualThreads(Boolean virtualThreads) {
+			this.virtualThreads = virtualThreads;
+		}
+
 	}
 
 	public static class Pool {

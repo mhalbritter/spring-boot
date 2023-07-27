@@ -31,8 +31,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.task.TaskExecutorBuilder;
-import org.springframework.boot.task.TaskExecutorCustomizer;
+import org.springframework.boot.task.ThreadPoolTaskExecutorBuilder;
+import org.springframework.boot.task.ThreadPoolTaskExecutorCustomizer;
 import org.springframework.boot.test.context.assertj.AssertableApplicationContext;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.test.context.runner.ContextConsumer;
@@ -88,8 +88,8 @@ class TaskExecutionAutoConfigurationTests {
 	@Test
 	void taskExecutorBuilderWhenHasCustomBuilderShouldUseCustomBuilder() {
 		this.contextRunner.withUserConfiguration(CustomTaskExecutorBuilderConfig.class).run((context) -> {
-			assertThat(context).hasSingleBean(TaskExecutorBuilder.class);
-			assertThat(context.getBean(TaskExecutorBuilder.class))
+			assertThat(context).hasSingleBean(ThreadPoolTaskExecutorBuilder.class);
+			assertThat(context.getBean(ThreadPoolTaskExecutorBuilder.class))
 				.isSameAs(context.getBean(CustomTaskExecutorBuilderConfig.class).taskExecutorBuilder);
 		});
 	}
@@ -97,8 +97,8 @@ class TaskExecutionAutoConfigurationTests {
 	@Test
 	void taskExecutorBuilderShouldUseTaskDecorator() {
 		this.contextRunner.withUserConfiguration(TaskDecoratorConfig.class).run((context) -> {
-			assertThat(context).hasSingleBean(TaskExecutorBuilder.class);
-			ThreadPoolTaskExecutor executor = context.getBean(TaskExecutorBuilder.class).build();
+			assertThat(context).hasSingleBean(ThreadPoolTaskExecutorBuilder.class);
+			ThreadPoolTaskExecutor executor = context.getBean(ThreadPoolTaskExecutorBuilder.class).build();
 			assertThat(executor).extracting("taskDecorator").isSameAs(context.getBean(TaskDecorator.class));
 		});
 	}
@@ -182,8 +182,8 @@ class TaskExecutionAutoConfigurationTests {
 	@Test
 	void taskExecutorBuilderShouldApplyCustomizer() {
 		this.contextRunner.withUserConfiguration(TaskExecutorCustomizerConfig.class).run((context) -> {
-			TaskExecutorCustomizer customizer = context.getBean(TaskExecutorCustomizer.class);
-			ThreadPoolTaskExecutor executor = context.getBean(TaskExecutorBuilder.class).build();
+			ThreadPoolTaskExecutorCustomizer customizer = context.getBean(ThreadPoolTaskExecutorCustomizer.class);
+			ThreadPoolTaskExecutor executor = context.getBean(ThreadPoolTaskExecutorBuilder.class).build();
 			then(customizer).should().customize(executor);
 		});
 	}
@@ -215,8 +215,8 @@ class TaskExecutionAutoConfigurationTests {
 	private ContextConsumer<AssertableApplicationContext> assertTaskExecutor(
 			Consumer<ThreadPoolTaskExecutor> taskExecutor) {
 		return (context) -> {
-			assertThat(context).hasSingleBean(TaskExecutorBuilder.class);
-			TaskExecutorBuilder builder = context.getBean(TaskExecutorBuilder.class);
+			assertThat(context).hasSingleBean(ThreadPoolTaskExecutorBuilder.class);
+			ThreadPoolTaskExecutorBuilder builder = context.getBean(ThreadPoolTaskExecutorBuilder.class);
 			taskExecutor.accept(builder.build());
 		};
 	}
@@ -238,10 +238,10 @@ class TaskExecutionAutoConfigurationTests {
 	@Configuration(proxyBeanMethods = false)
 	static class CustomTaskExecutorBuilderConfig {
 
-		private final TaskExecutorBuilder taskExecutorBuilder = new TaskExecutorBuilder();
+		private final ThreadPoolTaskExecutorBuilder taskExecutorBuilder = new ThreadPoolTaskExecutorBuilder();
 
 		@Bean
-		TaskExecutorBuilder customTaskExecutorBuilder() {
+		ThreadPoolTaskExecutorBuilder customTaskExecutorBuilder() {
 			return this.taskExecutorBuilder;
 		}
 
@@ -251,8 +251,8 @@ class TaskExecutionAutoConfigurationTests {
 	static class TaskExecutorCustomizerConfig {
 
 		@Bean
-		TaskExecutorCustomizer mockTaskExecutorCustomizer() {
-			return mock(TaskExecutorCustomizer.class);
+		ThreadPoolTaskExecutorCustomizer mockTaskExecutorCustomizer() {
+			return mock(ThreadPoolTaskExecutorCustomizer.class);
 		}
 
 	}

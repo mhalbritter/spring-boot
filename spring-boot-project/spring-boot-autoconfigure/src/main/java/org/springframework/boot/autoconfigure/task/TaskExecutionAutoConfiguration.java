@@ -23,8 +23,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.task.TaskExecutionProperties.Shutdown;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.task.TaskExecutorBuilder;
-import org.springframework.boot.task.TaskExecutorCustomizer;
+import org.springframework.boot.task.SimpleAsyncTaskExecutorBuilder;
+import org.springframework.boot.task.SimpleAsyncTaskExecutorCustomizer;
+import org.springframework.boot.task.ThreadPoolTaskExecutorBuilder;
+import org.springframework.boot.task.ThreadPoolTaskExecutorCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.task.TaskDecorator;
@@ -52,11 +54,11 @@ public class TaskExecutionAutoConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean
-	public TaskExecutorBuilder taskExecutorBuilder(TaskExecutionProperties properties,
-			ObjectProvider<TaskExecutorCustomizer> taskExecutorCustomizers,
+	public ThreadPoolTaskExecutorBuilder threadPoolTaskExecutorBuilder(TaskExecutionProperties properties,
+			ObjectProvider<ThreadPoolTaskExecutorCustomizer> taskExecutorCustomizers,
 			ObjectProvider<TaskDecorator> taskDecorator) {
 		TaskExecutionProperties.Pool pool = properties.getPool();
-		TaskExecutorBuilder builder = new TaskExecutorBuilder();
+		ThreadPoolTaskExecutorBuilder builder = new ThreadPoolTaskExecutorBuilder();
 		builder = builder.queueCapacity(pool.getQueueCapacity());
 		builder = builder.corePoolSize(pool.getCoreSize());
 		builder = builder.maxPoolSize(pool.getMaxSize());
@@ -68,6 +70,24 @@ public class TaskExecutionAutoConfiguration {
 		builder = builder.threadNamePrefix(properties.getThreadNamePrefix());
 		builder = builder.customizers(taskExecutorCustomizers.orderedStream()::iterator);
 		builder = builder.taskDecorator(taskDecorator.getIfUnique());
+		return builder;
+	}
+
+	// TODO: Do we want to provide both? If not, which one do we provide when?
+	// They both implement TaskExecutorBuilder, which means there are now 2 beans of type
+	// TaskExecutorBuilder
+	@Bean
+	@ConditionalOnMissingBean
+	SimpleAsyncTaskExecutorBuilder simpleAsyncTaskExecutorBuilder(TaskExecutionProperties properties,
+			ObjectProvider<SimpleAsyncTaskExecutorCustomizer> taskExecutorCustomizers,
+			ObjectProvider<TaskDecorator> taskDecorator) {
+		SimpleAsyncTaskExecutorBuilder builder = new SimpleAsyncTaskExecutorBuilder();
+		builder = builder.threadNamePrefix(properties.getThreadNamePrefix());
+		builder = builder.customizers(taskExecutorCustomizers.orderedStream()::iterator);
+		builder = builder.taskDecorator(taskDecorator.getIfUnique());
+		TaskExecutionProperties.Simple simple = properties.getSimple();
+		builder = builder.virtualThreads(simple.getVirtualThreads());
+		builder = builder.concurrencyLimit(simple.getConcurrencyLimit());
 		return builder;
 	}
 

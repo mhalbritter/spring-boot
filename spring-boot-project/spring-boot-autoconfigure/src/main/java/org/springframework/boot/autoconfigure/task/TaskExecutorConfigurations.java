@@ -18,15 +18,14 @@ package org.springframework.boot.autoconfigure.task;
 
 import java.util.concurrent.Executor;
 
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnVirtualThreads;
-import org.springframework.boot.task.TaskExecutorBuilder;
+import org.springframework.boot.task.SimpleAsyncTaskExecutorBuilder;
+import org.springframework.boot.task.ThreadPoolTaskExecutorBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
-import org.springframework.core.task.TaskDecorator;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.AsyncAnnotationBeanPostProcessor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -46,12 +45,8 @@ class TaskExecutorConfigurations {
 
 		@Bean(name = { TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME,
 				AsyncAnnotationBeanPostProcessor.DEFAULT_TASK_EXECUTOR_BEAN_NAME })
-		SimpleAsyncTaskExecutor applicationTaskExecutor(TaskExecutionProperties properties,
-				ObjectProvider<TaskDecorator> taskDecorator) {
-			SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor(properties.getThreadNamePrefix());
-			executor.setVirtualThreads(true);
-			taskDecorator.ifUnique(executor::setTaskDecorator);
-			return executor;
+		SimpleAsyncTaskExecutor applicationTaskExecutor(SimpleAsyncTaskExecutorBuilder builder) {
+			return builder.virtualThreads(true).build();
 		}
 
 	}
@@ -63,7 +58,7 @@ class TaskExecutorConfigurations {
 		@Lazy
 		@Bean(name = { TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME,
 				AsyncAnnotationBeanPostProcessor.DEFAULT_TASK_EXECUTOR_BEAN_NAME })
-		ThreadPoolTaskExecutor applicationTaskExecutor(TaskExecutorBuilder builder) {
+		ThreadPoolTaskExecutor applicationTaskExecutor(ThreadPoolTaskExecutorBuilder builder) {
 			return builder.build();
 		}
 

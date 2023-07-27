@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2019 the original author or authors.
+ * Copyright 2012-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +16,23 @@
 
 package org.springframework.boot.task;
 
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 
 /**
- * Callback interface that can be used to customize a {@link ThreadPoolTaskExecutor}.
+ * Callback interface that can be used to customize a {@link SimpleAsyncTaskExecutor}.
  *
  * @author Stephane Nicoll
- * @since 2.1.0
- * @see TaskExecutorBuilder
+ * @author Moritz Halbritter
+ * @since 3.2.0
+ * @see SimpleAsyncTaskExecutorBuilder
  */
 @FunctionalInterface
-public interface TaskExecutorCustomizer {
+public interface SimpleAsyncTaskExecutorCustomizer {
 
 	/**
-	 * Callback to customize a {@link ThreadPoolTaskExecutor} instance.
+	 * Callback to customize a {@link SimpleAsyncTaskExecutor} instance.
 	 * @param taskExecutor the task executor to customize
 	 */
-	void customize(ThreadPoolTaskExecutor taskExecutor);
+	void customize(SimpleAsyncTaskExecutor taskExecutor);
 
 }
