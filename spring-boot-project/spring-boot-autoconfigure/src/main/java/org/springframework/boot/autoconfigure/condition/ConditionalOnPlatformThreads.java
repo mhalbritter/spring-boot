@@ -22,22 +22,19 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.springframework.boot.system.JavaVersion;
 import org.springframework.context.annotation.Conditional;
 
 /**
- * {@link Conditional @Conditional} that only matches when virtual threads are available
- * and enabled.
+ * {@link Conditional @Conditional} that only matches when platform threads are enabled.
  *
  * @author Moritz Halbritter
  * @since 3.2.0
- * @see ConditionalOnPlatformThreads
+ * @see ConditionalOnVirtualThreads
  */
 @Target({ ElementType.TYPE, ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@ConditionalOnJava(JavaVersion.TWENTY_ONE)
-@ConditionalOnProperty(name = "spring.threads.virtual.enabled", havingValue = "true")
-public @interface ConditionalOnVirtualThreads {
+@Conditional(OnPlatformThreadsCondition.class)
+public @interface ConditionalOnPlatformThreads {
 
 }

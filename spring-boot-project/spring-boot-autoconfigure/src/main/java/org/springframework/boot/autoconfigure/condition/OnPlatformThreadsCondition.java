@@ -14,7 +14,25 @@
  * limitations under the License.
  */
 
+package org.springframework.boot.autoconfigure.condition;
+
+import org.springframework.context.annotation.Condition;
+
 /**
- * Classes related to threads.
+ * {@link Condition} that checks if platform threads should be used.
+ *
+ * @author Moritz Halbritter
+ * @see ConditionalOnVirtualThreads
  */
-package org.springframework.boot.autoconfigure.thread;
+class OnPlatformThreadsCondition extends NoneNestedConditions {
+
+	OnPlatformThreadsCondition() {
+		super(ConfigurationPhase.PARSE_CONFIGURATION);
+	}
+
+	@ConditionalOnVirtualThreads
+	static class VirtualThreadsCondition {
+
+	}
+
+}
