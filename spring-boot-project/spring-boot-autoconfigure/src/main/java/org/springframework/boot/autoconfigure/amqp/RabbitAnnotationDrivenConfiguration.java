@@ -29,16 +29,19 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnPlatformThreads;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.thread.VirtualThreads;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnVirtualThreads;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.VirtualThreadTaskExecutor;
 
 /**
  * Configuration for Spring AMQP annotation driven endpoints.
  *
  * @author Stephane Nicoll
  * @author Josh Thornhill
+ * @author Moritz Halbritter
  */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnClass(EnableRabbit.class)
@@ -52,28 +55,28 @@ class RabbitAnnotationDrivenConfiguration {
 
 	private final RabbitProperties properties;
 
-	private final ObjectProvider<VirtualThreads> virtualThreads;
-
 	RabbitAnnotationDrivenConfiguration(ObjectProvider<MessageConverter> messageConverter,
 			ObjectProvider<MessageRecoverer> messageRecoverer,
-			ObjectProvider<RabbitRetryTemplateCustomizer> retryTemplateCustomizers, RabbitProperties properties,
-			ObjectProvider<VirtualThreads> virtualThreads) {
+			ObjectProvider<RabbitRetryTemplateCustomizer> retryTemplateCustomizers, RabbitProperties properties) {
 		this.messageConverter = messageConverter;
 		this.messageRecoverer = messageRecoverer;
 		this.retryTemplateCustomizers = retryTemplateCustomizers;
 		this.properties = properties;
-		this.virtualThreads = virtualThreads;
 	}
 
 	@Bean
 	@ConditionalOnMissingBean
+	@ConditionalOnPlatformThreads
 	SimpleRabbitListenerContainerFactoryConfigurer simpleRabbitListenerContainerFactoryConfigurer() {
-		SimpleRabbitListenerContainerFactoryConfigurer configurer = new SimpleRabbitListenerContainerFactoryConfigurer(
-				this.properties);
-		configurer.setMessageConverter(this.messageConverter.getIfUnique());
-		configurer.setMessageRecoverer(this.messageRecoverer.getIfUnique());
-		configurer.setRetryTemplateCustomizers(this.retryTemplateCustomizers.orderedStream().toList());
-		this.virtualThreads.ifAvailable((virtualThreads) -> configurer.setTaskExecutor(virtualThreads.getExecutor()));
+		return simpleListenerConfigurer();
+	}
+
+	@Bean(name = "simpleRabbitListenerContainerFactoryConfigurer")
+	@ConditionalOnMissingBean
+	@ConditionalOnVirtualThreads
+	SimpleRabbitListenerContainerFactoryConfigurer simpleRabbitListenerContainerFactoryConfigurerVirtualThreads() {
+		SimpleRabbitListenerContainerFactoryConfigurer configurer = simpleListenerConfigurer();
+		configurer.setTaskExecutor(new VirtualThreadTaskExecutor());
 		return configurer;
 	}
 
@@ -92,13 +95,17 @@ class RabbitAnnotationDrivenConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean
+	@ConditionalOnPlatformThreads
 	DirectRabbitListenerContainerFactoryConfigurer directRabbitListenerContainerFactoryConfigurer() {
-		DirectRabbitListenerContainerFactoryConfigurer configurer = new DirectRabbitListenerContainerFactoryConfigurer(
-				this.properties);
-		configurer.setMessageConverter(this.messageConverter.getIfUnique());
-		configurer.setMessageRecoverer(this.messageRecoverer.getIfUnique());
-		configurer.setRetryTemplateCustomizers(this.retryTemplateCustomizers.orderedStream().toList());
-		this.virtualThreads.ifAvailable((virtualThreads) -> configurer.setTaskExecutor(virtualThreads.getExecutor()));
+		return directListenerConfigurer();
+	}
+
+	@Bean(name = "directRabbitListenerContainerFactoryConfigurer")
+	@ConditionalOnMissingBean
+	@ConditionalOnVirtualThreads
+	DirectRabbitListenerContainerFactoryConfigurer directRabbitListenerContainerFactoryConfigurerVirtualThreads() {
+		DirectRabbitListenerContainerFactoryConfigurer configurer = directListenerConfigurer();
+		configurer.setTaskExecutor(new VirtualThreadTaskExecutor());
 		return configurer;
 	}
 
@@ -112,6 +119,24 @@ class RabbitAnnotationDrivenConfiguration {
 		configurer.configure(factory, connectionFactory);
 		directContainerCustomizer.ifUnique(factory::setContainerCustomizer);
 		return factory;
+	}
+
+	private SimpleRabbitListenerContainerFactoryConfigurer simpleListenerConfigurer() {
+		SimpleRabbitListenerContainerFactoryConfigurer configurer = new SimpleRabbitListenerContainerFactoryConfigurer(
+				this.properties);
+		configurer.setMessageConverter(this.messageConverter.getIfUnique());
+		configurer.setMessageRecoverer(this.messageRecoverer.getIfUnique());
+		configurer.setRetryTemplateCustomizers(this.retryTemplateCustomizers.orderedStream().toList());
+		return configurer;
+	}
+
+	private DirectRabbitListenerContainerFactoryConfigurer directListenerConfigurer() {
+		DirectRabbitListenerContainerFactoryConfigurer configurer = new DirectRabbitListenerContainerFactoryConfigurer(
+				this.properties);
+		configurer.setMessageConverter(this.messageConverter.getIfUnique());
+		configurer.setMessageRecoverer(this.messageRecoverer.getIfUnique());
+		configurer.setRetryTemplateCustomizers(this.retryTemplateCustomizers.orderedStream().toList());
+		return configurer;
 	}
 
 	@Configuration(proxyBeanMethods = false)
