@@ -25,6 +25,8 @@ import org.springframework.boot.autoconfigure.task.TaskExecutionProperties.Shutd
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.task.TaskExecutorBuilder;
 import org.springframework.boot.task.TaskExecutorCustomizer;
+import org.springframework.boot.task.ThreadPoolTaskExecutorBuilder;
+import org.springframework.boot.task.ThreadPoolTaskExecutorCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.task.TaskDecorator;
@@ -36,6 +38,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
  *
  * @author Stephane Nicoll
  * @author Camille Vienot
+ * @author Moritz Halbritter
  * @since 2.1.0
  */
 @ConditionalOnClass(ThreadPoolTaskExecutor.class)
@@ -43,6 +46,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @EnableConfigurationProperties(TaskExecutionProperties.class)
 @Import({ TaskExecutorConfigurations.VirtualThreadTaskExecutorConfiguration.class,
 		TaskExecutorConfigurations.ThreadPoolTaskExecutorConfiguration.class })
+@SuppressWarnings("removal")
 public class TaskExecutionAutoConfiguration {
 
 	/**
@@ -52,11 +56,12 @@ public class TaskExecutionAutoConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean
+	@Deprecated(since = "3.2.0", forRemoval = true)
 	public TaskExecutorBuilder taskExecutorBuilder(TaskExecutionProperties properties,
 			ObjectProvider<TaskExecutorCustomizer> taskExecutorCustomizers,
 			ObjectProvider<TaskDecorator> taskDecorator) {
 		TaskExecutionProperties.Pool pool = properties.getPool();
-		TaskExecutorBuilder builder = new TaskExecutorBuilder();
+		TaskExecutorBuilder builder = new TaskExecutorBuilder(true);
 		builder = builder.queueCapacity(pool.getQueueCapacity());
 		builder = builder.corePoolSize(pool.getCoreSize());
 		builder = builder.maxPoolSize(pool.getMaxSize());
@@ -69,6 +74,34 @@ public class TaskExecutionAutoConfiguration {
 		builder = builder.customizers(taskExecutorCustomizers.orderedStream()::iterator);
 		builder = builder.taskDecorator(taskDecorator.getIfUnique());
 		return builder;
+	}
+
+	@Bean
+	@ConditionalOnMissingBean
+	ThreadPoolTaskExecutorBuilder threadPoolTaskExecutorBuilder(TaskExecutionProperties properties,
+			ObjectProvider<ThreadPoolTaskExecutorCustomizer> threadPoolTaskExecutorCustomizers,
+			ObjectProvider<TaskExecutorCustomizer> taskExecutorCustomizers,
+			ObjectProvider<TaskDecorator> taskDecorator) {
+		TaskExecutionProperties.Pool pool = properties.getPool();
+		ThreadPoolTaskExecutorBuilder builder = new ThreadPoolTaskExecutorBuilder();
+		builder = builder.queueCapacity(pool.getQueueCapacity());
+		builder = builder.corePoolSize(pool.getCoreSize());
+		builder = builder.maxPoolSize(pool.getMaxSize());
+		builder = builder.allowCoreThreadTimeOut(pool.isAllowCoreThreadTimeout());
+		builder = builder.keepAlive(pool.getKeepAlive());
+		Shutdown shutdown = properties.getShutdown();
+		builder = builder.awaitTermination(shutdown.isAwaitTermination());
+		builder = builder.awaitTerminationPeriod(shutdown.getAwaitTerminationPeriod());
+		builder = builder.threadNamePrefix(properties.getThreadNamePrefix());
+		builder = builder.customizers(threadPoolTaskExecutorCustomizers.orderedStream()::iterator);
+		builder = builder.taskDecorator(taskDecorator.getIfUnique());
+		// Apply the deprecated TaskExecutorCustomizers, too
+		builder = builder.additionalCustomizers(taskExecutorCustomizers.orderedStream().map(this::adapt).toList());
+		return builder;
+	}
+
+	private ThreadPoolTaskExecutorCustomizer adapt(TaskExecutorCustomizer customizer) {
+		return customizer::customize;
 	}
 
 }

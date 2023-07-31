@@ -23,6 +23,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnThreading;
 import org.springframework.boot.autoconfigure.thread.Threading;
 import org.springframework.boot.task.TaskExecutorBuilder;
+import org.springframework.boot.task.ThreadPoolTaskExecutorBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
@@ -37,6 +38,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
  * {@link TaskExecutionAutoConfiguration} in a specific order.
  *
  * @author Andy Wilkinson
+ * @author Moritz Halbritter
  */
 class TaskExecutorConfigurations {
 
@@ -59,13 +61,22 @@ class TaskExecutorConfigurations {
 
 	@Configuration(proxyBeanMethods = false)
 	@ConditionalOnMissingBean(Executor.class)
+	@SuppressWarnings("removal")
 	static class ThreadPoolTaskExecutorConfiguration {
 
 		@Lazy
 		@Bean(name = { TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME,
 				AsyncAnnotationBeanPostProcessor.DEFAULT_TASK_EXECUTOR_BEAN_NAME })
-		ThreadPoolTaskExecutor applicationTaskExecutor(TaskExecutorBuilder builder) {
-			return builder.build();
+		ThreadPoolTaskExecutor applicationTaskExecutor(TaskExecutorBuilder taskExecutorBuilder,
+				ThreadPoolTaskExecutorBuilder threadPoolTaskExecutorBuilder) {
+			// If a user has provided their own (deprecated) TaskExecutorBuilder, use it
+			// for task execution
+			if (!taskExecutorBuilder.isDefaultFromAutoConfiguration()) {
+				return taskExecutorBuilder.build();
+			}
+			// Otherwise, use the new ThreadPoolTaskExecutorBuilder, which also applies
+			// the deprecated customizers
+			return threadPoolTaskExecutorBuilder.build();
 		}
 
 	}
