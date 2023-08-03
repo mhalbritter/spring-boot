@@ -18,25 +18,31 @@ package org.springframework.boot.autoconfigure.rsocket;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.ssl.SslAutoConfiguration;
 import org.springframework.boot.rsocket.context.RSocketPortInfoApplicationContextInitializer;
 import org.springframework.boot.rsocket.context.RSocketServerBootstrap;
+import org.springframework.boot.rsocket.netty.NettyRSocketServerFactory;
 import org.springframework.boot.rsocket.server.RSocketServerCustomizer;
 import org.springframework.boot.rsocket.server.RSocketServerFactory;
 import org.springframework.boot.ssl.NoSuchSslBundleException;
 import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.test.context.runner.ReactiveWebApplicationContextRunner;
+import org.springframework.boot.testsupport.assertj.SimpleAsyncTaskExecutorAssert;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.codec.CharSequenceEncoder;
 import org.springframework.core.codec.StringDecoder;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.http.client.reactive.ReactorResourceFactory;
 import org.springframework.messaging.rsocket.RSocketStrategies;
 import org.springframework.messaging.rsocket.annotation.support.RSocketMessageHandler;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.util.unit.DataSize;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,6 +54,7 @@ import static org.mockito.Mockito.mock;
  * @author Brian Clozel
  * @author Verónica Vásquez
  * @author Scott Frederick
+ * @author Moritz Halbritter
  */
 class RSocketServerAutoConfigurationTests {
 
@@ -185,6 +192,20 @@ class RSocketServerAutoConfigurationTests {
 		contextRunner().withClassLoader(new FilteredClassLoader(ReactorResourceFactory.class))
 			.withPropertyValues("spring.rsocket.server.port=0")
 			.run((context) -> assertThat(context).doesNotHaveBean(RSocketServerFactory.class));
+	}
+
+	@Test
+	@EnabledForJreRange(min = JRE.JAVA_21)
+	void shouldUseVirtualThreadsIfEnabled() {
+		reactiveWebContextRunner()
+			.withPropertyValues("spring.rsocket.server.port=0", "spring.threads.virtual.enabled=true")
+			.run((context) -> {
+				NettyRSocketServerFactory factory = context.getBean(NettyRSocketServerFactory.class);
+				assertThat(factory).isNotNull();
+				Object taskExecutor = ReflectionTestUtils.getField(factory, "taskExecutor");
+				assertThat(taskExecutor).as("NettyRSocketServerFactory.taskExecutor").isNotNull();
+				SimpleAsyncTaskExecutorAssert.assertThat((SimpleAsyncTaskExecutor) taskExecutor).usesVirtualThreads();
+			});
 	}
 
 	private ApplicationContextRunner contextRunner() {

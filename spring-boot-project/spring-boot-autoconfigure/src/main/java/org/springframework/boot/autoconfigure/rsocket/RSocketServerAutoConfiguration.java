@@ -32,9 +32,11 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnThreading;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.reactor.netty.ReactorNettyConfigurations;
 import org.springframework.boot.autoconfigure.rsocket.RSocketProperties.Server.Spec;
+import org.springframework.boot.autoconfigure.thread.Threading;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.PropertyMapper;
 import org.springframework.boot.rsocket.context.RSocketServerBootstrap;
@@ -47,6 +49,7 @@ import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.io.buffer.NettyDataBufferFactory;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.http.client.reactive.ReactorResourceFactory;
 import org.springframework.messaging.rsocket.RSocketStrategies;
 import org.springframework.messaging.rsocket.annotation.support.RSocketMessageHandler;
@@ -61,6 +64,7 @@ import org.springframework.util.unit.DataSize;
  *
  * @author Brian Clozel
  * @author Scott Frederick
+ * @author Moritz Halbritter
  * @since 2.2.0
  */
 @AutoConfiguration(after = RSocketStrategiesAutoConfiguration.class)
@@ -102,18 +106,22 @@ public class RSocketServerAutoConfiguration {
 
 		@Bean
 		@ConditionalOnMissingBean
+		@ConditionalOnThreading(Threading.PLATFORM)
 		RSocketServerFactory rSocketServerFactory(RSocketProperties properties, ReactorResourceFactory resourceFactory,
 				ObjectProvider<RSocketServerCustomizer> customizers, ObjectProvider<SslBundles> sslBundles) {
-			NettyRSocketServerFactory factory = new NettyRSocketServerFactory();
-			factory.setResourceFactory(resourceFactory);
-			factory.setTransport(properties.getServer().getTransport());
-			PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
-			map.from(properties.getServer().getAddress()).to(factory::setAddress);
-			map.from(properties.getServer().getPort()).to(factory::setPort);
-			map.from(properties.getServer().getFragmentSize()).to(factory::setFragmentSize);
-			map.from(properties.getServer().getSsl()).to(factory::setSsl);
-			factory.setSslBundles(sslBundles.getIfAvailable());
-			factory.setRSocketServerCustomizers(customizers.orderedStream().toList());
+			return factory(properties, resourceFactory, customizers, sslBundles);
+		}
+
+		@Bean(name = "rSocketServerFactory")
+		@ConditionalOnMissingBean
+		@ConditionalOnThreading(Threading.VIRTUAL)
+		RSocketServerFactory rSocketServerFactoryVirtualThreads(RSocketProperties properties,
+				ReactorResourceFactory resourceFactory, ObjectProvider<RSocketServerCustomizer> customizers,
+				ObjectProvider<SslBundles> sslBundles) {
+			NettyRSocketServerFactory factory = factory(properties, resourceFactory, customizers, sslBundles);
+			SimpleAsyncTaskExecutor taskExecutor = new SimpleAsyncTaskExecutor("rsocket-");
+			taskExecutor.setVirtualThreads(true);
+			factory.setTaskExecutor(taskExecutor);
 			return factory;
 		}
 
@@ -132,6 +140,22 @@ public class RSocketServerAutoConfiguration {
 					server.payloadDecoder(PayloadDecoder.ZERO_COPY);
 				}
 			};
+		}
+
+		private static NettyRSocketServerFactory factory(RSocketProperties properties,
+				ReactorResourceFactory resourceFactory, ObjectProvider<RSocketServerCustomizer> customizers,
+				ObjectProvider<SslBundles> sslBundles) {
+			NettyRSocketServerFactory factory = new NettyRSocketServerFactory();
+			factory.setResourceFactory(resourceFactory);
+			factory.setTransport(properties.getServer().getTransport());
+			PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
+			map.from(properties.getServer().getAddress()).to(factory::setAddress);
+			map.from(properties.getServer().getPort()).to(factory::setPort);
+			map.from(properties.getServer().getFragmentSize()).to(factory::setFragmentSize);
+			map.from(properties.getServer().getSsl()).to(factory::setSsl);
+			factory.setSslBundles(sslBundles.getIfAvailable());
+			factory.setRSocketServerCustomizers(customizers.orderedStream().toList());
+			return factory;
 		}
 
 	}

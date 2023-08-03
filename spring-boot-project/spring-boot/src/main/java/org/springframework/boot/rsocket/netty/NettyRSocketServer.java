@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2019 the original author or authors.
+ * Copyright 2012-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,8 @@ import reactor.core.publisher.Mono;
 
 import org.springframework.boot.rsocket.server.RSocketServer;
 import org.springframework.boot.rsocket.server.RSocketServerException;
+import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.util.Assert;
 
 /**
@@ -33,6 +35,7 @@ import org.springframework.util.Assert;
  * should be created using the {@link NettyRSocketServerFactory} and not directly.
  *
  * @author Brian Clozel
+ * @author Moritz Halbritter
  * @since 2.2.0
  */
 public class NettyRSocketServer implements RSocketServer {
@@ -43,12 +46,36 @@ public class NettyRSocketServer implements RSocketServer {
 
 	private final Duration lifecycleTimeout;
 
+	private final AsyncTaskExecutor taskExecutor;
+
 	private CloseableChannel channel;
 
+	/**
+	 * Creates a new {@link NettyRSocketServer} using a {@link SimpleAsyncTaskExecutor}.
+	 * @param starter the signal to start
+	 * @param lifecycleTimeout the timeout to wait for the start signal
+	 * @deprecated since 3.2.0 for removal in 3.4.0 in favor of
+	 * {@link #NettyRSocketServer(Mono, Duration, AsyncTaskExecutor)}
+	 */
+	@Deprecated(since = "3.2.0", forRemoval = true)
 	public NettyRSocketServer(Mono<CloseableChannel> starter, Duration lifecycleTimeout) {
+		this(starter, lifecycleTimeout, new SimpleAsyncTaskExecutor("rsocket-"));
+	}
+
+	/**
+	 * Creates a new {@link NettyRSocketServer} using a {@link SimpleAsyncTaskExecutor}.
+	 * @param starter the signal to start
+	 * @param lifecycleTimeout the timeout to wait for the start signal
+	 * @param taskExecutor the task executor to run background tasks
+	 * @since 3.2.0
+	 */
+	public NettyRSocketServer(Mono<CloseableChannel> starter, Duration lifecycleTimeout,
+			AsyncTaskExecutor taskExecutor) {
 		Assert.notNull(starter, "starter must not be null");
+		Assert.notNull(taskExecutor, "taskExecutor must not be null");
 		this.starter = starter;
 		this.lifecycleTimeout = lifecycleTimeout;
+		this.taskExecutor = taskExecutor;
 	}
 
 	@Override
@@ -67,10 +94,7 @@ public class NettyRSocketServer implements RSocketServer {
 	}
 
 	private void startDaemonAwaitThread(CloseableChannel channel) {
-		Thread awaitThread = new Thread(() -> channel.onClose().block(), "rsocket");
-		awaitThread.setContextClassLoader(getClass().getClassLoader());
-		awaitThread.setDaemon(false);
-		awaitThread.start();
+		this.taskExecutor.execute(() -> channel.onClose().block());
 	}
 
 	@Override

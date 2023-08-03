@@ -21,6 +21,7 @@ import java.net.InetAddress;
 import org.springframework.boot.ssl.SslBundles;
 import org.springframework.boot.web.server.Ssl;
 import org.springframework.boot.web.server.SslStoreProvider;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.util.unit.DataSize;
 
 /**
@@ -28,6 +29,7 @@ import org.springframework.util.unit.DataSize;
  *
  * @author Brian Clozel
  * @author Scott Frederick
+ * @author Moritz Halbritter
  * @since 2.2.0
  */
 public interface ConfigurableRSocketServerFactory {
@@ -81,5 +83,12 @@ public interface ConfigurableRSocketServerFactory {
 	 * @since 3.1.0
 	 */
 	void setSslBundles(SslBundles sslBundles);
+
+	/**
+	 * Sets the task executor to run tasks in the background.
+	 * @param taskExecutor the task executor
+	 * @since 3.2.0
+	 */
+	void setTaskExecutor(AsyncTaskExecutor taskExecutor);
 
 }

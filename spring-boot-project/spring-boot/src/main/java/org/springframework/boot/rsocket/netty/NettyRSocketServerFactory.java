@@ -45,6 +45,8 @@ import org.springframework.boot.web.embedded.netty.SslServerCustomizer;
 import org.springframework.boot.web.server.Ssl;
 import org.springframework.boot.web.server.SslStoreProvider;
 import org.springframework.boot.web.server.WebServerSslBundle;
+import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.http.client.reactive.ReactorResourceFactory;
 import org.springframework.util.Assert;
 import org.springframework.util.unit.DataSize;
@@ -56,6 +58,7 @@ import org.springframework.util.unit.DataSize;
  * @author Brian Clozel
  * @author Chris Bono
  * @author Scott Frederick
+ * @author Moritz Halbritter
  * @since 2.2.0
  */
 @SuppressWarnings("removal")
@@ -80,6 +83,8 @@ public class NettyRSocketServerFactory implements RSocketServerFactory, Configur
 	private SslStoreProvider sslStoreProvider;
 
 	private SslBundles sslBundles;
+
+	private AsyncTaskExecutor taskExecutor = new SimpleAsyncTaskExecutor("rsocket-");
 
 	@Override
 	public void setPort(int port) {
@@ -114,6 +119,11 @@ public class NettyRSocketServerFactory implements RSocketServerFactory, Configur
 	@Override
 	public void setSslBundles(SslBundles sslBundles) {
 		this.sslBundles = sslBundles;
+	}
+
+	@Override
+	public void setTaskExecutor(AsyncTaskExecutor taskExecutor) {
+		this.taskExecutor = taskExecutor;
 	}
 
 	/**
@@ -162,7 +172,7 @@ public class NettyRSocketServerFactory implements RSocketServerFactory, Configur
 		io.rsocket.core.RSocketServer server = io.rsocket.core.RSocketServer.create(socketAcceptor);
 		configureServer(server);
 		Mono<CloseableChannel> starter = server.bind(transport);
-		return new NettyRSocketServer(starter, this.lifecycleTimeout);
+		return new NettyRSocketServer(starter, this.lifecycleTimeout, this.taskExecutor);
 	}
 
 	private void configureServer(io.rsocket.core.RSocketServer server) {
