@@ -35,6 +35,12 @@ public enum Threading {
 		public boolean isActive(Environment environment) {
 			return !VIRTUAL.isActive(environment);
 		}
+
+		@Override
+		public boolean isAvailable() {
+			return true;
+		}
+
 	},
 	/**
 	 * Virtual threads. Active if {@code spring.threads.virtual.enabled} is {@code true}
@@ -45,8 +51,14 @@ public enum Threading {
 		public boolean isActive(Environment environment) {
 			boolean virtualThreadsEnabled = environment.getProperty("spring.threads.virtual.enabled", boolean.class,
 					false);
-			return virtualThreadsEnabled && JavaVersion.getJavaVersion().isEqualOrNewerThan(JavaVersion.TWENTY_ONE);
+			return isAvailable() && virtualThreadsEnabled;
 		}
+
+		@Override
+		public boolean isAvailable() {
+			return JavaVersion.getJavaVersion().isEqualOrNewerThan(JavaVersion.TWENTY_ONE);
+		}
+
 	};
 
 	/**
@@ -55,5 +67,11 @@ public enum Threading {
 	 * @return whether the threading is active
 	 */
 	public abstract boolean isActive(Environment environment);
+
+	/**
+	 * Determines whether the threading is available.
+	 * @return whether the threading is available
+	 */
+	public abstract boolean isAvailable();
 
 }
