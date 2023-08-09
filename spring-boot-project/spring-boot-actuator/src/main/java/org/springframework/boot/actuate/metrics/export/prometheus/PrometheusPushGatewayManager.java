@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.SimpleAsyncTaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.util.Assert;
 
@@ -71,7 +72,7 @@ public class PrometheusPushGatewayManager {
 	 */
 	public PrometheusPushGatewayManager(PushGateway pushGateway, CollectorRegistry registry, Duration pushRate,
 			String job, Map<String, String> groupingKeys, ShutdownOperation shutdownOperation) {
-		this(pushGateway, registry, new PushGatewayTaskScheduler(), pushRate, job, groupingKeys, shutdownOperation);
+		this(pushGateway, registry, createDefaultScheduler(), pushRate, job, groupingKeys, shutdownOperation);
 	}
 
 	/**
@@ -136,8 +137,11 @@ public class PrometheusPushGatewayManager {
 	}
 
 	private void shutdown(ShutdownOperation shutdownOperation) {
-		if (this.scheduler instanceof PushGatewayTaskScheduler pushGatewayTaskScheduler) {
-			pushGatewayTaskScheduler.shutdown();
+		if (this.scheduler instanceof PushGatewayTaskScheduler taskScheduler) {
+			taskScheduler.shutdown();
+		}
+		if (this.scheduler instanceof PushGatewayVirtualThreadTaskScheduler taskScheduler) {
+			taskScheduler.close();
 		}
 		this.scheduled.cancel(false);
 		switch (shutdownOperation) {
@@ -145,6 +149,25 @@ public class PrometheusPushGatewayManager {
 			case PUT -> put();
 			case DELETE -> delete();
 		}
+	}
+
+	/**
+	 * Creates the default scheduler used to periodically push data.
+	 * @return the task scheduler
+	 * @since 3.2.0
+	 */
+	public static TaskScheduler createDefaultScheduler() {
+		return new PushGatewayTaskScheduler();
+	}
+
+	/**
+	 * Creates the default scheduler used to periodically push data, using virtual
+	 * threads.
+	 * @return the task scheduler
+	 * @since 3.2.0
+	 */
+	public static TaskScheduler createDefaultVirtualThreadScheduler() {
+		return new PushGatewayVirtualThreadTaskScheduler();
 	}
 
 	/**
@@ -175,7 +198,21 @@ public class PrometheusPushGatewayManager {
 	}
 
 	/**
-	 * {@link TaskScheduler} used when the user doesn't specify one.
+	 * {@link TaskScheduler} using virtual threads.
+	 */
+	static class PushGatewayVirtualThreadTaskScheduler extends SimpleAsyncTaskScheduler {
+
+		PushGatewayVirtualThreadTaskScheduler() {
+			setVirtualThreads(true);
+			setDaemon(true);
+			setThreadGroupName("prometheus-push-gateway");
+			setThreadNamePrefix("prometheus-push-gateway-");
+		}
+
+	}
+
+	/**
+	 * {@link TaskScheduler} using platform threads.
 	 */
 	static class PushGatewayTaskScheduler extends ThreadPoolTaskScheduler {
 
@@ -183,6 +220,7 @@ public class PrometheusPushGatewayManager {
 			setPoolSize(1);
 			setDaemon(true);
 			setThreadGroupName("prometheus-push-gateway");
+			setThreadNamePrefix("prometheus-push-gateway-");
 		}
 
 		@Override

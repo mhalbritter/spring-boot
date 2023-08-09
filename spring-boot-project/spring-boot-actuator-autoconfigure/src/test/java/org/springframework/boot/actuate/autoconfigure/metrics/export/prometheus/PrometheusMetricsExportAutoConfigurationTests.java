@@ -28,6 +28,8 @@ import io.prometheus.client.exporter.HttpConnectionFactory;
 import io.prometheus.client.exporter.PushGateway;
 import org.assertj.core.api.ThrowingConsumer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.springframework.boot.actuate.autoconfigure.web.server.ManagementContextAutoConfiguration;
@@ -39,9 +41,13 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.test.context.runner.ContextConsumer;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.boot.testsupport.assertj.SimpleAsyncTaskExecutorAssert;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.SimpleAsyncTaskScheduler;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -219,6 +225,22 @@ class PrometheusMetricsExportAutoConfigurationTests {
 			.withUserConfiguration(BaseConfiguration.class)
 			.run(hasHttpConnectionFactory((httpConnectionFactory) -> assertThat(httpConnectionFactory)
 				.isInstanceOf(BasicAuthHttpConnectionFactory.class)));
+	}
+
+	@Test
+	@EnabledForJreRange(min = JRE.JAVA_21)
+	void shouldUseVirtualThreadsForSchedulingIfEnabled() {
+		this.contextRunner.withConfiguration(AutoConfigurations.of(ManagementContextAutoConfiguration.class))
+			.withPropertyValues("management.prometheus.metrics.export.pushgateway.enabled=true",
+					"spring.threads.virtual.enabled=true")
+			.withUserConfiguration(BaseConfiguration.class)
+			.run((context) -> {
+				assertThat(context).hasSingleBean(PrometheusPushGatewayManager.class);
+				PrometheusPushGatewayManager manager = context.getBean(PrometheusPushGatewayManager.class);
+				TaskScheduler scheduler = (TaskScheduler) ReflectionTestUtils.getField(manager, "scheduler");
+				assertThat(scheduler).isInstanceOf(SimpleAsyncTaskScheduler.class);
+				SimpleAsyncTaskExecutorAssert.assertThat((SimpleAsyncTaskExecutor) scheduler).usesVirtualThreads();
+			});
 	}
 
 	private void hasGatewayURL(AssertableApplicationContext context, String url) {

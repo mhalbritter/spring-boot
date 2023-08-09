@@ -46,10 +46,12 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.thread.Threading;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.util.StringUtils;
 
 /**
@@ -124,6 +126,12 @@ public class PrometheusMetricsExportAutoConfiguration {
 		 */
 		private static final String FALLBACK_JOB = "spring";
 
+		private final Environment environment;
+
+		PrometheusPushGatewayConfiguration(Environment environment) {
+			this.environment = environment;
+		}
+
 		@Bean
 		@ConditionalOnMissingBean
 		public PrometheusPushGatewayManager prometheusPushGatewayManager(CollectorRegistry collectorRegistry,
@@ -138,8 +146,11 @@ public class PrometheusMetricsExportAutoConfiguration {
 				pushGateway.setConnectionFactory(
 						new BasicAuthHttpConnectionFactory(properties.getUsername(), properties.getPassword()));
 			}
-			return new PrometheusPushGatewayManager(pushGateway, collectorRegistry, pushRate, job, groupingKey,
-					shutdownOperation);
+			TaskScheduler taskScheduler = Threading.VIRTUAL.isActive(this.environment)
+					? PrometheusPushGatewayManager.createDefaultVirtualThreadScheduler()
+					: PrometheusPushGatewayManager.createDefaultScheduler();
+			return new PrometheusPushGatewayManager(pushGateway, collectorRegistry, taskScheduler, pushRate, job,
+					groupingKey, shutdownOperation);
 		}
 
 		private PushGateway initializePushGateway(String url) throws MalformedURLException {
