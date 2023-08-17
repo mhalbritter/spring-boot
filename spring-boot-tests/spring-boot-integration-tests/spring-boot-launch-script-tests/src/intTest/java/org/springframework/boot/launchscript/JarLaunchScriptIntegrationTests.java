@@ -30,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Alexey Vinogradov
  * @author Andy Wilkinson
+ * @author Moritz Halbritter
  */
 @DisabledIfDockerUnavailable
 class JarLaunchScriptIntegrationTests extends AbstractLaunchScriptIntegrationTests {
