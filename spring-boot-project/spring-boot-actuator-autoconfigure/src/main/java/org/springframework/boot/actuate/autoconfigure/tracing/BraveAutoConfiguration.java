@@ -37,8 +37,11 @@ import brave.handler.SpanHandler;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.CurrentTraceContext.ScopeDecorator;
 import brave.propagation.CurrentTraceContextCustomizer;
+import brave.propagation.Propagation;
 import brave.propagation.Propagation.Factory;
+import brave.propagation.Propagation.KeyFactory;
 import brave.propagation.ThreadLocalCurrentTraceContext;
+import brave.propagation.TraceContext;
 import brave.sampler.Sampler;
 import io.micrometer.tracing.brave.bridge.BraveBaggageManager;
 import io.micrometer.tracing.brave.bridge.BraveCurrentTraceContext;
@@ -63,6 +66,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
+import org.springframework.util.Assert;
 
 /**
  * {@link EnableAutoConfiguration Auto-configuration} for Brave.
@@ -168,7 +172,7 @@ public class BraveAutoConfiguration {
 		@Bean
 		@ConditionalOnMissingBean
 		Factory propagationFactory(TracingProperties properties) {
-			return CompositePropagationFactory.create(properties.getPropagation(), null);
+			return CompositePropagationFactory.create(properties.getPropagation());
 		}
 
 	}
@@ -187,10 +191,11 @@ public class BraveAutoConfiguration {
 		@ConditionalOnMissingBean
 		BaggagePropagation.FactoryBuilder propagationFactoryBuilder(
 				ObjectProvider<BaggagePropagationCustomizer> baggagePropagationCustomizers) {
-			CompositePropagationFactory factory = CompositePropagationFactory
-				.create(this.tracingProperties.getPropagation(), BRAVE_BAGGAGE_MANAGER);
+			SwitchableFactory factory = new SwitchableFactory();
 			FactoryBuilder builder = BaggagePropagation.newFactoryBuilder(factory);
 			baggagePropagationCustomizers.orderedStream().forEach((customizer) -> customizer.customize(builder));
+			factory.setDelegate(CompositePropagationFactory.create(this.tracingProperties.getPropagation(),
+					BRAVE_BAGGAGE_MANAGER, LocalBaggageFields.extractFrom(builder)));
 			return builder;
 		}
 
@@ -241,6 +246,50 @@ public class BraveAutoConfiguration {
 		@ConditionalOnMissingBean(CorrelationScopeDecorator.class)
 		ScopeDecorator correlationScopeDecorator(CorrelationScopeDecorator.Builder builder) {
 			return builder.build();
+		}
+
+	}
+
+	/**
+	 * A {@link Propagation.Factory} which allows switching the delegate.
+	 */
+	static class SwitchableFactory extends Propagation.Factory {
+
+		private Propagation.Factory delegate;
+
+		@Override
+		public boolean supportsJoin() {
+			Assert.notNull(this.delegate, "delegate must not be null");
+			return this.delegate.supportsJoin();
+		}
+
+		@Override
+		public boolean requires128BitTraceId() {
+			Assert.notNull(this.delegate, "delegate must not be null");
+			return this.delegate.requires128BitTraceId();
+		}
+
+		@Override
+		public Propagation<String> get() {
+			Assert.notNull(this.delegate, "delegate must not be null");
+			return this.delegate.get();
+		}
+
+		@Override
+		public TraceContext decorate(TraceContext context) {
+			Assert.notNull(this.delegate, "delegate must not be null");
+			return this.delegate.decorate(context);
+		}
+
+		@Override
+		@SuppressWarnings("deprecation")
+		public <K> Propagation<K> create(KeyFactory<K> keyFactory) {
+			Assert.notNull(this.delegate, "delegate must not be null");
+			return this.delegate.create(keyFactory);
+		}
+
+		void setDelegate(Factory delegate) {
+			this.delegate = delegate;
 		}
 
 	}
