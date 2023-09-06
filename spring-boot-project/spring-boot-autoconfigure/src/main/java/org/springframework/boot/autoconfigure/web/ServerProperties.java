@@ -905,6 +905,11 @@ public class ServerProperties {
 			 */
 			private int minSpare = 10;
 
+			/**
+			 * Maximum capacity of the thread pool's backing queue.
+			 */
+			private int maxQueueCapacity = Integer.MAX_VALUE;
+
 			public int getMax() {
 				return this.max;
 			}
@@ -919,6 +924,14 @@ public class ServerProperties {
 
 			public void setMinSpare(int minSpare) {
 				this.minSpare = minSpare;
+			}
+
+			public int getMaxQueueCapacity() {
+				return this.maxQueueCapacity;
+			}
+
+			public void setMaxQueueCapacity(int maxQueueCapacity) {
+				this.maxQueueCapacity = maxQueueCapacity;
 			}
 
 		}
