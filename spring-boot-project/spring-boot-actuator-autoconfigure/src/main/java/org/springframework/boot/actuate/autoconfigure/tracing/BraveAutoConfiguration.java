@@ -247,6 +247,28 @@ public class BraveAutoConfiguration {
 		}
 
 		@Bean
+		@Order(1)
+		BaggagePropagationCustomizer localFieldsBaggagePropagationCustomizer() {
+			return (builder) -> {
+				final List<String> localFields = this.tracingProperties.getBaggage().getLocalFields();
+				for (final String localFieldName : localFields) {
+					builder.add(BaggagePropagationConfig.SingleBaggageField.local(BaggageField.create(localFieldName)));
+				}
+			};
+		}
+
+		@Bean
+		@Order(2)
+		SpanHandler baggageTagSpanHandler() {
+			final List<String> tagFields = this.tracingProperties.getBaggage().getTagFields();
+
+			if (tagFields.isEmpty()) {
+				return SpanHandler.NOOP; // Brave ignores these
+			}
+			return new BaggageTagSpanHandler(tagFields.stream().map(BaggageField::create).toArray(BaggageField[]::new));
+		}
+
+		@Bean
 		@ConditionalOnMissingBean
 		Factory propagationFactory(BaggagePropagation.FactoryBuilder factoryBuilder) {
 			return factoryBuilder.build();
