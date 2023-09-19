@@ -36,6 +36,7 @@ import org.springframework.util.Assert;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.ModelAndView;
 
 /**
@@ -79,6 +80,13 @@ public class BasicErrorController extends AbstractErrorController {
 		super(errorAttributes, errorViewResolvers);
 		Assert.notNull(errorProperties, "ErrorProperties must not be null");
 		this.errorProperties = errorProperties;
+	}
+
+	@RequestMapping(method = RequestMethod.TRACE, produces = { MediaType.TEXT_HTML_VALUE, MediaType.ALL_VALUE })
+	public ResponseEntity<Void> trace() {
+		return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+			.contentType(MediaType.valueOf("message/http"))
+			.build();
 	}
 
 	@RequestMapping(produces = MediaType.TEXT_HTML_VALUE)

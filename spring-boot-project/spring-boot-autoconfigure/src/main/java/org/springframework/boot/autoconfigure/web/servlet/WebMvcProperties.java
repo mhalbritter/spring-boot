@@ -50,7 +50,7 @@ public class WebMvcProperties {
 	/**
 	 * Whether to dispatch TRACE requests to the FrameworkServlet doService method.
 	 */
-	private boolean dispatchTraceRequest = false;
+	private boolean dispatchTraceRequest = true;
 
 	/**
 	 * Whether to dispatch OPTIONS requests to the FrameworkServlet doService method.
