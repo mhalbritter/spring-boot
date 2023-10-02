@@ -67,6 +67,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
+import org.springframework.util.CollectionUtils;
 
 /**
  * {@link EnableAutoConfiguration Auto-configuration} for Brave.
@@ -250,8 +251,8 @@ public class BraveAutoConfiguration {
 		@Order(1)
 		BaggagePropagationCustomizer localFieldsBaggagePropagationCustomizer() {
 			return (builder) -> {
-				final List<String> localFields = this.tracingProperties.getBaggage().getLocalFields();
-				for (final String localFieldName : localFields) {
+				List<String> localFields = this.tracingProperties.getBaggage().getLocalFields();
+				for (String localFieldName : localFields) {
 					builder.add(BaggagePropagationConfig.SingleBaggageField.local(BaggageField.create(localFieldName)));
 				}
 			};
@@ -260,12 +261,11 @@ public class BraveAutoConfiguration {
 		@Bean
 		@Order(2)
 		SpanHandler baggageTagSpanHandler() {
-			final List<String> tagFields = this.tracingProperties.getBaggage().getTagFields();
-
-			if (tagFields.isEmpty()) {
-				return SpanHandler.NOOP; // Brave ignores these
+			List<String> tagFields = this.tracingProperties.getBaggage().getTagFields();
+			if (CollectionUtils.isEmpty(tagFields)) {
+				return SpanHandler.NOOP;
 			}
-			return new BaggageTagSpanHandler(tagFields.stream().map(BaggageField::create).toArray(BaggageField[]::new));
+			return new BaggageTagSpanHandler(tagFields.stream().map(BaggageField::create).toList());
 		}
 
 		@Bean

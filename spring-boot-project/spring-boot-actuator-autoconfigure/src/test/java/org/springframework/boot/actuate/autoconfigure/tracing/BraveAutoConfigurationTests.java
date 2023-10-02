@@ -346,9 +346,9 @@ class BraveAutoConfigurationTests {
 	void shouldCreateTagHandler() {
 		this.contextRunner.withPropertyValues("management.tracing.baggage.tag-fields=country-code,bp")
 			.run((context) -> assertThat(context.getBean(BaggageTagSpanHandler.class)).extracting("fieldsToTag")
-				.asInstanceOf(InstanceOfAssertFactories.array(BaggageField[].class))
+				.asInstanceOf(InstanceOfAssertFactories.list(BaggageField.class))
 				.extracting(BaggageField::name)
-				.containsOnly("country-code", "bp"));
+				.containsExactlyInAnyOrder("country-code", "bp"));
 	}
 
 	@Test

@@ -16,17 +16,19 @@
 
 package org.springframework.boot.actuate.autoconfigure.tracing;
 
+import java.util.Collection;
+
 import brave.Tags;
 import brave.baggage.BaggageField;
 import brave.handler.MutableSpan;
 import brave.handler.SpanHandler;
 import brave.propagation.TraceContext;
 
-public class BaggageTagSpanHandler extends SpanHandler {
+class BaggageTagSpanHandler extends SpanHandler {
 
-	final BaggageField[] fieldsToTag;
+	private final Collection<BaggageField> fieldsToTag;
 
-	BaggageTagSpanHandler(BaggageField[] fieldsToTag) {
+	BaggageTagSpanHandler(Collection<BaggageField> fieldsToTag) {
 		this.fieldsToTag = fieldsToTag;
 	}
 
