@@ -48,6 +48,8 @@ import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessorBuilder;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
 import io.opentelemetry.sdk.trace.samplers.Sampler;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.SpringBootVersion;
@@ -59,6 +61,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.CollectionUtils;
 
 /**
  * {@link EnableAutoConfiguration Auto-configuration} for OpenTelemetry tracing.
@@ -73,10 +76,15 @@ import org.springframework.context.annotation.Configuration;
 @EnableConfigurationProperties(TracingProperties.class)
 public class OpenTelemetryAutoConfiguration {
 
+	private static final Log logger = LogFactory.getLog(OpenTelemetryAutoConfiguration.class);
+
 	private final TracingProperties tracingProperties;
 
 	OpenTelemetryAutoConfiguration(TracingProperties tracingProperties) {
 		this.tracingProperties = tracingProperties;
+		if (!CollectionUtils.isEmpty(this.tracingProperties.getBaggage().getLocalFields())) {
+			logger.warn("Local fields are not supported when using OpenTelemetry!");
+		}
 	}
 
 	@Bean
