@@ -91,7 +91,7 @@ public class SslServerCustomizer implements NettyServerCustomizer {
 	 */
 	@Deprecated(since = "3.2", forRemoval = true)
 	protected AbstractProtocolSslContextSpec<?> createSslContextSpec() {
-		return this.createSslContextSpec(this.sslBundle);
+		return createSslContextSpec(this.sslBundle);
 	}
 
 	/**
