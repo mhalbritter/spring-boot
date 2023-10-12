@@ -36,7 +36,7 @@ public interface SslBundles {
 	SslBundle getBundle(String name) throws NoSuchSslBundleException;
 
 	/**
-	 * Add a handler to that will be called each time the named bundle is updated.
+	 * Add a handler that will be called each time the named bundle is updated.
 	 * @param name the bundle name
 	 * @param updateHandler the handler that should be called
 	 * @throws NoSuchSslBundleException if a bundle with the provided name does not exist
