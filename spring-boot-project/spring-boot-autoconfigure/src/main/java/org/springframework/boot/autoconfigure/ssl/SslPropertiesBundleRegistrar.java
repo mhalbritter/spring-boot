@@ -20,6 +20,7 @@ import java.io.FileNotFoundException;
 import java.io.UncheckedIOException;
 import java.net.URL;
 import java.nio.file.Path;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -79,17 +80,21 @@ class SslPropertiesBundleRegistrar implements SslBundleRegistrar {
 	private Set<Location> getLocations(JksSslBundleProperties properties) {
 		JksSslBundleProperties.Store keystore = properties.getKeystore();
 		JksSslBundleProperties.Store truststore = properties.getTruststore();
-		return Set.of(new Location("keystore.location", keystore.getLocation()),
-				new Location("truststore.location", truststore.getLocation()));
+		Set<Location> locations = new LinkedHashSet<>();
+		locations.add(new Location("keystore.location", keystore.getLocation()));
+		locations.add(new Location("truststore.location", truststore.getLocation()));
+		return locations;
 	}
 
 	private Set<Location> getLocations(PemSslBundleProperties properties) {
 		PemSslBundleProperties.Store keystore = properties.getKeystore();
 		PemSslBundleProperties.Store truststore = properties.getTruststore();
-		return Set.of(new Location("keystore.private-key", keystore.getPrivateKey()),
-				new Location("keystore.certificate", keystore.getCertificate()),
-				new Location("truststore.private-key", truststore.getPrivateKey()),
-				new Location("truststore.certificate", truststore.getCertificate()));
+		Set<Location> locations = new LinkedHashSet<>();
+		locations.add(new Location("keystore.private-key", keystore.getPrivateKey()));
+		locations.add(new Location("keystore.certificate", keystore.getCertificate()));
+		locations.add(new Location("truststore.private-key", truststore.getPrivateKey()));
+		locations.add(new Location("truststore.certificate", truststore.getCertificate()));
+		return locations;
 	}
 
 	private Path toPath(String bundleName, Location watchableLocation) {

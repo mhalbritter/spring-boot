@@ -162,6 +162,7 @@ public class PemSslStoreBundle implements SslStoreBundle {
 	}
 
 	private static X509Certificate[] loadCertificates(PemSslStoreDetails details) {
+		// TODO: Reinstate the PemContent
 		String certificateContent = (details.getCertificateType() == Type.PEM) ? details.certificate()
 				: load(details.certificate());
 		X509Certificate[] certificates = PemCertificateParser.parse(certificateContent);

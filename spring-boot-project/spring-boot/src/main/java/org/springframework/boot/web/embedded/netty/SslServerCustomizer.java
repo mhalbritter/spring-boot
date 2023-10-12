@@ -58,6 +58,7 @@ public class SslServerCustomizer implements NettyServerCustomizer {
 		this.http2 = http2;
 		this.clientAuth = Ssl.ClientAuth.map(clientAuth, ClientAuth.NONE, ClientAuth.OPTIONAL, ClientAuth.REQUIRE);
 		this.sslProvider = createSslProvider(sslBundle);
+		// TODO: Save the bundle here
 	}
 
 	@Override
@@ -73,6 +74,7 @@ public class SslServerCustomizer implements NettyServerCustomizer {
 	void updateSslBundle(SslBundle sslBundle) {
 		logger.debug("SSL Bundle has been updated, reloading SSL configuration");
 		this.sslProvider = createSslProvider(sslBundle);
+		// TODO: Update the bundle here
 	}
 
 	private SslProvider createSslProvider(SslBundle sslBundle) {
@@ -87,6 +89,7 @@ public class SslServerCustomizer implements NettyServerCustomizer {
 	 */
 	@Deprecated(since = "3.2", forRemoval = true)
 	protected AbstractProtocolSslContextSpec<?> createSslContextSpec() {
+		// TODO: Use the bundle here
 		throw new UnsupportedOperationException(
 				"The createSslContextSpec factory method requires an SslBundle parameter");
 	}
@@ -98,6 +101,7 @@ public class SslServerCustomizer implements NettyServerCustomizer {
 	 * @return an {@link AbstractProtocolSslContextSpec} instance
 	 * @since 3.2.0
 	 */
+	// TODO: Drop that method, use the one without args
 	protected AbstractProtocolSslContextSpec<?> createSslContextSpec(SslBundle sslBundle) {
 		AbstractProtocolSslContextSpec<?> sslContextSpec = (this.http2 != null && this.http2.isEnabled())
 				? Http2SslContextSpec.forServer(sslBundle.getManagers().getKeyManagerFactory())

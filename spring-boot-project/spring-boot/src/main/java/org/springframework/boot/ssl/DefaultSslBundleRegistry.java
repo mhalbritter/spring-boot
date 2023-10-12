@@ -90,6 +90,7 @@ public class DefaultSslBundleRegistry implements SslBundleRegistry, SslBundles {
 
 		private final List<Consumer<SslBundle>> updateHandlers = new CopyOnWriteArrayList<>();
 
+		// TODO: Drop the atomic and only warn if an update is called and the bundle has no listeners
 		private final AtomicInteger getWithoutAddUpdateListener = new AtomicInteger();
 
 		RegisteredSslBundle(String name, SslBundle bundle) {
