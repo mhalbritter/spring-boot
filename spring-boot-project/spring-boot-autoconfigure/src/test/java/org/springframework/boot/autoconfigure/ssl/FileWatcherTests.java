@@ -22,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -132,11 +133,43 @@ class FileWatcherTests {
 		}).doesNotThrowAnyException();
 	}
 
+	@Test
+	void testRelativeFiles() throws Exception {
+		Path watchedFile = Path.of(UUID.randomUUID() + ".txt");
+		Files.createFile(watchedFile);
+		try {
+			WaitingCallback callback = new WaitingCallback();
+			this.fileWatcher.watch(Set.of(watchedFile), callback);
+			Files.delete(watchedFile);
+			callback.expectChanges();
+		}
+		finally {
+			Files.deleteIfExists(watchedFile);
+		}
+	}
+
+	@Test
+	void testRelativeDirectories() throws Exception {
+		Path watchedDirectory = Path.of(UUID.randomUUID() + "/");
+		Path file = watchedDirectory.resolve("file.txt");
+		Files.createDirectory(watchedDirectory);
+		try {
+			WaitingCallback callback = new WaitingCallback();
+			this.fileWatcher.watch(Set.of(watchedDirectory), callback);
+			Files.createFile(file);
+			callback.expectChanges();
+		}
+		finally {
+			Files.deleteIfExists(file);
+			Files.deleteIfExists(watchedDirectory);
+		}
+	}
+
 	private static class WaitingCallback implements Runnable {
 
 		private final CountDownLatch latch = new CountDownLatch(1);
 
-		boolean changed = false;
+		volatile boolean changed = false;
 
 		@Override
 		public void run() {

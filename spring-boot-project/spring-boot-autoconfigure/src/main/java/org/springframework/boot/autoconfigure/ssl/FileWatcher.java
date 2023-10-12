@@ -19,6 +19,7 @@ package org.springframework.boot.autoconfigure.ssl;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.ClosedWatchServiceException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -34,6 +35,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -55,7 +57,7 @@ class FileWatcher implements Closeable {
 
 	private final Object lock = new Object();
 
-	private volatile WatcherThread thread;
+	private WatcherThread thread;
 
 	/**
 	 * Create a new {@link FileWatcher} instance.
@@ -156,7 +158,7 @@ class FileWatcher implements Closeable {
 					long timeout = FileWatcher.this.quietPeriod.toMillis();
 					WatchKey key = this.watchService.poll(timeout, TimeUnit.MILLISECONDS);
 					if (key == null) {
-						actions.forEach((action) -> runSafely(action));
+						actions.forEach(this::runSafely);
 						actions.clear();
 					}
 					else {
@@ -166,6 +168,10 @@ class FileWatcher implements Closeable {
 				}
 				catch (InterruptedException ex) {
 					Thread.currentThread().interrupt();
+				}
+				catch (ClosedWatchServiceException ex) {
+					logger.debug("File watcher has been closed");
+					this.running = false;
 				}
 			}
 			logger.debug("Watch thread stopped");
@@ -206,12 +212,17 @@ class FileWatcher implements Closeable {
 	 */
 	private record Registration(Set<Path> paths, Runnable action) {
 
+		Registration {
+			paths = paths.stream().map(Path::toAbsolutePath).collect(Collectors.toSet());
+		}
+
 		boolean manages(Path file) {
-			return this.paths.contains(file) || isInDirectories(file);
+			Path absolutePath = file.toAbsolutePath();
+			return this.paths.contains(absolutePath) || isInDirectories(absolutePath);
 		}
 
 		private boolean isInDirectories(Path file) {
-			return this.paths.stream().filter(Files::isDirectory).anyMatch((path) -> file.startsWith(path));
+			return this.paths.stream().filter(Files::isDirectory).anyMatch(file::startsWith);
 		}
 	}
 
