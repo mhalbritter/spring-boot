@@ -90,7 +90,8 @@ public class DefaultSslBundleRegistry implements SslBundleRegistry, SslBundles {
 
 		private final List<Consumer<SslBundle>> updateHandlers = new CopyOnWriteArrayList<>();
 
-		// TODO: Drop the atomic and only warn if an update is called and the bundle has no listeners
+		// TODO: Drop the atomic and only warn if an update is called and the bundle has
+		// no listeners
 		private final AtomicInteger getWithoutAddUpdateListener = new AtomicInteger();
 
 		RegisteredSslBundle(String name, SslBundle bundle) {
@@ -98,7 +99,7 @@ public class DefaultSslBundleRegistry implements SslBundleRegistry, SslBundles {
 			this.bundle = bundle;
 		}
 
-		public void update(SslBundle updatedBundle) {
+		void update(SslBundle updatedBundle) {
 			Assert.notNull(updatedBundle, "UpdatedBundle must not be null");
 			this.bundle = updatedBundle;
 			if (this.getWithoutAddUpdateListener.get() == 0) {

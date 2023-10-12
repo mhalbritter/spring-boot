@@ -72,6 +72,7 @@ class SslConnectorCustomizer {
 
 	/**
 	 * Configure Tomcat's {@link AbstractHttp11JsseProtocol} for SSL.
+	 * @param sslBundle the SSL bundle
 	 * @param protocol the protocol
 	 */
 	private void configureSsl(SslBundle sslBundle, AbstractHttp11JsseProtocol<?> protocol) {
