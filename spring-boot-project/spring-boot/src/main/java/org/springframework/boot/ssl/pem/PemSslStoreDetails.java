@@ -17,7 +17,6 @@
 package org.springframework.boot.ssl.pem;
 
 import java.security.KeyStore;
-import java.util.regex.Pattern;
 
 import org.springframework.util.ResourceUtils;
 import org.springframework.util.StringUtils;
@@ -37,10 +36,6 @@ import org.springframework.util.StringUtils;
  * @since 3.1.0
  */
 public record PemSslStoreDetails(String type, String certificate, String privateKey, String privateKeyPassword) {
-
-	private static final Pattern PEM_HEADER = Pattern.compile("-+BEGIN\\s+[^-]*-+", Pattern.CASE_INSENSITIVE);
-
-	private static final Pattern PEM_FOOTER = Pattern.compile("-+END\\s+[^-]*-+", Pattern.CASE_INSENSITIVE);
 
 	public PemSslStoreDetails(String type, String certificate, String privateKey) {
 		this(type, certificate, privateKey, null);
@@ -64,23 +59,6 @@ public record PemSslStoreDetails(String type, String certificate, String private
 		return new PemSslStoreDetails(this.type, this.certificate, this.privateKey, password);
 	}
 
-	/**
-	 * Returns the type of the private key.
-	 * @return the type of the private key
-	 * @since 3.2.0
-	 */
-	Type getPrivateKeyType() {
-		return (isPemContent(this.privateKey)) ? Type.PEM : Type.URL;
-	}
-
-	/**
-	 * Returns the type of the certificate.
-	 * @return the type of the certificate
-	 */
-	Type getCertificateType() {
-		return (isPemContent(this.certificate)) ? Type.PEM : Type.URL;
-	}
-
 	boolean isEmpty() {
 		return isEmpty(this.type) && isEmpty(this.certificate) && isEmpty(this.privateKey);
 	}
@@ -97,27 +75,6 @@ public record PemSslStoreDetails(String type, String certificate, String private
 	 */
 	public static PemSslStoreDetails forCertificate(String certificate) {
 		return new PemSslStoreDetails(null, certificate, null);
-	}
-
-	private static boolean isPemContent(String content) {
-		return content != null && PEM_HEADER.matcher(content).find() && PEM_FOOTER.matcher(content).find();
-	}
-
-	/**
-	 * Type of key or certificate.
-	 */
-	enum Type {
-
-		/**
-		 * URL loadable by {@link ResourceUtils#getURL}.
-		 */
-		URL,
-
-		/**
-		 * PEM content.
-		 */
-		PEM
-
 	}
 
 }
