@@ -16,21 +16,29 @@
 
 package org.springframework.boot.ssl.pem;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+
 import org.junit.jupiter.api.Test;
 
-import org.springframework.boot.ssl.pem.PemSslStoreDetails.Type;
+import org.springframework.core.io.ClassPathResource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link PemSslStoreDetails}.
+ * Tests for {@link PemContent}.
  *
- * @author Moritz Halbritter
+ * @author Phillip Webb
  */
-class PemSslStoreDetailsTests {
+class PemContentTests {
 
 	@Test
-	void pemContent() {
+	void loadWhenContentIsNullReturnsNull() {
+		assertThat(PemContent.load(null)).isNull();
+	}
+
+	@Test
+	void loadWhenContentIsPemContentReturnsContent() {
 		String content = """
 				-----BEGIN CERTIFICATE-----
 				MIICpDCCAYwCCQCDOqHKPjAhCTANBgkqhkiG9w0BAQUFADAUMRIwEAYDVQQDDAls
@@ -49,24 +57,21 @@ class PemSslStoreDetailsTests {
 				+lGuHKdhNOVW9CmqPD1y76o6c8PQKuF7KZEoY2jvy3GeIfddBvqXgZ4PbWvFz1jO
 				32C9XWHwRA4=
 				-----END CERTIFICATE-----""";
-		PemSslStoreDetails details = new PemSslStoreDetails("JKS", content, content);
-		assertThat(details.getCertificateType()).isEqualTo(Type.PEM);
-		assertThat(details.getPrivateKeyType()).isEqualTo(Type.PEM);
+		assertThat(PemContent.load(content)).isEqualTo(content);
 	}
 
 	@Test
-	void location() {
-		PemSslStoreDetails details = new PemSslStoreDetails("JKS", "classpath:certificate.pem", "file:privatekey.pem");
-		assertThat(details.getCertificateType()).isEqualTo(Type.URL);
-		assertThat(details.getPrivateKeyType()).isEqualTo(Type.URL);
+	void loadWhenClasspathLocationReturnsContent() throws IOException {
+		String actual = PemContent.load("classpath:test-cert.pem");
+		String expected = new ClassPathResource("test-cert.pem").getContentAsString(StandardCharsets.UTF_8);
+		assertThat(actual).isEqualTo(expected);
 	}
 
 	@Test
-	void empty() {
-		PemSslStoreDetails details = new PemSslStoreDetails(null, null, null);
-		assertThat(details.getCertificateType()).isEqualTo(Type.URL);
-		assertThat(details.getPrivateKeyType()).isEqualTo(Type.URL);
-		assertThat(details.isEmpty()).isTrue();
+	void loadWhenFileLocationReturnsContent() throws IOException {
+		String actual = PemContent.load("src/test/resources/test-cert.pem");
+		String expected = new ClassPathResource("test-cert.pem").getContentAsString(StandardCharsets.UTF_8);
+		assertThat(actual).isEqualTo(expected);
 	}
 
 }
