@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import org.apache.commons.logging.Log;
@@ -86,13 +85,9 @@ public class DefaultSslBundleRegistry implements SslBundleRegistry, SslBundles {
 
 		private final String name;
 
-		private volatile SslBundle bundle;
-
 		private final List<Consumer<SslBundle>> updateHandlers = new CopyOnWriteArrayList<>();
 
-		// TODO: Drop the atomic and only warn if an update is called and the bundle has
-		// no listeners
-		private final AtomicInteger getWithoutAddUpdateListener = new AtomicInteger();
+		private volatile SslBundle bundle;
 
 		RegisteredSslBundle(String name, SslBundle bundle) {
 			this.name = name;
@@ -102,7 +97,7 @@ public class DefaultSslBundleRegistry implements SslBundleRegistry, SslBundles {
 		void update(SslBundle updatedBundle) {
 			Assert.notNull(updatedBundle, "UpdatedBundle must not be null");
 			this.bundle = updatedBundle;
-			if (this.getWithoutAddUpdateListener.get() == 0) {
+			if (this.updateHandlers.isEmpty()) {
 				logger.warn(LogMessage.format(
 						"SSL bundle '%s' has been updated but may be in use by a technology that doesn't support SSL reloading",
 						this.name));
@@ -111,14 +106,12 @@ public class DefaultSslBundleRegistry implements SslBundleRegistry, SslBundles {
 		}
 
 		SslBundle getBundle() {
-			this.getWithoutAddUpdateListener.incrementAndGet();
 			return this.bundle;
 		}
 
 		void addUpdateHandler(Consumer<SslBundle> updateHandler) {
 			Assert.notNull(updateHandler, "UpdateHandler must not be null");
 			this.updateHandlers.add(updateHandler);
-			this.getWithoutAddUpdateListener.decrementAndGet();
 		}
 
 	}
