@@ -19,6 +19,8 @@ package org.springframework.boot.autoconfigure.ssl;
 import org.springframework.util.StringUtils;
 
 /**
+ * Parses patterns in the form '*.txt' or '/some/directory/*.txt'.
+ *
  * @author Moritz Halbritter
  */
 final class PatternParser {
@@ -37,7 +39,8 @@ final class PatternParser {
 			return null;
 		}
 		if (numberOfStars > 1) {
-			throw new IllegalArgumentException("Found multiple wildcards in '%s'. Only one is allowed.".formatted(input));
+			throw new IllegalArgumentException(
+					"Found multiple wildcards in '%s'. Only one is allowed.".formatted(input));
 		}
 		int wildcard = findWildcardIndex(input);
 		int lastSlash = input.lastIndexOf('/');
@@ -56,7 +59,6 @@ final class PatternParser {
 		}
 		return wildcard;
 	}
-
 
 	record Pattern(String directory, String extension) {
 	}

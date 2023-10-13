@@ -49,13 +49,13 @@ class MaximumNotAfterCertificateSelectorTests {
 		Certificate cert1 = new Certificate("certificate-1", "",
 				createCertificate(NOW.minusSeconds(10), NOW.plusSeconds(10)));
 		// Not valid, starts in the future
-		Certificate cert2 = new Certificate("certificate-2","",
+		Certificate cert2 = new Certificate("certificate-2", "",
 				createCertificate(NOW.plusSeconds(1), NOW.plusSeconds(15)));
 		// Not valid, expired
-		Certificate cert3 = new Certificate("certificate-3","",
+		Certificate cert3 = new Certificate("certificate-3", "",
 				createCertificate(NOW.minusSeconds(10), NOW.minusSeconds(1)));
 		// Valid until 20s
-		Certificate cert4 = new Certificate("certificate-4","",
+		Certificate cert4 = new Certificate("certificate-4", "",
 				createCertificate(NOW.minusSeconds(10), NOW.plusSeconds(20)));
 		List<Certificate> candidates = List.of(cert1, cert2, cert3, cert4);
 		Certificate selected = this.selector.select(candidates);

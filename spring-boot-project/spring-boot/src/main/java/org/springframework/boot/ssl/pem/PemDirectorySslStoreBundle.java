@@ -67,7 +67,8 @@ public class PemDirectorySslStoreBundle implements SslStoreBundle {
 		}
 		Certificate certificate = loadCertificate(store.certificate());
 		PrivateKey privateKey = loadPrivateKey(store.privateKey(), certificate);
-		return new PemSslStoreDetails(store.type(), certificate.content(), privateKey.content(), store.privateKeyPassword());
+		return new PemSslStoreDetails(store.type(), certificate.content(), privateKey.content(),
+				store.privateKeyPassword());
 	}
 
 	private static Certificate loadCertificate(CertificateDetails certificate) {
@@ -114,11 +115,13 @@ public class PemDirectorySslStoreBundle implements SslStoreBundle {
 
 	/**
 	 * Store details.
+	 *
 	 * @param type the key store type, for example {@code JKS} or {@code PKCS11}. A
 	 * {@code null} value will use {@link KeyStore#getDefaultType()}).
 	 * @param certificate the certificate
 	 * @param privateKey the private key or {@code null}
-	 * @param privateKeyPassword a password used to decrypt an encrypted private key or {@code null}
+	 * @param privateKeyPassword a password used to decrypt an encrypted private key or
+	 * {@code null}
 	 */
 	public record StoreDetails(String type, CertificateDetails certificate, PrivateKeyDetails privateKey,
 			String privateKeyPassword) {
@@ -129,6 +132,7 @@ public class PemDirectorySslStoreBundle implements SslStoreBundle {
 
 	/**
 	 * Certificate details.
+	 *
 	 * @param location the location of the certificate
 	 * @param certificateMatcher the certificate matcher or {@code null}
 	 * @param certificateSelector the certificate selector or {@code null}
@@ -156,16 +160,13 @@ public class PemDirectorySslStoreBundle implements SslStoreBundle {
 		}
 
 		private List<Certificate> loadCertificates(List<String> locations) {
-			return locations
-					.stream()
-					.filter(this.certificateMatcher::matches)
-					.map(Certificate::load)
-					.toList();
+			return locations.stream().filter(this.certificateMatcher::matches).map(Certificate::load).toList();
 		}
 	}
 
 	/**
 	 * Private key details.
+	 *
 	 * @param location the location of the private key
 	 * @param keyLocator the key locator or {@code null}
 	 */

@@ -37,7 +37,7 @@ import org.springframework.boot.ssl.pem.PemSslStoreDetails;
 
 /**
  * {@link SslBundle} backed by {@link JksSslBundleProperties} or
- * {@link PemSslBundleProperties}
+ * {@link PemSslBundleProperties}.
  *
  * @author Scott Frederick
  * @author Phillip Webb

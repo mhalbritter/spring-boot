@@ -57,22 +57,25 @@ class PatternParserTests {
 	@Test
 	void shouldFailIfMoreThanOneWildcard() {
 		assertThatIllegalArgumentException().isThrownBy(() -> parse("/some/*/directory/*.txt"))
-				.withMessageContaining("Found multiple wildcards");
+			.withMessageContaining("Found multiple wildcards");
 	}
 
 	@Test
 	void shouldFailIfDirectoryAfterWildcard() {
 		assertThatIllegalArgumentException().isThrownBy(() -> parse("/some/directory/*.txt/1.txt"))
-				.withMessageContaining("Found slash after wildcard");
+			.withMessageContaining("Found slash after wildcard");
 	}
 
 	@Test
 	void shouldFailIfNoExtension() {
-		assertThatIllegalArgumentException().isThrownBy(() -> parse("/some/directory/*")).withMessageContaining("Expected extension");
-		assertThatIllegalArgumentException().isThrownBy(() -> parse("/some/directory/*foo")).withMessageContaining("Expected extension");
+		assertThatIllegalArgumentException().isThrownBy(() -> parse("/some/directory/*"))
+			.withMessageContaining("Expected extension");
+		assertThatIllegalArgumentException().isThrownBy(() -> parse("/some/directory/*foo"))
+			.withMessageContaining("Expected extension");
 	}
 
 	private Pattern parse(String input) {
 		return PatternParser.parse(input);
 	}
+
 }

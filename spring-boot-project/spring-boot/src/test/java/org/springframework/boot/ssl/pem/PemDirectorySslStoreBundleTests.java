@@ -104,9 +104,10 @@ class PemDirectorySslStoreBundleTests {
 
 	private PemDirectorySslStoreBundle createBundle(Path tempDir) {
 		return null;
-//		return new PemDirectorySslStoreBundle(
-//				new PemDirectorySslStoreDetails(tempDir, null, null, null, "alias", false), this.certificateMatcher,
-//				this.keyLocator, this.certificateSelector);
+		// return new PemDirectorySslStoreBundle(
+		// new PemDirectorySslStoreDetails(tempDir, null, null, null, "alias", false),
+		// this.certificateMatcher,
+		// this.keyLocator, this.certificateSelector);
 	}
 
 	private void assertHasCertificate(KeyStore keyStore, String alias, String serialNumber) throws KeyStoreException {

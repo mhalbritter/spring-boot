@@ -99,44 +99,45 @@ final class CertificateSelectors {
 	}
 
 	// TODO
-//	static class NewestFileCertificateSelector extends AbstractCertificateSelector {
-//
-//		NewestFileCertificateSelector() {
-//			super();
-//		}
-//
-//		NewestFileCertificateSelector(Clock clock) {
-//			super(clock);
-//		}
-//
-//		@Override
-//		protected Certificate doSelect(List<Certificate> candidates) {
-//			if (candidates.isEmpty()) {
-//				return null;
-//			}
-//			if (candidates.size() == 1) {
-//				return candidates.get(0);
-//			}
-//			Certificate certificate = null;
-//			Instant created = null;
-//			for (Certificate candidate : candidates) {
-//				BasicFileAttributes attributes;
-//				try {
-//					attributes = Files.readAttributes(candidate.file(), BasicFileAttributes.class);
-//				}
-//				catch (IOException ex) {
-//					throw new UncheckedIOException("Failed to get creation time of file %s".formatted(candidate.file()),
-//							ex);
-//				}
-//				Instant candidateCreationTime = attributes.creationTime().toInstant();
-//				if (created == null || candidateCreationTime.isAfter(created)) {
-//					certificate = candidate;
-//					created = candidateCreationTime;
-//				}
-//			}
-//			return certificate;
-//		}
-//
-//	}
+	// static class NewestFileCertificateSelector extends AbstractCertificateSelector {
+	//
+	// NewestFileCertificateSelector() {
+	// super();
+	// }
+	//
+	// NewestFileCertificateSelector(Clock clock) {
+	// super(clock);
+	// }
+	//
+	// @Override
+	// protected Certificate doSelect(List<Certificate> candidates) {
+	// if (candidates.isEmpty()) {
+	// return null;
+	// }
+	// if (candidates.size() == 1) {
+	// return candidates.get(0);
+	// }
+	// Certificate certificate = null;
+	// Instant created = null;
+	// for (Certificate candidate : candidates) {
+	// BasicFileAttributes attributes;
+	// try {
+	// attributes = Files.readAttributes(candidate.file(), BasicFileAttributes.class);
+	// }
+	// catch (IOException ex) {
+	// throw new UncheckedIOException("Failed to get creation time of file
+	// %s".formatted(candidate.file()),
+	// ex);
+	// }
+	// Instant candidateCreationTime = attributes.creationTime().toInstant();
+	// if (created == null || candidateCreationTime.isAfter(created)) {
+	// certificate = candidate;
+	// created = candidateCreationTime;
+	// }
+	// }
+	// return certificate;
+	// }
+	//
+	// }
 
 }

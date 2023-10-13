@@ -47,7 +47,8 @@ class SuffixKeyLocator implements KeyLocator {
 				return location;
 			}
 		}
-		throw new IllegalStateException("Key for certificate '%s' named '%s' not found in locations: %s".formatted(certificate.location(), keyFilename, locations));
+		throw new IllegalStateException("Key for certificate '%s' named '%s' not found in locations: %s"
+			.formatted(certificate.location(), keyFilename, locations));
 	}
 
 	private static String getFilename(String location) {
