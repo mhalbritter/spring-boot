@@ -16,8 +16,6 @@
 
 package org.springframework.boot.ssl.pem;
 
-import java.nio.file.Path;
-
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,14 +31,14 @@ class SuffixCertificateMatcherTests {
 
 	@Test
 	void shouldMatch() {
-		assertThat(this.predicate.matches(Path.of("1.crt"))).isTrue();
-		assertThat(this.predicate.matches(Path.of(".crt"))).isTrue();
+		assertThat(this.predicate.matches("1.crt")).isTrue();
+		assertThat(this.predicate.matches(".crt")).isTrue();
 	}
 
 	@Test
 	void shouldNotMatch() {
-		assertThat(this.predicate.matches(Path.of(".key"))).isFalse();
-		assertThat(this.predicate.matches(Path.of(".pem"))).isFalse();
+		assertThat(this.predicate.matches(".key")).isFalse();
+		assertThat(this.predicate.matches(".pem")).isFalse();
 	}
 
 }

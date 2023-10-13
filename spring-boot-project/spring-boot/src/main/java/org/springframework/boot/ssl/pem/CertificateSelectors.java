@@ -16,10 +16,6 @@
 
 package org.springframework.boot.ssl.pem;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.file.Files;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Comparator;
@@ -102,44 +98,45 @@ final class CertificateSelectors {
 
 	}
 
-	static class NewestFileCertificateSelector extends AbstractCertificateSelector {
-
-		NewestFileCertificateSelector() {
-			super();
-		}
-
-		NewestFileCertificateSelector(Clock clock) {
-			super(clock);
-		}
-
-		@Override
-		protected Certificate doSelect(List<Certificate> candidates) {
-			if (candidates.isEmpty()) {
-				return null;
-			}
-			if (candidates.size() == 1) {
-				return candidates.get(0);
-			}
-			Certificate certificate = null;
-			Instant created = null;
-			for (Certificate candidate : candidates) {
-				BasicFileAttributes attributes;
-				try {
-					attributes = Files.readAttributes(candidate.file(), BasicFileAttributes.class);
-				}
-				catch (IOException ex) {
-					throw new UncheckedIOException("Failed to get creation time of file %s".formatted(candidate.file()),
-							ex);
-				}
-				Instant candidateCreationTime = attributes.creationTime().toInstant();
-				if (created == null || candidateCreationTime.isAfter(created)) {
-					certificate = candidate;
-					created = candidateCreationTime;
-				}
-			}
-			return certificate;
-		}
-
-	}
+	// TODO
+//	static class NewestFileCertificateSelector extends AbstractCertificateSelector {
+//
+//		NewestFileCertificateSelector() {
+//			super();
+//		}
+//
+//		NewestFileCertificateSelector(Clock clock) {
+//			super(clock);
+//		}
+//
+//		@Override
+//		protected Certificate doSelect(List<Certificate> candidates) {
+//			if (candidates.isEmpty()) {
+//				return null;
+//			}
+//			if (candidates.size() == 1) {
+//				return candidates.get(0);
+//			}
+//			Certificate certificate = null;
+//			Instant created = null;
+//			for (Certificate candidate : candidates) {
+//				BasicFileAttributes attributes;
+//				try {
+//					attributes = Files.readAttributes(candidate.file(), BasicFileAttributes.class);
+//				}
+//				catch (IOException ex) {
+//					throw new UncheckedIOException("Failed to get creation time of file %s".formatted(candidate.file()),
+//							ex);
+//				}
+//				Instant candidateCreationTime = attributes.creationTime().toInstant();
+//				if (created == null || candidateCreationTime.isAfter(created)) {
+//					certificate = candidate;
+//					created = candidateCreationTime;
+//				}
+//			}
+//			return certificate;
+//		}
+//
+//	}
 
 }

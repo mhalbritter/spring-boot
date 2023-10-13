@@ -3,8 +3,8 @@ sample.name: Andy
 spring.ssl.bundle.pem:
   mybundle:
     keystore:
-      certificate: "/home/mkammerer/tmp/1/*.crt"
-      private-key: "/home/mkammerer/tmp/2/1.key"
+      certificate: "file:/home/moe/tmp/certs/1/*.crt"
+      private-key: "file:/home/moe/tmp/certs/2/*.key"
     truststore:
-      certificate: "/home/mkammerer/tmp/3/2.crt"
-      private-key: "/home/mkammerer/tmp/4/2.key"
+      certificate: "/home/moe/tmp/certs/3/2.crt"
+      private-key: "/home/moe/tmp/certs/4/2.key"

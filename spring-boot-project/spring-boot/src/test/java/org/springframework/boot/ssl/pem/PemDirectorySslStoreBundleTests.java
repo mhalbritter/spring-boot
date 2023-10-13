@@ -55,7 +55,7 @@ class PemDirectorySslStoreBundleTests {
 
 	private final CertificateMatcher certificateMatcher = new SuffixCertificateMatcher(".crt");
 
-	private final KeyLocator keyLocator = new SuffixKeyLocator(".crt", ".key");
+	private final KeyLocator keyLocator = new SuffixKeyLocator(".key");
 
 	private final CertificateSelector certificateSelector = new CertificateSelectors.MaximumNotAfterCertificateSelector(
 			Clock.fixed(NOW, ZoneId.of("UTC")));
@@ -103,9 +103,10 @@ class PemDirectorySslStoreBundleTests {
 	}
 
 	private PemDirectorySslStoreBundle createBundle(Path tempDir) {
-		return new PemDirectorySslStoreBundle(
-				new PemDirectorySslStoreDetails(tempDir, null, null, null, "alias", false), this.certificateMatcher,
-				this.keyLocator, this.certificateSelector);
+		return null;
+//		return new PemDirectorySslStoreBundle(
+//				new PemDirectorySslStoreDetails(tempDir, null, null, null, "alias", false), this.certificateMatcher,
+//				this.keyLocator, this.certificateSelector);
 	}
 
 	private void assertHasCertificate(KeyStore keyStore, String alias, String serialNumber) throws KeyStoreException {

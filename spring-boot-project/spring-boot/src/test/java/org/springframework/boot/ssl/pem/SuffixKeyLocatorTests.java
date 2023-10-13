@@ -16,10 +16,8 @@
 
 package org.springframework.boot.ssl.pem;
 
-import java.nio.file.Path;
 import java.security.cert.X509Certificate;
-import java.util.Collections;
-import java.util.Set;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -27,7 +25,7 @@ import org.mockito.Mockito;
 import org.springframework.boot.ssl.pem.PemDirectorySslStoreBundle.Certificate;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 /**
  * Tests for {@link SuffixKeyLocator}.
@@ -36,24 +34,80 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
  */
 class SuffixKeyLocatorTests {
 
-	private final SuffixKeyLocator locator = new SuffixKeyLocator(".crt", ".key");
+	private final SuffixKeyLocator locator = new SuffixKeyLocator(".key");
 
 	@Test
-	void shouldMatch() {
+	void shouldMatchWithoutPrefix() {
 		Certificate certificate = createCertificate("1.crt");
-		Path key = this.locator.locate(certificate, Set.of(Path.of("1.crt"), Path.of("1.key")));
-		assertThat(key).isEqualTo(Path.of("1.key"));
+		String location = this.locator.locate(List.of("1.key", "2.key"), certificate);
+		assertThat(location).isEqualTo("1.key");
 	}
 
 	@Test
-	void shouldThrowExceptionIfGivenCertificateDoesntEndWithSuffix() {
-		Certificate certificate = createCertificate("1.pem");
-		assertThatIllegalArgumentException().isThrownBy(() -> this.locator.locate(certificate, Collections.emptySet()))
-			.withMessageContaining("does not end with '.crt'");
+	void shouldMatchWithPrefix() {
+		Certificate certificate = createCertificate("file:1.crt");
+		String location = this.locator.locate(List.of("file:1.key", "file:2.key"), certificate);
+		assertThat(location).isEqualTo("file:1.key");
 	}
 
-	private Certificate createCertificate(String file) {
-		return new Certificate(Path.of(file), Mockito.mock(X509Certificate.class));
+	@Test
+	void shouldMatchMixed() {
+		Certificate certificate = createCertificate("1.crt");
+		String location = this.locator.locate(List.of("file:1.key", "file:2.key"), certificate);
+		assertThat(location).isEqualTo("file:1.key");
+	}
+
+	@Test
+	void shouldMatchMixedOtherWayAround() {
+		Certificate certificate = createCertificate("file:1.crt");
+		String location = this.locator.locate(List.of("1.key", "2.key"), certificate);
+		assertThat(location).isEqualTo("1.key");
+	}
+
+	@Test
+	void shouldMatchWithoutPrefixDirectory() {
+		Certificate certificate = createCertificate("/dir1/1.crt");
+		String location = this.locator.locate(List.of("/dir2/1.key", "/dir2/2.key"), certificate);
+		assertThat(location).isEqualTo("/dir2/1.key");
+	}
+
+	@Test
+	void shouldMatchWithPrefixDirectory() {
+		Certificate certificate = createCertificate("file:/dir1/1.crt");
+		String location = this.locator.locate(List.of("file:/dir2/1.key", "file:/dir2/2.key"), certificate);
+		assertThat(location).isEqualTo("file:/dir2/1.key");
+	}
+
+	@Test
+	void shouldMatchMixedDirectory() {
+		Certificate certificate = createCertificate("/dir2/1.crt");
+		String location = this.locator.locate(List.of("file:/dir2/1.key", "file:/dir2/2.key"), certificate);
+		assertThat(location).isEqualTo("file:/dir2/1.key");
+	}
+
+	@Test
+	void shouldMatchMixedOtherWayAroundDirectory() {
+		Certificate certificate = createCertificate("file:/dir1/1.crt");
+		String location = this.locator.locate(List.of("/dir2/1.key", "/dir2/2.key"), certificate);
+		assertThat(location).isEqualTo("/dir2/1.key");
+	}
+
+	@Test
+	void shouldUseKeyExtension() {
+		Certificate certificate = createCertificate("1.crt");
+		String location = this.locator.locate(List.of("1.key", "1.dummy"), certificate);
+		assertThat(location).isEqualTo("1.key");
+	}
+
+	@Test
+	void shouldFailIfNoKeyIsFound() {
+		Certificate certificate = createCertificate("1.crt");
+		assertThatIllegalStateException().isThrownBy(() -> this.locator.locate(List.of("2.key", "3.key"), certificate))
+			.withMessageContaining("Key for certificate '1.crt' named '1.key' not found in locations: [2.key, 3.key]");
+	}
+
+	private Certificate createCertificate(String location) {
+		return new Certificate(location, "", Mockito.mock(X509Certificate.class));
 	}
 
 }

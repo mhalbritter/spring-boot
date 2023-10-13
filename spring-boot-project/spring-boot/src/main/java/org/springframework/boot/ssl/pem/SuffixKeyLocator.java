@@ -16,12 +16,12 @@
 
 package org.springframework.boot.ssl.pem;
 
-import java.nio.file.Path;
-import java.util.Collection;
+import java.util.List;
 
 import org.springframework.boot.ssl.pem.PemDirectorySslStoreBundle.Certificate;
 import org.springframework.boot.ssl.pem.PemDirectorySslStoreBundle.KeyLocator;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 /**
  * A {@link KeyLocator} which matches files with a given suffix.
@@ -38,13 +38,32 @@ class SuffixKeyLocator implements KeyLocator {
 	}
 
 	@Override
-	public Path locate(Certificate certificate, Collection<Path> files) {
-		String path = certificate.file().toString();
-		int extensionStart = path.lastIndexOf('.');
-		Assert.state(extensionStart != -1, "Unable to find extension in '%s'".formatted(path));
-		path = path.substring(0, extensionStart);
-		path = path + this.keySuffix;
-		return Path.of(path);
+	public String locate(List<String> locations, Certificate certificate) {
+		String certFilenameWithoutExtension = getFilenameWithoutExtension(certificate.location());
+		String keyFilename = certFilenameWithoutExtension + this.keySuffix;
+		for (String location : locations) {
+			String locationFilename = getFilename(location);
+			if (keyFilename.equals(locationFilename)) {
+				return location;
+			}
+		}
+		throw new IllegalStateException("Key for certificate '%s' named '%s' not found in locations: %s".formatted(certificate.location(), keyFilename, locations));
+	}
+
+	private static String getFilename(String location) {
+		return StringUtils.getFilename(stripPrefix(location));
+	}
+
+	private static String getFilenameWithoutExtension(String location) {
+		return StringUtils.stripFilenameExtension(StringUtils.getFilename(stripPrefix(location)));
+	}
+
+	private static String stripPrefix(String input) {
+		int colon = input.indexOf(':');
+		if (colon == -1) {
+			return input;
+		}
+		return input.substring(colon + 1);
 	}
 
 }

@@ -16,8 +16,6 @@
 
 package org.springframework.boot.ssl.pem;
 
-import java.nio.file.Path;
-
 import org.springframework.boot.ssl.pem.PemDirectorySslStoreBundle.CertificateMatcher;
 import org.springframework.util.Assert;
 
@@ -36,8 +34,8 @@ class SuffixCertificateMatcher implements CertificateMatcher {
 	}
 
 	@Override
-	public boolean matches(Path file) {
-		return file.toString().endsWith(this.certificateSuffix);
+	public boolean matches(String location) {
+		return location.endsWith(this.certificateSuffix);
 	}
 
 }

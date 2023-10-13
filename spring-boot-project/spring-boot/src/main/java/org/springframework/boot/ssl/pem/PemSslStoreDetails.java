@@ -30,7 +30,7 @@ import org.springframework.util.StringUtils;
  * that can be loaded by {@link ResourceUtils#getURL})
  * @param privateKey the private key content (either the PEM content itself or something
  * that can be loaded by {@link ResourceUtils#getURL})
- * @param privateKeyPassword a password used to decrypt an encrypted private key
+ * @param privateKeyPassword a password used to decrypt an encrypted private key or {@code null}
  * @author Scott Frederick
  * @author Phillip Webb
  * @since 3.1.0

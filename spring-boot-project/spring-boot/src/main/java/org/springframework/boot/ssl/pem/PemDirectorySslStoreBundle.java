@@ -22,8 +22,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyStore;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -42,25 +40,10 @@ public class PemDirectorySslStoreBundle implements SslStoreBundle {
 
 	private final SslStoreBundle delegate;
 
-	public PemDirectorySslStoreBundle(StoreDetails keyStore, StoreDetails trustStore,
-			String keyAlias, String keyPassword, boolean verifyKeys) {
-		String keyStoreCertificate = loadCertificate(keyStore.certificate());
-		String keyStorePrivateKey = loadPrivateKey(keyStore.privateKey());
-		String trustStoreCertificate = loadCertificate(trustStore.certificate());
-		String trustStorePrivateKey = loadPrivateKey(trustStore.privateKey());
-		this.delegate = new PemSslStoreBundle(
-				new PemSslStoreDetails(keyStore.type(), keyStoreCertificate, keyStorePrivateKey, keyStore.privateKeyPassword()),
-				new PemSslStoreDetails(trustStore.type(), trustStoreCertificate, trustStorePrivateKey, trustStore.privateKeyPassword()),
-				keyAlias, keyPassword, verifyKeys
-		);
-	}
-
-	private static String loadPrivateKey(PrivateKeyDetails privateKey) {
-		if (privateKey.fixedLocation()) {
-			return privateKey.location();
-		}
-		// TODO
-		return null;
+	public PemDirectorySslStoreBundle(StoreDetails keyStore, StoreDetails trustStore, String keyAlias,
+			String keyPassword, boolean verifyKeys) {
+		this.delegate = new PemSslStoreBundle(getStoreDetails(keyStore), getStoreDetails(trustStore), keyAlias,
+				keyPassword, verifyKeys);
 	}
 
 	@Override
@@ -78,68 +61,80 @@ public class PemDirectorySslStoreBundle implements SslStoreBundle {
 		return this.delegate.getTrustStore();
 	}
 
-	private static String loadCertificate(CertificateDetails certificate) {
-		if (certificate.fixedLocation()) {
-			return certificate.location();
+	private static PemSslStoreDetails getStoreDetails(StoreDetails store) {
+		if (store == null) {
+			return null;
 		}
-		// TODO
-		return null;
+		Certificate certificate = loadCertificate(store.certificate());
+		PrivateKey privateKey = loadPrivateKey(store.privateKey(), certificate);
+		return new PemSslStoreDetails(store.type(), certificate.content(), privateKey.content(), store.privateKeyPassword());
 	}
 
-	private static List<Path> listFiles(Path directory) {
+	private static Certificate loadCertificate(CertificateDetails certificate) {
+		if (certificate.fixedLocation()) {
+			return Certificate.load(certificate.location());
+		}
+		else {
+			List<String> files = findFiles(certificate.location());
+			return certificate.selectCertificate(files);
+		}
+	}
+
+	private static PrivateKey loadPrivateKey(PrivateKeyDetails privateKey, Certificate certificate) {
+		if (privateKey == null) {
+			return null;
+		}
+		if (privateKey.fixedLocation()) {
+			return PrivateKey.load(privateKey.location());
+		}
+		else {
+			List<String> files = findFiles(privateKey.location());
+			String location = privateKey.locate(files, certificate);
+			return PrivateKey.load(location);
+		}
+	}
+
+	private static List<String> findFiles(String location) {
+		Assert.state(!location.startsWith("classpath:"), "Wildcard with 'classpath:' locations not supported");
+		Path directory = Path.of(removePrefix(location, "file:")).toAbsolutePath();
 		try (Stream<Path> fileStream = Files.list(directory)) {
-			return fileStream.toList();
+			return fileStream.map((p) -> "file:" + p.toAbsolutePath()).toList();
 		}
 		catch (IOException ex) {
 			throw new UncheckedIOException("Failed to list files in directory '%s'".formatted(directory), ex);
 		}
 	}
 
-	private static Certificate selectCertificate(CertificateSelector certificateSelector,
-			List<Certificate> certificates) {
-		Certificate selected = certificateSelector.select(certificates);
-		if (selected == null) {
-			throw new IllegalStateException("No certificate could be selected. Candidates: %s".formatted(certificates));
+	private static String removePrefix(String input, String prefix) {
+		if (input.startsWith(prefix)) {
+			return input.substring(prefix.length());
 		}
-		return selected;
+		return input;
 	}
 
-	private static Path findKey(KeyLocator keyLocator, Certificate certificate, List<Path> files) {
-		Path key = keyLocator.locate(certificate, files);
-		if (key == null || !Files.exists(key)) {
-			throw new IllegalStateException("Key for certificate '%s' not found".formatted(certificate.file()));
-		}
-		return key;
-	}
-
-	private static List<Certificate> findCertificates(CertificateMatcher certificateMatcher, List<Path> files) {
-		List<Certificate> candidates = new ArrayList<>();
-		for (Path file : files) {
-			if (certificateMatcher.matches(file)) {
-				String content = readContent(file);
-				X509Certificate[] x509Certificates = PemCertificateParser.parse(content);
-				if (x509Certificates == null || x509Certificates.length == 0) {
-					throw new IllegalStateException("No certificates found in file '%s'".formatted(file));
-				}
-				// Always use the first certificate if it is a chain
-				candidates.add(new Certificate(file, x509Certificates[0]));
-			}
-		}
-		return candidates;
-	}
-
-	private static String readContent(Path file) {
-		try {
-			return Files.readString(file);
-		}
-		catch (IOException ex) {
-			throw new UncheckedIOException("Failed to read content of file '%s'".formatted(file), ex);
+	/**
+	 * Store details.
+	 * @param type the key store type, for example {@code JKS} or {@code PKCS11}. A
+	 * {@code null} value will use {@link KeyStore#getDefaultType()}).
+	 * @param certificate the certificate
+	 * @param privateKey the private key or {@code null}
+	 * @param privateKeyPassword a password used to decrypt an encrypted private key or {@code null}
+	 */
+	public record StoreDetails(String type, CertificateDetails certificate, PrivateKeyDetails privateKey,
+			String privateKeyPassword) {
+		public StoreDetails {
+			Assert.notNull(certificate, "Certificate must not be null");
 		}
 	}
 
-	public record StoreDetails(String type, CertificateDetails certificate, PrivateKeyDetails privateKey, String privateKeyPassword) {}
-
-	public record CertificateDetails(String location, CertificateMatcher certificateMatcher, CertificateSelector certificateSelector) {
+	/**
+	 * Certificate details.
+	 * @param location the location of the certificate
+	 * @param certificateMatcher the certificate matcher or {@code null}
+	 * @param certificateSelector the certificate selector or {@code null}
+	 */
+	public record CertificateDetails(String location, CertificateMatcher certificateMatcher,
+			CertificateSelector certificateSelector) {
 		public CertificateDetails {
 			Assert.notNull(location, "Location must not be null");
 		}
@@ -151,8 +146,29 @@ public class PemDirectorySslStoreBundle implements SslStoreBundle {
 		boolean fixedLocation() {
 			return this.certificateMatcher == null || this.certificateSelector == null;
 		}
+
+		Certificate selectCertificate(List<String> locations) {
+			List<Certificate> certificates = loadCertificates(locations);
+			Assert.state(!certificates.isEmpty(), "No certificates found in %s".formatted(locations));
+			Certificate selected = this.certificateSelector.select(certificates);
+			Assert.notNull(selected, "No certificate has been selected from %s".formatted(locations));
+			return selected;
+		}
+
+		private List<Certificate> loadCertificates(List<String> locations) {
+			return locations
+					.stream()
+					.filter(this.certificateMatcher::matches)
+					.map(Certificate::load)
+					.toList();
+		}
 	}
 
+	/**
+	 * Private key details.
+	 * @param location the location of the private key
+	 * @param keyLocator the key locator or {@code null}
+	 */
 	public record PrivateKeyDetails(String location, KeyLocator keyLocator) {
 		public PrivateKeyDetails {
 			Assert.notNull(location, "Location must not be null");
@@ -165,26 +181,56 @@ public class PemDirectorySslStoreBundle implements SslStoreBundle {
 		boolean fixedLocation() {
 			return this.keyLocator == null;
 		}
+
+		String locate(List<String> locations, Certificate certificate) {
+			String key = this.keyLocator.locate(locations, certificate);
+			if (key == null || !locations.contains(key)) {
+				throw new IllegalStateException("Key could not be found in locations %s".formatted(locations));
+			}
+			return key;
+		}
 	}
 
 	/**
-	 * Certificate.
+	 * A Certificate.
 	 *
-	 * @param file the certificate file
+	 * @param location the certificate location
+	 * @param content the certificate content
 	 * @param certificate the parsed certificate
 	 */
-	public record Certificate(Path file, X509Certificate certificate) {
+	public record Certificate(String location, String content, X509Certificate certificate) {
+		public Certificate {
+			Assert.notNull(location, "Location must not be null");
+			Assert.notNull(content, "Content must not be null");
+			Assert.notNull(certificate, "Certificate must not be null");
+		}
+
+		static Certificate load(String location) {
+			String content = PemContent.load(location);
+			X509Certificate[] x509Certificates = PemCertificateParser.parse(content);
+			if (x509Certificates == null || x509Certificates.length == 0) {
+				throw new IllegalStateException("No certificates found at '%s'".formatted(location));
+			}
+			// Always use first certificate of the chain
+			return new Certificate(location, content, x509Certificates[0]);
+		}
+	}
+
+	private record PrivateKey(String location, String content) {
+		static PrivateKey load(String location) {
+			return new PrivateKey(location, PemContent.load(location));
+		}
 	}
 
 	public interface KeyLocator {
 
 		/**
 		 * Locates the key belonging to the given {@code certificate}.
+		 * @param locations the available key locations
 		 * @param certificate the certificate to locate a key for
-		 * @param files the available files
-		 * @return the path to the key, or {@code null}
+		 * @return the location to the key, or {@code null}
 		 */
-		Path locate(Certificate certificate, Collection<Path> files);
+		String locate(List<String> locations, Certificate certificate);
 
 		/**
 		 * Creates a {@link KeyLocator} which selects keys based on the file extension.
@@ -200,11 +246,11 @@ public class PemDirectorySslStoreBundle implements SslStoreBundle {
 	public interface CertificateMatcher {
 
 		/**
-		 * Decides whether the given {@code file} is a certificate.
-		 * @param file the file to decide on
-		 * @return whether the file is a certificate
+		 * Decides whether the given {@code location} is a certificate.
+		 * @param location the location to decide on
+		 * @return whether the location is a certificate
 		 */
-		boolean matches(Path file);
+		boolean matches(String location);
 
 		/**
 		 * Creates a {@link CertificateMatcher} which selects certificates based on the
@@ -251,7 +297,9 @@ public class PemDirectorySslStoreBundle implements SslStoreBundle {
 		 * @return the certificate selector
 		 */
 		static CertificateSelector newestFile() {
-			return new CertificateSelectors.NewestFileCertificateSelector();
+			// TODO
+			return null;
+			// return new CertificateSelectors.NewestFileCertificateSelector();
 		}
 
 	}
