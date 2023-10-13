@@ -16,6 +16,7 @@
 
 package org.springframework.boot.autoconfigure.ssl;
 
+import org.springframework.boot.autoconfigure.ssl.PatternParser.Pattern;
 import org.springframework.boot.autoconfigure.ssl.SslBundleProperties.Key;
 import org.springframework.boot.ssl.SslBundle;
 import org.springframework.boot.ssl.SslBundleKey;
@@ -25,14 +26,18 @@ import org.springframework.boot.ssl.SslStoreBundle;
 import org.springframework.boot.ssl.jks.JksSslStoreBundle;
 import org.springframework.boot.ssl.jks.JksSslStoreDetails;
 import org.springframework.boot.ssl.pem.PemDirectorySslStoreBundle;
+import org.springframework.boot.ssl.pem.PemDirectorySslStoreBundle.CertificateDetails;
 import org.springframework.boot.ssl.pem.PemDirectorySslStoreBundle.CertificateMatcher;
+import org.springframework.boot.ssl.pem.PemDirectorySslStoreBundle.CertificateSelector;
 import org.springframework.boot.ssl.pem.PemDirectorySslStoreBundle.KeyLocator;
+import org.springframework.boot.ssl.pem.PemDirectorySslStoreBundle.PrivateKeyDetails;
+import org.springframework.boot.ssl.pem.PemDirectorySslStoreBundle.StoreDetails;
 import org.springframework.boot.ssl.pem.PemSslStoreBundle;
 import org.springframework.boot.ssl.pem.PemSslStoreDetails;
 
 /**
  * {@link SslBundle} backed by {@link JksSslBundleProperties} or
- * {@link PemSslBundleProperties} or {@link PemDirectorySslBundleProperties}.
+ * {@link PemSslBundleProperties}
  *
  * @author Scott Frederick
  * @author Phillip Webb
@@ -110,22 +115,58 @@ public final class PropertiesSslBundle implements SslBundle {
 		return new PropertiesSslBundle(asSslStoreBundle(properties), properties);
 	}
 
-	/**
-	 * Get an {@link SslBundle} for the given {@link PemDirectorySslBundleProperties}.
-	 * @param properties the source properties
-	 * @return an {@link SslBundle} instance
-	 * @since 3.2.0
-	 */
-	public static SslBundle get(PemDirectorySslBundleProperties properties) {
-		properties.validate();
-		return new PropertiesSslBundle(asSslStoreBundle(properties), properties);
-	}
-
 	private static SslStoreBundle asSslStoreBundle(PemSslBundleProperties properties) {
+		if (hasPattern(properties)) {
+			return asPemDirectoryStoreBundle(properties);
+		}
 		PemSslStoreDetails keyStoreDetails = asStoreDetails(properties.getKeystore());
 		PemSslStoreDetails trustStoreDetails = asStoreDetails(properties.getTruststore());
 		return new PemSslStoreBundle(keyStoreDetails, trustStoreDetails, properties.getKey().getAlias(), null,
 				properties.isVerifyKeys());
+	}
+
+	private static PemDirectorySslStoreBundle asPemDirectoryStoreBundle(PemSslBundleProperties properties) {
+		return new PemDirectorySslStoreBundle(
+				new StoreDetails(properties.getKeystore().getType(),
+						createCertificate(properties.getKeystore().getCertificate()),
+						createPrivateKey(properties.getKeystore().getPrivateKey()),
+						properties.getKeystore().getPrivateKeyPassword()),
+				new StoreDetails(properties.getTruststore().getType(),
+						createCertificate(properties.getTruststore().getCertificate()),
+						createPrivateKey(properties.getTruststore().getPrivateKey()),
+						properties.getTruststore().getPrivateKeyPassword()),
+				properties.getKey().getAlias(), null, properties.isVerifyKeys());
+	}
+
+	private static PrivateKeyDetails createPrivateKey(String location) {
+		Pattern pattern = PatternParser.parse(location);
+		if (pattern == null) {
+			return PrivateKeyDetails.forFixedLocation(location);
+		}
+		else {
+			return new PrivateKeyDetails(pattern.directory(), KeyLocator.withExtension(pattern.extension()));
+		}
+	}
+
+	private static CertificateDetails createCertificate(String location) {
+		Pattern pattern = PatternParser.parse(location);
+		if (pattern == null) {
+			return CertificateDetails.forFixedLocation(location);
+		}
+		else {
+			// TODO: Make CertificateSelector configurable
+			return new CertificateDetails(pattern.directory(), CertificateMatcher.withExtension(pattern.extension()),
+					CertificateSelector.maximumNotBefore());
+		}
+	}
+
+	private static boolean hasPattern(PemSslBundleProperties properties) {
+		Pattern keyStoreCertificate = PatternParser.parse(properties.getKeystore().getCertificate());
+		Pattern keyStorePrivateKey = PatternParser.parse(properties.getKeystore().getPrivateKey());
+		Pattern trustStoreCertificate = PatternParser.parse(properties.getTruststore().getCertificate());
+		Pattern trustStorePrivateKey = PatternParser.parse(properties.getTruststore().getPrivateKey());
+		return keyStoreCertificate != null || keyStorePrivateKey != null || trustStoreCertificate != null
+				|| trustStorePrivateKey != null;
 	}
 
 	private static PemSslStoreDetails asStoreDetails(PemSslBundleProperties.Store properties) {
@@ -142,13 +183,6 @@ public final class PropertiesSslBundle implements SslBundle {
 	private static JksSslStoreDetails asStoreDetails(JksSslBundleProperties.Store properties) {
 		return new JksSslStoreDetails(properties.getType(), properties.getProvider(), properties.getLocation(),
 				properties.getPassword());
-	}
-
-	private static SslStoreBundle asSslStoreBundle(PemDirectorySslBundleProperties properties) {
-		return new PemDirectorySslStoreBundle(properties.toDetails(),
-				CertificateMatcher.withExtension(properties.getCertificateExtension()),
-				KeyLocator.withExtension(properties.getCertificateExtension(), properties.getKeyExtension()),
-				properties.getCertificateSelection().getCertificateSelector());
 	}
 
 }

@@ -30,25 +30,19 @@ import org.springframework.util.Assert;
  */
 class SuffixKeyLocator implements KeyLocator {
 
-	private final String certificateSuffix;
-
 	private final String keySuffix;
 
-	SuffixKeyLocator(String certificateSuffix, String keySuffix) {
-		Assert.notNull(certificateSuffix, "certificateSuffix must not be null");
+	SuffixKeyLocator(String keySuffix) {
 		Assert.notNull(keySuffix, "keySuffix must not be null");
-		this.certificateSuffix = certificateSuffix;
 		this.keySuffix = keySuffix;
 	}
 
 	@Override
 	public Path locate(Certificate certificate, Collection<Path> files) {
 		String path = certificate.file().toString();
-		if (!path.endsWith(this.certificateSuffix)) {
-			throw new IllegalArgumentException(
-					"Path '%s' does not end with '%s'".formatted(path, this.certificateSuffix));
-		}
-		path = path.substring(0, path.length() - this.certificateSuffix.length());
+		int extensionStart = path.lastIndexOf('.');
+		Assert.state(extensionStart != -1, "Unable to find extension in '%s'".formatted(path));
+		path = path.substring(0, extensionStart);
 		path = path + this.keySuffix;
 		return Path.of(path);
 	}

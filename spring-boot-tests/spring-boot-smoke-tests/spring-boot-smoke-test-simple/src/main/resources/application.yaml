@@ -1,0 +1,10 @@
+test.name: Phil
+sample.name: Andy
+spring.ssl.bundle.pem:
+  mybundle:
+    keystore:
+      certificate: "/home/mkammerer/tmp/1/*.crt"
+      private-key: "/home/mkammerer/tmp/2/1.key"
+    truststore:
+      certificate: "/home/mkammerer/tmp/3/2.crt"
+      private-key: "/home/mkammerer/tmp/4/2.key"

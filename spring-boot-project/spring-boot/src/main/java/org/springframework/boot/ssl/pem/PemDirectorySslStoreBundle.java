@@ -42,24 +42,25 @@ public class PemDirectorySslStoreBundle implements SslStoreBundle {
 
 	private final SslStoreBundle delegate;
 
-	/**
-	 * Creates a new {@link PemDirectorySslStoreBundle}.
-	 * @param details the {@link PemDirectorySslStoreDetails} to create the bundle
-	 * @param certificateMatcher the strategy to find certificates
-	 * @param keyLocator the strategy to find the key for a certificate
-	 * @param certificateSelector the strategy to select a certificate
-	 */
-	public PemDirectorySslStoreBundle(PemDirectorySslStoreDetails details, CertificateMatcher certificateMatcher,
-			KeyLocator keyLocator, CertificateSelector certificateSelector) {
-		Assert.notNull(details, "details must not be null");
-		Assert.notNull(certificateMatcher, "certificateMatcher must not be null");
-		Assert.notNull(keyLocator, "keyLocator must not be null");
-		Assert.notNull(certificateSelector, "certificateSelector must not be null");
-		List<Path> files = listFiles(details.directory());
-		List<Certificate> certificates = findCertificates(certificateMatcher, files);
-		Certificate certificate = selectCertificate(certificateSelector, certificates);
-		Path key = findKey(keyLocator, certificate, files);
-		this.delegate = loadBundle(certificate.file(), key, details);
+	public PemDirectorySslStoreBundle(StoreDetails keyStore, StoreDetails trustStore,
+			String keyAlias, String keyPassword, boolean verifyKeys) {
+		String keyStoreCertificate = loadCertificate(keyStore.certificate());
+		String keyStorePrivateKey = loadPrivateKey(keyStore.privateKey());
+		String trustStoreCertificate = loadCertificate(trustStore.certificate());
+		String trustStorePrivateKey = loadPrivateKey(trustStore.privateKey());
+		this.delegate = new PemSslStoreBundle(
+				new PemSslStoreDetails(keyStore.type(), keyStoreCertificate, keyStorePrivateKey, keyStore.privateKeyPassword()),
+				new PemSslStoreDetails(trustStore.type(), trustStoreCertificate, trustStorePrivateKey, trustStore.privateKeyPassword()),
+				keyAlias, keyPassword, verifyKeys
+		);
+	}
+
+	private static String loadPrivateKey(PrivateKeyDetails privateKey) {
+		if (privateKey.fixedLocation()) {
+			return privateKey.location();
+		}
+		// TODO
+		return null;
 	}
 
 	@Override
@@ -77,14 +78,12 @@ public class PemDirectorySslStoreBundle implements SslStoreBundle {
 		return this.delegate.getTrustStore();
 	}
 
-	private static PemSslStoreBundle loadBundle(Path certificate, Path key, PemDirectorySslStoreDetails details) {
-		String certificateContent = readContent(certificate);
-		String keyContent = readContent(key);
-		return new PemSslStoreBundle(
-				new PemSslStoreDetails(details.keyStoreType(), certificateContent, keyContent,
-						details.privateKeyPassword()),
-				new PemSslStoreDetails(details.trustStoreType(), certificateContent, null), details.alias(), null,
-				details.verifyKeys());
+	private static String loadCertificate(CertificateDetails certificate) {
+		if (certificate.fixedLocation()) {
+			return certificate.location();
+		}
+		// TODO
+		return null;
 	}
 
 	private static List<Path> listFiles(Path directory) {
@@ -138,6 +137,36 @@ public class PemDirectorySslStoreBundle implements SslStoreBundle {
 		}
 	}
 
+	public record StoreDetails(String type, CertificateDetails certificate, PrivateKeyDetails privateKey, String privateKeyPassword) {}
+
+	public record CertificateDetails(String location, CertificateMatcher certificateMatcher, CertificateSelector certificateSelector) {
+		public CertificateDetails {
+			Assert.notNull(location, "Location must not be null");
+		}
+
+		public static CertificateDetails forFixedLocation(String location) {
+			return new CertificateDetails(location, null, null);
+		}
+
+		boolean fixedLocation() {
+			return this.certificateMatcher == null || this.certificateSelector == null;
+		}
+	}
+
+	public record PrivateKeyDetails(String location, KeyLocator keyLocator) {
+		public PrivateKeyDetails {
+			Assert.notNull(location, "Location must not be null");
+		}
+
+		public static PrivateKeyDetails forFixedLocation(String location) {
+			return new PrivateKeyDetails(location, null);
+		}
+
+		boolean fixedLocation() {
+			return this.keyLocator == null;
+		}
+	}
+
 	/**
 	 * Certificate.
 	 *
@@ -159,12 +188,11 @@ public class PemDirectorySslStoreBundle implements SslStoreBundle {
 
 		/**
 		 * Creates a {@link KeyLocator} which selects keys based on the file extension.
-		 * @param certificateExtension the extension of certificate files
 		 * @param keyExtension the extension of key files
 		 * @return the key locator
 		 */
-		static KeyLocator withExtension(String certificateExtension, String keyExtension) {
-			return new SuffixKeyLocator(certificateExtension, keyExtension);
+		static KeyLocator withExtension(String keyExtension) {
+			return new SuffixKeyLocator(keyExtension);
 		}
 
 	}
