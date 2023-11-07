@@ -26,10 +26,12 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnectionAutoConfiguration;
 import org.springframework.boot.testsupport.testcontainers.DockerImageNames;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
 import org.springframework.data.elasticsearch.client.elc.ElasticsearchTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,20 +39,18 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.springframework.boot.test.autoconfigure.AutoConfigurationImportedCondition.importedAutoConfiguration;
 
 /**
- * Integration tests for {@link DataElasticsearchTest @DataElasticsearchTest}.
+ * Integration tests for {@link DataElasticsearchTest @DataElasticsearchTest} with
+ * Elasticsearch 8.
  *
- * @author Eddú Meléndez
- * @author Moritz Halbritter
- * @author Andy Wilkinson
- * @author Phillip Webb
+ * @author Scott Frederick
  */
-@DataElasticsearchTest
 @Testcontainers(disabledWithoutDocker = true)
-class DataElasticsearchTestIntegrationTests {
+@DataElasticsearchTest(properties = { "spring.elasticsearch.restclient.ssl.bundle=elasticsearch-container" })
+class DataElasticsearchTestVersion8IntegrationTests {
 
 	@Container
 	@ServiceConnection
-	static final ElasticsearchContainer elasticsearch = new ElasticsearchContainer(DockerImageNames.elasticsearch())
+	static final ElasticsearchContainer elasticsearch = new ElasticsearchContainer(DockerImageNames.elasticsearch8())
 		.withEnv("ES_JAVA_OPTS", "-Xms32m -Xmx512m")
 		.withStartupAttempts(5)
 		.withStartupTimeout(Duration.ofMinutes(10));
@@ -87,6 +87,16 @@ class DataElasticsearchTestIntegrationTests {
 	@Test
 	void serviceConnectionAutoConfigurationWasImported() {
 		assertThat(this.applicationContext).has(importedAutoConfiguration(ServiceConnectionAutoConfiguration.class));
+	}
+
+	@TestConfiguration
+	static class ElasticsearchContainerSslBundleConfiguration {
+
+		@Bean
+		ElasticsearchContainerSslBundleRegistrar elasticsearchContainerSslBundleRegistrar() {
+			return new ElasticsearchContainerSslBundleRegistrar("elasticsearch-container", elasticsearch);
+		}
+
 	}
 
 }

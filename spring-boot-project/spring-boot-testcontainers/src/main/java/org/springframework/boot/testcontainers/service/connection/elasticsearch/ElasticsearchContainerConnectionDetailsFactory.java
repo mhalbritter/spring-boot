@@ -19,6 +19,8 @@ package org.springframework.boot.testcontainers.service.connection.elasticsearch
 import java.util.List;
 
 import org.testcontainers.elasticsearch.ElasticsearchContainer;
+import org.testcontainers.utility.ComparableVersion;
+import org.testcontainers.utility.DockerImageName;
 
 import org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchConnectionDetails;
 import org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchConnectionDetails.Node.Protocol;
@@ -39,6 +41,10 @@ class ElasticsearchContainerConnectionDetailsFactory
 		extends ContainerConnectionDetailsFactory<ElasticsearchContainer, ElasticsearchConnectionDetails> {
 
 	private static final int DEFAULT_PORT = 9200;
+
+	public static final String DEFAULT_USERNAME = "elastic";
+
+	public static final String PASSWORD_ENV_KEY = "ELASTIC_PASSWORD";
 
 	@Override
 	protected ElasticsearchConnectionDetails getContainerConnectionDetails(
@@ -61,7 +67,23 @@ class ElasticsearchContainerConnectionDetailsFactory
 		public List<Node> getNodes() {
 			String host = getContainer().getHost();
 			Integer port = getContainer().getMappedPort(DEFAULT_PORT);
-			return List.of(new Node(host, port, Protocol.HTTP, null, null));
+			Protocol protocol = isVersion8OrGreater() ? Protocol.HTTPS : Protocol.HTTP;
+			return List.of(new Node(host, port, protocol, null, null));
+		}
+
+		@Override
+		public String getUsername() {
+			return isVersion8OrGreater() ? DEFAULT_USERNAME : null;
+		}
+
+		@Override
+		public String getPassword() {
+			return isVersion8OrGreater() ? getContainer().getEnvMap().get(PASSWORD_ENV_KEY) : null;
+		}
+
+		private boolean isVersion8OrGreater() {
+			DockerImageName dockerImageName = DockerImageName.parse(getContainer().getDockerImageName());
+			return new ComparableVersion(dockerImageName.getVersionPart()).isGreaterThanOrEqualTo("8.0.0");
 		}
 
 	}

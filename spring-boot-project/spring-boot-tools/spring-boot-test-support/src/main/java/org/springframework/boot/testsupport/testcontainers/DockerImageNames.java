@@ -128,7 +128,9 @@ public final class DockerImageNames {
 	 * @return a docker image name for running elasticsearch
 	 */
 	public static DockerImageName elasticsearch8() {
-		return DockerImageName.parse("elasticsearch").withTag(ELASTICSEARCH_8_VERSION);
+		return DockerImageName.parse("elasticsearch")
+			.withTag(ELASTICSEARCH_8_VERSION)
+			.asCompatibleSubstituteFor("docker.elastic.co/elasticsearch/elasticsearch");
 	}
 
 	/**

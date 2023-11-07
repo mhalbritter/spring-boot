@@ -24,28 +24,27 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.testsupport.testcontainers.DockerImageNames;
+import org.springframework.context.annotation.Bean;
 import org.springframework.data.elasticsearch.client.elc.ReactiveElasticsearchTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Integration tests for {@link DataElasticsearchTest @DataElasticsearchTest} using
- * reactive repositories.
+ * Integration tests for {@link DataElasticsearchTest @DataElasticsearchTest} with
+ * Elasticsearch 8 using reactive repositories.
  *
- * @author Eddú Meléndez
- * @author Moritz Halbritter
- * @author Andy Wilkinson
- * @author Phillip Webb
+ * @author Scott Frederick
  */
-@DataElasticsearchTest
 @Testcontainers(disabledWithoutDocker = true)
-class DataElasticsearchTestReactiveIntegrationTests {
+@DataElasticsearchTest(properties = { "spring.elasticsearch.restclient.ssl.bundle=elasticsearch-container" })
+class DataElasticsearchTestVersion8ReactiveIntegrationTests {
 
 	@Container
 	@ServiceConnection
-	static final ElasticsearchContainer elasticsearch = new ElasticsearchContainer(DockerImageNames.elasticsearch())
+	static final ElasticsearchContainer elasticsearch = new ElasticsearchContainer(DockerImageNames.elasticsearch8())
 		.withEnv("ES_JAVA_OPTS", "-Xms32m -Xmx512m")
 		.withStartupAttempts(5)
 		.withStartupTimeout(Duration.ofMinutes(10));
@@ -64,6 +63,16 @@ class DataElasticsearchTestReactiveIntegrationTests {
 		assertThat(exampleDocument.getId()).isNotNull();
 		assertThat(this.elasticsearchTemplate.exists(exampleDocument.getId(), ExampleDocument.class)
 			.block(Duration.ofSeconds(30))).isTrue();
+	}
+
+	@TestConfiguration
+	static class ElasticsearchContainerSslBundleConfiguration {
+
+		@Bean
+		ElasticsearchContainerSslBundleRegistrar elasticsearchContainerSslBundleRegistrar() {
+			return new ElasticsearchContainerSslBundleRegistrar("elasticsearch-container", elasticsearch);
+		}
+
 	}
 
 }
