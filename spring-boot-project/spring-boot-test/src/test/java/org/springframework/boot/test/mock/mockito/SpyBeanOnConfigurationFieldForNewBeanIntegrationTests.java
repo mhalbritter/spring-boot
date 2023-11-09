@@ -24,6 +24,7 @@ import org.springframework.boot.test.mock.mockito.example.ExampleServiceCaller;
 import org.springframework.boot.test.mock.mockito.example.SimpleExampleService;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,6 +37,7 @@ import static org.mockito.BDDMockito.then;
  * @author Phillip Webb
  */
 @ExtendWith(SpringExtension.class)
+@DirtiesContext
 class SpyBeanOnConfigurationFieldForNewBeanIntegrationTests {
 
 	@Autowired

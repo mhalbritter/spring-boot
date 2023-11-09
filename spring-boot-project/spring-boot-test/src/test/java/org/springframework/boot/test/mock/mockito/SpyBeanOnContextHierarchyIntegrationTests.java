@@ -28,6 +28,7 @@ import org.springframework.boot.test.mock.mockito.example.SimpleExampleService;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -41,6 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Phillip Webb
  */
 @ExtendWith(SpringExtension.class)
+@DirtiesContext
 @ContextHierarchy({ @ContextConfiguration(classes = ParentConfig.class),
 		@ContextConfiguration(classes = ChildConfig.class) })
 class SpyBeanOnContextHierarchyIntegrationTests {

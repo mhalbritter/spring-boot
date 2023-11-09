@@ -26,6 +26,7 @@ import org.springframework.boot.test.json.BasicJsonTester;
 import org.springframework.boot.test.json.GsonTester;
 import org.springframework.boot.test.json.JacksonTester;
 import org.springframework.boot.test.json.JsonbTester;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,6 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Andy Wilkinson
  */
 @SpringBootTest
+@DirtiesContext
 @AutoConfigureJsonTesters
 @ContextConfiguration(classes = ExampleJsonApplication.class)
 class SpringBootTestWithAutoConfigureJsonTestersTests {

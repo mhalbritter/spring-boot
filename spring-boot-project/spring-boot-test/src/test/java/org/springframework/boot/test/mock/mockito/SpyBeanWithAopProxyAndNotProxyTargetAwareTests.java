@@ -32,6 +32,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.stereotype.Service;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -45,6 +46,7 @@ import static org.mockito.Mockito.reset;
  * @see <a href="https://github.com/spring-projects/spring-boot/issues/5837">5837</a>
  */
 @ExtendWith(SpringExtension.class)
+@DirtiesContext
 class SpyBeanWithAopProxyAndNotProxyTargetAwareTests {
 
 	@SpyBean(proxyTargetAware = false)

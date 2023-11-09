@@ -27,6 +27,7 @@ import org.springframework.boot.test.graphql.tester.HttpGraphQlTesterContextCust
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.AbstractApplicationContext;
 import org.springframework.graphql.test.tester.HttpGraphQlTester;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.MergedContextConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -65,6 +66,7 @@ class HttpGraphQlTesterContextCustomizerTests {
 	}
 
 	@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+	@DirtiesContext
 	static class TestClass {
 
 	}

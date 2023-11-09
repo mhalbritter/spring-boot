@@ -31,6 +31,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testsupport.testcontainers.DockerImageNames;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.neo4j.repository.config.EnableNeo4jRepositories;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
@@ -42,6 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Michael J. Simons
  */
 @SpringBootTest
+@DirtiesContext
 @Testcontainers(disabledWithoutDocker = true)
 class Neo4jRepositoriesAutoConfigurationIntegrationTests {
 

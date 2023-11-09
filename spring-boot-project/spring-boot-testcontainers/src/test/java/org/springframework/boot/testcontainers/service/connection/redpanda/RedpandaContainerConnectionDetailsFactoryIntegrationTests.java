@@ -35,6 +35,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
@@ -46,6 +47,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Eddú Meléndez
  */
 @SpringJUnitConfig
+@DirtiesContext
 @Testcontainers(disabledWithoutDocker = true)
 @TestPropertySource(properties = { "spring.kafka.consumer.group-id=test-group",
 		"spring.kafka.consumer.auto-offset-reset=earliest" })

@@ -27,6 +27,7 @@ import org.springframework.boot.test.autoconfigure.ExampleTestConfig;
 import org.springframework.boot.test.autoconfigure.OverrideAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTestContextBootstrapper;
 import org.springframework.context.ApplicationContext;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.BootstrapWith;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
@@ -40,6 +41,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * @author Phillip Webb
  */
 @ExtendWith(SpringExtension.class)
+@DirtiesContext
 @OverrideAutoConfiguration(enabled = false)
 @BootstrapWith(SpringBootTestContextBootstrapper.class)
 @ImportAutoConfiguration(ExampleTestConfig.class)

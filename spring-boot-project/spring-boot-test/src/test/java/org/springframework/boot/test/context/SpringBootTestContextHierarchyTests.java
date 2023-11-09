@@ -25,6 +25,7 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.ContextHierarchy;
 
@@ -37,6 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Andy Wilkinson
  */
 @SpringBootTest
+@DirtiesContext
 @ContextHierarchy({ @ContextConfiguration(classes = ParentConfiguration.class),
 		@ContextConfiguration(classes = ChildConfiguration.class) })
 @ExtendWith(OutputCaptureExtension.class)

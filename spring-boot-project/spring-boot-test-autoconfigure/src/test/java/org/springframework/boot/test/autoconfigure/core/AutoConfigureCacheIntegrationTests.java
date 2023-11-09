@@ -25,6 +25,7 @@ import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.support.NoOpCacheManager;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.test.annotation.DirtiesContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -34,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Phillip Webb
  */
 @SpringBootTest
+@DirtiesContext
 @AutoConfigureCache
 class AutoConfigureCacheIntegrationTests {
 

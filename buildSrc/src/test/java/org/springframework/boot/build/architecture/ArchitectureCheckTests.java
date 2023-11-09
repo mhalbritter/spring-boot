@@ -127,7 +127,10 @@ class ArchitectureCheckTests {
 		copyClasses(classes, projectDir);
 		Project project = ProjectBuilder.builder().withProjectDir(projectDir).build();
 		ArchitectureCheck architectureCheck = project.getTasks()
-			.create("checkArchitecture", ArchitectureCheck.class, (task) -> task.setClasses(project.files("classes")));
+			.create("checkArchitecture", ArchitectureCheck.class, (task) -> {
+				task.setClasspath(project.files());
+				task.setClasses(project.files("classes"));
+			});
 		callback.accept(architectureCheck);
 	}
 

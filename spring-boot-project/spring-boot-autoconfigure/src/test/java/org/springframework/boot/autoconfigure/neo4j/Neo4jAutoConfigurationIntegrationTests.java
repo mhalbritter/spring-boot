@@ -39,6 +39,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testsupport.testcontainers.DockerImageNames;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
@@ -59,6 +60,7 @@ class Neo4jAutoConfigurationIntegrationTests {
 		.withStartupTimeout(Duration.ofMinutes(10));
 
 	@SpringBootTest
+	@DirtiesContext
 	@Nested
 	class DriverWithDefaultAuthToken {
 
@@ -90,6 +92,7 @@ class Neo4jAutoConfigurationIntegrationTests {
 	}
 
 	@SpringBootTest
+	@DirtiesContext
 	@Nested
 	class DriverWithDynamicAuthToken {
 
@@ -127,6 +130,7 @@ class Neo4jAutoConfigurationIntegrationTests {
 	}
 
 	@SpringBootTest
+	@DirtiesContext
 	@Nested
 	class DriverWithCustomConnectionDetailsIgnoresAuthTokenManager {
 

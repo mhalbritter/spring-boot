@@ -29,6 +29,7 @@ import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.env.StandardEnvironment;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
@@ -42,6 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Phillip Webb
  */
 @SpringBootTest
+@DirtiesContext
 @ActiveProfiles({ "test1", "test2" })
 @ContextConfiguration(loader = SpringBootTestWithActiveProfilesAndSystemEnvironmentPropertyTests.Loader.class)
 class SpringBootTestWithActiveProfilesAndSystemEnvironmentPropertyTests {

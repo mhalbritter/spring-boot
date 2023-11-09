@@ -22,6 +22,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.SpyBeanOnTestFieldForExistingCircularBeansIntegrationTests.SpyBeanOnTestFieldForExistingCircularBeansConfig;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
@@ -34,6 +35,7 @@ import static org.mockito.BDDMockito.then;
  * @author Andy Wilkinson
  */
 @ExtendWith(SpringExtension.class)
+@DirtiesContext
 @ContextConfiguration(classes = SpyBeanOnTestFieldForExistingCircularBeansConfig.class)
 class SpyBeanOnTestFieldForExistingCircularBeansIntegrationTests {
 

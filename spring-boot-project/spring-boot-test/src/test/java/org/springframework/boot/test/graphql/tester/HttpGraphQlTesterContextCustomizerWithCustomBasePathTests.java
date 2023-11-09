@@ -35,6 +35,7 @@ import org.springframework.http.server.reactive.ContextPathCompositeHandler;
 import org.springframework.http.server.reactive.HttpHandler;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 
 /**
@@ -44,6 +45,7 @@ import org.springframework.test.context.TestPropertySource;
  * @author Brian Clozel
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@DirtiesContext
 @TestPropertySource(properties = { "spring.main.web-application-type=reactive", "spring.webflux.base-path=/test" })
 class HttpGraphQlTesterContextCustomizerWithCustomBasePathTests {
 

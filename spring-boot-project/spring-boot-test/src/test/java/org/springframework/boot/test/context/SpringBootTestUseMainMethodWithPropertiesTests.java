@@ -23,6 +23,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.test.context.SpringBootTest.UseMainMethod;
 import org.springframework.context.ApplicationContext;
+import org.springframework.test.annotation.DirtiesContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -33,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Phillip Webb
  */
 @SpringBootTest(properties = "test=123", useMainMethod = UseMainMethod.ALWAYS)
+@DirtiesContext
 class SpringBootTestUseMainMethodWithPropertiesTests {
 
 	@Autowired

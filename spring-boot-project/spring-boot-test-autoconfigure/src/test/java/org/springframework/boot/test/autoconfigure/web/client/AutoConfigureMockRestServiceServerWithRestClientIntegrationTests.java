@@ -26,6 +26,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClient.Builder;
@@ -42,6 +43,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
  * @author Scott Frederick
  */
 @SpringBootTest
+@DirtiesContext
 @AutoConfigureMockRestServiceServer
 class AutoConfigureMockRestServiceServerWithRestClientIntegrationTests {
 

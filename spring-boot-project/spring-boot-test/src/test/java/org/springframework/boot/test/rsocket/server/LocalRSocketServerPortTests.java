@@ -21,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
@@ -33,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Eddú Meléndez
  */
 @ExtendWith(SpringExtension.class)
+@DirtiesContext
 @TestPropertySource(properties = "local.rsocket.server.port=8181")
 class LocalRSocketServerPortTests {
 

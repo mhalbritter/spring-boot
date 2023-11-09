@@ -28,6 +28,7 @@ import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.testsupport.testcontainers.DockerImageNames;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,6 +40,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Moritz Halbritter
  */
 @SpringJUnitConfig
+@DirtiesContext
 @Testcontainers(disabledWithoutDocker = true)
 class ZipkinContainerConnectionDetailsFactoryIntegrationTests {
 

@@ -26,6 +26,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.test.web.client.TestRestTemplateContextCustomizer.TestRestTemplateRegistrar;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.AbstractApplicationContext;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.MergedContextConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -64,6 +65,7 @@ class TestRestTemplateContextCustomizerTests {
 	}
 
 	@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+	@DirtiesContext
 	static class TestClass {
 
 	}

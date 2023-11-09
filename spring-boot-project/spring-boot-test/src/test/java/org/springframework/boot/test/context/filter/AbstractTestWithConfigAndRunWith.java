@@ -19,6 +19,7 @@ package org.springframework.boot.test.context.filter;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.springframework.context.annotation.Configuration;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 /**
@@ -28,6 +29,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
  * @author Phillip Webb
  */
 @ExtendWith(SpringExtension.class)
+@DirtiesContext
 public abstract class AbstractTestWithConfigAndRunWith {
 
 	@Configuration(proxyBeanMethods = false)

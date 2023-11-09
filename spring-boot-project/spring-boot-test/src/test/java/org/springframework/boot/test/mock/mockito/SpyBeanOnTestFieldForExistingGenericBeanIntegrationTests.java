@@ -27,6 +27,7 @@ import org.springframework.boot.test.mock.mockito.example.SimpleExampleStringGen
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,6 +41,7 @@ import static org.mockito.BDDMockito.then;
  * @see SpyBeanOnTestFieldForExistingBeanCacheIntegrationTests
  */
 @ExtendWith(SpringExtension.class)
+@DirtiesContext
 class SpyBeanOnTestFieldForExistingGenericBeanIntegrationTests {
 
 	// gh-7625

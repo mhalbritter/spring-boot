@@ -28,6 +28,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Scope;
 import org.springframework.context.annotation.ScopedProxyMode;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,6 +41,7 @@ import static org.mockito.BDDMockito.given;
  * @see <a href="https://github.com/spring-projects/spring-boot/issues/5724">gh-5724</a>
  */
 @ExtendWith(SpringExtension.class)
+@DirtiesContext
 class MockBeanOnScopedProxyTests {
 
 	@MockBean

@@ -25,6 +25,7 @@ import org.springframework.boot.test.context.ImportsContextCustomizerFactoryInte
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.stereotype.Component;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,6 +38,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * @author Phillip Webb
  */
 @ExtendWith(SpringExtension.class)
+@DirtiesContext
 @Import(ImportedBean.class)
 class ImportsContextCustomizerFactoryIntegrationTests {
 

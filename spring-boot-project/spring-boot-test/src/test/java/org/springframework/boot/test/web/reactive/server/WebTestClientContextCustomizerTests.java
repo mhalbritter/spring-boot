@@ -26,6 +26,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.test.web.reactive.server.WebTestClientContextCustomizer.WebTestClientRegistrar;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.AbstractApplicationContext;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.MergedContextConfiguration;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
@@ -65,6 +66,7 @@ class WebTestClientContextCustomizerTests {
 	}
 
 	@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+	@DirtiesContext
 	static class TestClass {
 
 	}

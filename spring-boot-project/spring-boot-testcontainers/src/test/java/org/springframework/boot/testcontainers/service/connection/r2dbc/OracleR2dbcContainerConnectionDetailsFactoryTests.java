@@ -37,6 +37,7 @@ import org.springframework.boot.testsupport.junit.DisabledOnOs;
 import org.springframework.boot.testsupport.testcontainers.DockerImageNames;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.r2dbc.core.DatabaseClient;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -47,6 +48,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Andy Wilkinson
  */
 @SpringJUnitConfig
+@DirtiesContext
 @Testcontainers(disabledWithoutDocker = true)
 @DisabledOnOs(os = { OS.LINUX, OS.MAC }, architecture = "aarch64",
 		disabledReason = "The Oracle image has no ARM support")

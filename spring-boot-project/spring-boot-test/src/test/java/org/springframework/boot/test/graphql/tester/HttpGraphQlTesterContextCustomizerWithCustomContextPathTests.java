@@ -26,6 +26,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.graphql.test.tester.HttpGraphQlTester;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,6 +39,7 @@ import org.springframework.web.servlet.DispatcherServlet;
  * @author Brian Clozel
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@DirtiesContext
 @TestPropertySource(properties = "server.servlet.context-path=/test")
 class HttpGraphQlTesterContextCustomizerWithCustomContextPathTests {
 

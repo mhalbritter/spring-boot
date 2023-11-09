@@ -18,12 +18,17 @@ package org.springframework.boot.build.architecture;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaAnnotation;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClass.Predicates;
 import com.tngtech.archunit.core.domain.JavaClasses;
@@ -45,6 +50,7 @@ import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.FileTree;
 import org.gradle.api.provider.ListProperty;
+import org.gradle.api.tasks.Classpath;
 import org.gradle.api.tasks.IgnoreEmptyDirectories;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFiles;
@@ -65,25 +71,22 @@ public abstract class ArchitectureCheck extends DefaultTask {
 
 	private FileCollection classes;
 
+	private FileCollection classpath;
+
 	public ArchitectureCheck() {
 		getOutputDirectory().convention(getProject().getLayout().getBuildDirectory().dir(getName()));
 		getRules().addAll(allPackagesShouldBeFreeOfTangles(),
 				allBeanPostProcessorBeanMethodsShouldBeStaticAndHaveParametersThatWillNotCausePrematureInitialization(),
 				allBeanFactoryPostProcessorBeanMethodsShouldBeStaticAndHaveNoParameters(),
 				noClassesShouldCallStepVerifierStepVerifyComplete(),
-				noClassesShouldConfigureDefaultStepVerifierTimeout(), noClassesShouldCallCollectorsToList());
+				noClassesShouldConfigureDefaultStepVerifierTimeout(), noClassesShouldCallCollectorsToList(),
+				integrationTestsShouldUseDirtiesContext());
 		getRuleDescriptions().set(getRules().map((rules) -> rules.stream().map(ArchRule::getDescription).toList()));
 	}
 
 	@TaskAction
 	void checkArchitecture() throws IOException {
-		JavaClasses javaClasses = new ClassFileImporter()
-			.importPaths(this.classes.getFiles().stream().map(File::toPath).toList());
-		List<EvaluationResult> violations = getRules().get()
-			.stream()
-			.map((rule) -> rule.evaluate(javaClasses))
-			.filter(EvaluationResult::hasViolation)
-			.toList();
+		List<EvaluationResult> violations = runArchUnit();
 		File outputFile = getOutputDirectory().file("failure-report.txt").get().getAsFile();
 		outputFile.getParentFile().mkdirs();
 		if (!violations.isEmpty()) {
@@ -99,6 +102,34 @@ public abstract class ArchitectureCheck extends DefaultTask {
 		else {
 			outputFile.createNewFile();
 		}
+	}
+
+	private List<EvaluationResult> runArchUnit() {
+		ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+		try {
+			Thread.currentThread().setContextClassLoader(new URLClassLoader(getClassPathAsUrls(), contextClassLoader));
+			JavaClasses javaClasses = new ClassFileImporter()
+				.importPaths(this.classes.getFiles().stream().map(File::toPath).toList());
+			return getRules().get()
+				.stream()
+				.map((rule) -> rule.evaluate(javaClasses))
+				.filter(EvaluationResult::hasViolation)
+				.toList();
+		}
+		finally {
+			Thread.currentThread().setContextClassLoader(contextClassLoader);
+		}
+	}
+
+	private URL[] getClassPathAsUrls() {
+		return this.classpath.getFiles().stream().map((file) -> {
+			try {
+				return file.toURI().toURL();
+			}
+			catch (MalformedURLException ex) {
+				throw new IllegalStateException("Failed to convert %s to url".formatted(file), ex);
+			}
+		}).toArray(URL[]::new);
 	}
 
 	private ArchRule allPackagesShouldBeFreeOfTangles() {
@@ -188,6 +219,40 @@ public abstract class ArchitectureCheck extends DefaultTask {
 			.should()
 			.callMethod(Collectors.class, "toList")
 			.because("java.util.stream.Stream.toList() should be used instead");
+	}
+
+	private ArchRule integrationTestsShouldUseDirtiesContext() {
+		return ArchRuleDefinition.classes()
+			.that()
+			.areMetaAnnotatedWith(extendWithSpringExtension())
+			.should()
+			.beMetaAnnotatedWith("org.springframework.test.annotation.DirtiesContext")
+			.because("context caching can cause bugs as the context is not necessarily closed after test execution")
+			.allowEmptyShould(true);
+	}
+
+	private DescribedPredicate<JavaAnnotation<?>> extendWithSpringExtension() {
+		return new DescribedPredicate<>("@ExtendWith(SpringExtension.class)") {
+			@Override
+			public boolean test(JavaAnnotation<?> javaAnnotation) {
+				if (javaAnnotation.getType().getName().equals("org.junit.jupiter.api.extension.ExtendWith")) {
+					JavaClass[] value = (JavaClass[]) javaAnnotation.get("value").get();
+					return Stream.of(value)
+						.anyMatch((v) -> v.getName()
+							.equals("org.springframework.test.context.junit.jupiter.SpringExtension"));
+				}
+				return false;
+			}
+		};
+	}
+
+	@Classpath
+	public FileCollection getClasspath() {
+		return this.classpath;
+	}
+
+	public void setClasspath(FileCollection classpath) {
+		this.classpath = classpath;
 	}
 
 	public void setClasses(FileCollection classes) {

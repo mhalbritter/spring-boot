@@ -27,6 +27,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.BootstrapContext;
 import org.springframework.test.context.MergedContextConfiguration;
 import org.springframework.test.context.TestContext;
@@ -91,11 +92,13 @@ class MockBeanContextCachingTests {
 	}
 
 	@SpringBootTest(classes = TestConfiguration.class)
+	@DirtiesContext
 	static class TestClass {
 
 	}
 
 	@SpringBootTest(classes = TestConfiguration.class)
+	@DirtiesContext
 	static class MockedBeanTestClass {
 
 		@MockBean
@@ -104,6 +107,7 @@ class MockBeanContextCachingTests {
 	}
 
 	@SpringBootTest(classes = TestConfiguration.class)
+	@DirtiesContext
 	static class AnotherMockedBeanTestClass {
 
 		@MockBean

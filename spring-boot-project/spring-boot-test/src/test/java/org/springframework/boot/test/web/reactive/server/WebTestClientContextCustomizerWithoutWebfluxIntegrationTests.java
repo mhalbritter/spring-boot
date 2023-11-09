@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testsupport.classpath.ClassPathExclusions;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextCustomizer;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,6 +46,7 @@ class WebTestClientContextCustomizerWithoutWebfluxIntegrationTests {
 	}
 
 	@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+	@DirtiesContext
 	private static class TestClass {
 
 	}

@@ -22,13 +22,12 @@ import javax.sql.DataSource;
 
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.annotation.DirtiesContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -37,9 +36,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Stephane Nicoll
  */
-@ExtendWith(SpringExtension.class)
 @SpringBootTest(properties = { "app.datasource.second.url=jdbc:h2:mem:bar;DB_CLOSE_DELAY=-1",
 		"app.datasource.second.max-total=42" })
+@DirtiesContext
 @Import(MyDataSourcesConfiguration.class)
 class MyDataSourcesConfigurationTests {
 

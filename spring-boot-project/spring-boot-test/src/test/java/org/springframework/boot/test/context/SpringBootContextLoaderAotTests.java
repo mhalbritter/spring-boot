@@ -33,6 +33,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.core.test.tools.CompileWithForkedClassLoader;
 import org.springframework.core.test.tools.TestCompiler;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.BootstrapUtils;
 import org.springframework.test.context.MergedContextConfiguration;
 import org.springframework.test.context.TestContextBootstrapper;
@@ -97,6 +98,7 @@ class SpringBootContextLoaderAotTests {
 	}
 
 	@SpringBootTest(classes = ExampleConfig.class, webEnvironment = WebEnvironment.NONE)
+	@DirtiesContext
 	static class ExampleTest {
 
 	}

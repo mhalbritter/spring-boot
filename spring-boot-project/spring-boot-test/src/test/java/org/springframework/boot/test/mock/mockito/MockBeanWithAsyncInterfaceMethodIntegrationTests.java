@@ -24,6 +24,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,6 +36,7 @@ import static org.mockito.BDDMockito.given;
  * @author Andy Wilkinson
  */
 @ExtendWith(SpringExtension.class)
+@DirtiesContext
 class MockBeanWithAsyncInterfaceMethodIntegrationTests {
 
 	@MockBean

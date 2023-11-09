@@ -27,6 +27,7 @@ import org.springframework.boot.test.context.nestedtests.InheritedNestedTestConf
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.stereotype.Component;
+import org.springframework.test.annotation.DirtiesContext;
 
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.times;
@@ -38,6 +39,7 @@ import static org.mockito.Mockito.times;
  * @author Andy Wilkinson
  */
 @SpringBootTest(classes = AppConfiguration.class)
+@DirtiesContext
 @Import(ActionPerformer.class)
 class InheritedNestedTestConfigurationTests {
 

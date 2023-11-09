@@ -24,6 +24,7 @@ import org.springframework.boot.test.context.SpringBootTestContextBootstrapper;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.BootstrapWith;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
@@ -36,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Phillip Webb
  */
 @ExtendWith(SpringExtension.class)
+@DirtiesContext
 @BootstrapWith(SpringBootTestContextBootstrapper.class)
 class SpringBootTestContextBootstrapperIntegrationTests {
 

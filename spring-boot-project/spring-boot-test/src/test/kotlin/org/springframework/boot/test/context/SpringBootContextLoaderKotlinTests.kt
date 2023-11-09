@@ -18,9 +18,8 @@ package org.springframework.boot.test.context
 
 import org.assertj.core.api.Assertions.assertThatIllegalStateException
 import org.junit.jupiter.api.Test
-import org.springframework.boot.SpringBootConfiguration
 import org.springframework.boot.test.context.SpringBootTest.UseMainMethod
-import org.springframework.context.annotation.Configuration
+import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.TestContext
 import org.springframework.test.context.TestContextManager
 
@@ -48,6 +47,7 @@ class SpringBootContextLoaderKotlinTests {
 	}
 
 	@SpringBootTest(classes = [KotlinApplicationWithMainThrowingException::class], useMainMethod = UseMainMethod.ALWAYS)
+	@DirtiesContext
 	internal class UseMainMethodAlwaysAndKotlinMainMethodThrowsException
 
 }

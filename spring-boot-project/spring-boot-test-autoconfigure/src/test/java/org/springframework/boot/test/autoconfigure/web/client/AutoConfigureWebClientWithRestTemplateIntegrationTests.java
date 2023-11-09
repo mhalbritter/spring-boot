@@ -26,6 +26,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
 
@@ -40,6 +41,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
  * @author Phillip Webb
  */
 @SpringBootTest
+@DirtiesContext
 @AutoConfigureWebClient(registerRestTemplate = true)
 @AutoConfigureMockRestServiceServer
 class AutoConfigureWebClientWithRestTemplateIntegrationTests {

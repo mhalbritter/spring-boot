@@ -39,6 +39,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.env.StandardEnvironment;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ApplicationContextFailureProcessor;
 import org.springframework.test.context.ContextConfiguration;
@@ -274,105 +275,125 @@ class SpringBootContextLoaderTests {
 	}
 
 	@SpringBootTest(properties = { "key=myValue", "anotherKey:anotherValue" }, classes = Config.class)
+	@DirtiesContext
 	static class SimpleConfig {
 
 	}
 
 	@SpringBootTest(properties = { "key=myValue", "anotherKey:anotherValue" }, classes = Config.class)
+	@DirtiesContext
 	static class SimpleConfigNonAlias {
 
 	}
 
 	@SpringBootTest(properties = "server.port=2345", classes = Config.class)
+	@DirtiesContext
 	static class OverrideConfig {
 
 	}
 
 	@SpringBootTest(properties = { "key=myValue", "otherKey=otherValue" }, classes = Config.class)
+	@DirtiesContext
 	static class AppendConfig {
 
 	}
 
 	@SpringBootTest(properties = { "key=my=Value", "anotherKey:another:Value" }, classes = Config.class)
+	@DirtiesContext
 	static class SameSeparatorInValue {
 
 	}
 
 	@SpringBootTest(properties = { "key=my:Value", "anotherKey:another=Value" }, classes = Config.class)
+	@DirtiesContext
 	static class AnotherSeparatorInValue {
 
 	}
 
 	@SpringBootTest(properties = { "key=myValue", "variables=foo=FOO\n bar=BAR" }, classes = Config.class)
+	@DirtiesContext
 	static class NewLineInValue {
 
 	}
 
 	@SpringBootTest(classes = Config.class)
+	@DirtiesContext
 	@ActiveProfiles({ "profile1", "profile2" })
 	static class MultipleActiveProfiles {
 
 	}
 
 	@SpringBootTest(classes = Config.class)
+	@DirtiesContext
 	@ActiveProfiles({ "profile1,2" })
 	static class ActiveProfileWithComma {
 
 	}
 
 	@SpringBootTest(properties = { "key=myValue" }, classes = Config.class)
+	@DirtiesContext
 	@ActiveProfiles({ "profile1,2" })
 	static class ActiveProfileWithInlinedProperties {
 
 	}
 
 	@SpringBootTest(classes = Config.class, args = "args", properties = "one=1")
+	@DirtiesContext
 	@TestPropertySource(properties = "two=2")
 	static class PropertySourceOrdering {
 
 	}
 
 	@SpringBootTest(classes = Config.class, args = "--spring.main.web-application-type=none")
+	@DirtiesContext
 	static class ChangingWebApplicationTypeToNone {
 
 	}
 
 	@SpringBootTest(classes = Config.class, args = "--spring.main.web-application-type=reactive")
+	@DirtiesContext
 	static class ChangingWebApplicationTypeToReactive {
 
 	}
 
 	@SpringBootTest(classes = ConfigWithMainThrowingException.class, useMainMethod = UseMainMethod.ALWAYS)
+	@DirtiesContext
 	static class UseMainMethodAlwaysAndMainMethodThrowsException {
 
 	}
 
 	@SpringBootTest(classes = ConfigWithNoMain.class, useMainMethod = UseMainMethod.WHEN_AVAILABLE)
+	@DirtiesContext
 	static class UseMainMethodWhenAvailableAndNoMainMethod {
 
 	}
 
 	@SpringBootTest(classes = ConfigWithMain.class, useMainMethod = UseMainMethod.WHEN_AVAILABLE)
+	@DirtiesContext
 	static class UseMainMethodWhenAvailableAndMainMethod {
 
 	}
 
 	@SpringBootTest(classes = ConfigWithMain.class, useMainMethod = UseMainMethod.NEVER)
+	@DirtiesContext
 	static class UseMainMethodNever {
 
 	}
 
 	@SpringBootTest(classes = ConfigWithMainWithBeanThrowingException.class, useMainMethod = UseMainMethod.ALWAYS)
+	@DirtiesContext
 	static class UseMainMethodWithBeanThrowingException {
 
 	}
 
 	@SpringBootTest(classes = ConfigWithNoMainWithBeanThrowingException.class, useMainMethod = UseMainMethod.NEVER)
+	@DirtiesContext
 	static class NoMainMethodWithBeanThrowingException {
 
 	}
 
 	@SpringBootTest(useMainMethod = UseMainMethod.ALWAYS)
+	@DirtiesContext
 	@ContextHierarchy({ @ContextConfiguration(classes = ConfigWithMain.class),
 			@ContextConfiguration(classes = AnotherConfigWithMain.class) })
 	static class UseMainMethodWithContextHierarchy {
@@ -380,6 +401,7 @@ class SpringBootContextLoaderTests {
 	}
 
 	@SpringBootTest
+	@DirtiesContext
 	@ContextConfiguration(classes = Config.class, loader = CustomApplicationContextSpringBootContextLoader.class)
 	static class CustomApplicationContextTest {
 

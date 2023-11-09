@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.context.SpringBootTestContextBootstrapper;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.BootstrapContext;
 import org.springframework.test.context.CacheAwareContextLoaderDelegate;
 import org.springframework.test.context.MergedContextConfiguration;
@@ -114,48 +115,57 @@ class SpringBootTestContextBootstrapperTests {
 	}
 
 	@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+	@DirtiesContext
 	@WebAppConfiguration
 	static class SpringBootTestNonMockWebEnvironmentAndWebAppConfiguration {
 
 	}
 
 	@SpringBootTest
+	@DirtiesContext
 	@WebAppConfiguration
 	static class SpringBootTestMockWebEnvironmentAndWebAppConfiguration {
 
 	}
 
 	@SpringBootTest(args = "--app.test=same")
+	@DirtiesContext
 	static class SpringBootTestArgsConfiguration {
 
 	}
 
 	@SpringBootTest(webEnvironment = WebEnvironment.MOCK)
+	@DirtiesContext
 	static class SpringBootTestMockWebEnvironmentConfiguration {
 
 	}
 
 	@SpringBootTest(webEnvironment = WebEnvironment.MOCK)
+	@DirtiesContext
 	static class SpringBootTestAnotherMockWebEnvironmentConfiguration {
 
 	}
 
 	@SpringBootTest(webEnvironment = WebEnvironment.DEFINED_PORT)
+	@DirtiesContext
 	static class SpringBootTestDefinedPortWebEnvironmentConfiguration {
 
 	}
 
 	@SpringBootTest(args = "--app.test=same")
+	@DirtiesContext
 	static class SpringBootTestSameArgsConfiguration {
 
 	}
 
 	@SpringBootTest(args = "--app.test=different")
+	@DirtiesContext
 	static class SpringBootTestOtherArgsConfiguration {
 
 	}
 
 	@SpringBootTest(classes = SpringBootTestContextBootstrapperExampleConfig.class)
+	@DirtiesContext
 	static class SpringBootTestClassesConfiguration {
 
 	}

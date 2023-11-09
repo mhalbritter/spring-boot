@@ -27,6 +27,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.testsupport.BuildOutput;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.util.FileSystemUtils;
 
 import static io.restassured.RestAssured.given;
@@ -43,6 +44,7 @@ import static org.springframework.restdocs.restassured.RestAssuredRestDocumentat
  * @author Eddú Meléndez
  */
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@DirtiesContext
 @AutoConfigureRestDocs
 class RestAssuredRestDocsAutoConfigurationIntegrationTests {
 

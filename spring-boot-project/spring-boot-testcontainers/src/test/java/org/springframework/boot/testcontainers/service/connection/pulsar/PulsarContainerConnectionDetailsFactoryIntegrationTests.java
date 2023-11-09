@@ -36,6 +36,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.pulsar.annotation.PulsarListener;
 import org.springframework.pulsar.core.PulsarTemplate;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
@@ -47,6 +48,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Chris Bono
  */
 @SpringJUnitConfig
+@DirtiesContext
 @Testcontainers(disabledWithoutDocker = true)
 @TestPropertySource(properties = { "spring.pulsar.consumer.subscription.initial-position=earliest" })
 class PulsarContainerConnectionDetailsFactoryIntegrationTests {

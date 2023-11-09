@@ -22,6 +22,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.example.ExampleService;
 import org.springframework.boot.test.mock.mockito.example.ExampleServiceCaller;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
@@ -36,6 +37,7 @@ import static org.mockito.BDDMockito.given;
  * @see MockBeanOnTestFieldForExistingBeanCacheIntegrationTests
  */
 @ExtendWith(SpringExtension.class)
+@DirtiesContext
 @ContextConfiguration(classes = MockBeanOnTestFieldForExistingBeanConfig.class)
 class MockBeanOnTestFieldForExistingBeanIntegrationTests {
 

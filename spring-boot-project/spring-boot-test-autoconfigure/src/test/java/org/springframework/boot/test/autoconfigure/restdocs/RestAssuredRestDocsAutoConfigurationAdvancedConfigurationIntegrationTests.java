@@ -32,6 +32,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation;
 import org.springframework.restdocs.mockmvc.RestDocumentationResultHandler;
 import org.springframework.restdocs.templates.TemplateFormats;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.util.FileSystemUtils;
 
 import static io.restassured.RestAssured.given;
@@ -51,6 +52,7 @@ import static org.springframework.restdocs.restassured.RestAssuredRestDocumentat
  * @author Eddú Meléndez
  */
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@DirtiesContext
 @AutoConfigureRestDocs
 class RestAssuredRestDocsAutoConfigurationAdvancedConfigurationIntegrationTests {
 
