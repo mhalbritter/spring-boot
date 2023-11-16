@@ -66,12 +66,14 @@ import org.springframework.boot.logging.LoggingSystemFactory;
 import org.springframework.core.Conventions;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ResourceUtils;
 import org.springframework.util.StringUtils;
+import org.springframework.web.context.support.StandardServletEnvironment;
 
 /**
  * {@link LoggingSystem} for <a href="https://logging.apache.org/log4j/2.x/">Log4j 2</a>.
@@ -449,7 +451,13 @@ public class Log4J2LoggingSystem extends AbstractLoggingSystem {
 
 	@Override
 	public Runnable getShutdownHandler() {
-		return () -> getLoggerContext().stop();
+		return () -> {
+			Environment environment = (Environment)getLoggerContext().getObject(ENVIRONMENT_KEY);
+			if (environment instanceof ConfigurableEnvironment configurableEnvironment) {
+				configurableEnvironment.getPropertySources().remove(StandardServletEnvironment.SERVLET_CONTEXT_PROPERTY_SOURCE_NAME);
+			}
+			getLoggerContext().stop();
+		};
 	}
 
 	@Override
