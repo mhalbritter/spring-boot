@@ -25,8 +25,11 @@ import org.springframework.util.Assert;
  * Returns properties from Spring.
  *
  * @author Ralph Goers
+ * @author Moritz Halbritter
  */
 class SpringEnvironmentPropertySource implements PropertySource {
+
+	private volatile boolean stopped;
 
 	/**
 	 * System properties take precedence followed by properties in Log4j properties files.
@@ -47,12 +50,21 @@ class SpringEnvironmentPropertySource implements PropertySource {
 
 	@Override
 	public String getProperty(String key) {
+		if (this.stopped) {
+			return null;
+		}
 		return this.environment.getProperty(key);
 	}
 
 	@Override
 	public boolean containsProperty(String key) {
+		if (this.stopped) {
+			return false;
+		}
 		return this.environment.containsProperty(key);
 	}
 
+	void stop() {
+		this.stopped = true;
+	}
 }
