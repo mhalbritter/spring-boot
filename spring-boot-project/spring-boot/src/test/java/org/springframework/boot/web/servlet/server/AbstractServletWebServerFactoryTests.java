@@ -65,6 +65,7 @@ import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.FilterConfig;
 import jakarta.servlet.GenericServlet;
+import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
@@ -1355,6 +1356,24 @@ public abstract class AbstractServletWebServerFactoryTests {
 	}
 
 	@Test
+	void servletComponentsAreInitializedWithTheSameThreadContextClassLoader() {
+		AbstractServletWebServerFactory factory = getFactory();
+		ThreadContextClassLoaderCapturingServlet servlet = new ThreadContextClassLoaderCapturingServlet();
+		ThreadContextClassLoaderCapturingFilter filter = new ThreadContextClassLoaderCapturingFilter();
+		ThreadContextClassLoaderCapturingListener listener = new ThreadContextClassLoaderCapturingListener();
+		this.webServer = factory.getWebServer((context) -> {
+			context.addServlet("tcclCapturingServlet", servlet).setLoadOnStartup(0);
+			context.addFilter("tcclCapturingFilter", filter);
+			context.addListener(listener);
+		});
+		this.webServer.start();
+		assertThat(servlet.contextClassLoader).isNotNull();
+		assertThat(filter.contextClassLoader).isNotNull();
+		assertThat(listener.contextClassLoader).isNotNull();
+		assertThat(servlet.contextClassLoader).isEqualTo(filter.contextClassLoader).isEqualTo(listener.contextClassLoader);
+	}
+
+	@Test
 	void startedLogMessageWithMultiplePorts() {
 		AbstractServletWebServerFactory factory = getFactory();
 		addConnector(0, factory);
@@ -1811,6 +1830,45 @@ public abstract class AbstractServletWebServerFactoryTests {
 				resp.addCookie(new Cookie("empty", "test"));
 				resp.addCookie(new Cookie("controlled", "test"));
 			}
+		}
+
+	}
+
+	static class ThreadContextClassLoaderCapturingServlet extends HttpServlet {
+
+		private ClassLoader contextClassLoader;
+
+		@Override
+		public void init(ServletConfig config) throws ServletException {
+			this.contextClassLoader = Thread.currentThread().getContextClassLoader();
+		}
+
+	}
+
+	static class ThreadContextClassLoaderCapturingListener implements ServletContextListener {
+
+		private ClassLoader contextClassLoader;
+
+		@Override
+		public void contextInitialized(ServletContextEvent sce) {
+			this.contextClassLoader = Thread.currentThread().getContextClassLoader();
+		}
+
+	}
+
+	static class ThreadContextClassLoaderCapturingFilter implements Filter {
+
+		private ClassLoader contextClassLoader;
+
+		@Override
+		public void init(FilterConfig filterConfig) throws ServletException {
+			this.contextClassLoader = Thread.currentThread().getContextClassLoader();
+		}
+
+		@Override
+		public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+				throws IOException, ServletException {
+			chain.doFilter(request, response);
 		}
 
 	}
