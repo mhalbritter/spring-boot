@@ -61,6 +61,7 @@ import org.springframework.boot.web.servlet.filter.OrderedFormContentFilter;
 import org.springframework.boot.web.servlet.filter.OrderedHiddenHttpMethodFilter;
 import org.springframework.boot.web.servlet.filter.OrderedRequestContextFilter;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.EmbeddedValueResolverAware;
 import org.springframework.context.ResourceLoaderAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -77,6 +78,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.ClassUtils;
+import org.springframework.util.StringValueResolver;
 import org.springframework.validation.DefaultMessageCodesResolver;
 import org.springframework.validation.MessageCodesResolver;
 import org.springframework.validation.Validator;
@@ -378,7 +380,7 @@ public class WebMvcAutoConfiguration {
 	 */
 	@Configuration(proxyBeanMethods = false)
 	@EnableConfigurationProperties(WebProperties.class)
-	public static class EnableWebMvcConfiguration extends DelegatingWebMvcConfiguration implements ResourceLoaderAware {
+	public static class EnableWebMvcConfiguration extends DelegatingWebMvcConfiguration implements ResourceLoaderAware, EmbeddedValueResolverAware {
 
 		private final Resources resourceProperties;
 
@@ -389,6 +391,8 @@ public class WebMvcAutoConfiguration {
 		private final ListableBeanFactory beanFactory;
 
 		private final WebMvcRegistrations mvcRegistrations;
+
+		private StringValueResolver embeddedValueResolver;
 
 		private ResourceLoader resourceLoader;
 
@@ -523,6 +527,7 @@ public class WebMvcAutoConfiguration {
 		public FormattingConversionService mvcConversionService() {
 			Format format = this.mvcProperties.getFormat();
 			WebConversionService conversionService = new WebConversionService(
+					this.embeddedValueResolver,
 					new DateTimeFormatters().dateFormat(format.getDate())
 						.timeFormat(format.getTime())
 						.dateTimeFormat(format.getDateTime()));
@@ -606,6 +611,10 @@ public class WebMvcAutoConfiguration {
 			this.resourceLoader = resourceLoader;
 		}
 
+		@Override
+		public void setEmbeddedValueResolver(StringValueResolver resolver) {
+			this.embeddedValueResolver = resolver;
+		}
 	}
 
 	@Configuration(proxyBeanMethods = false)
