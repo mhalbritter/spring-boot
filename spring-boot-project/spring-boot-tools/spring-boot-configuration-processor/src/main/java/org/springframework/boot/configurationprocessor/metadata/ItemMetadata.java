@@ -65,7 +65,7 @@ public final class ItemMetadata implements Comparable<ItemMetadata> {
 			fullName.append(prefix);
 		}
 		if (name != null) {
-			if (fullName.length() > 0) {
+			if (!fullName.isEmpty()) {
 				fullName.append('.');
 			}
 			fullName.append(ConfigurationMetadata.toDashedCase(name));
@@ -196,7 +196,7 @@ public final class ItemMetadata implements Comparable<ItemMetadata> {
 		return string.toString();
 	}
 
-	protected void buildToStringProperty(StringBuilder string, String property, Object value) {
+	private void buildToStringProperty(StringBuilder string, String property, Object value) {
 		if (value != null) {
 			string.append(" ").append(property).append(":").append(value);
 		}
