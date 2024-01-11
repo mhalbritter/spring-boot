@@ -33,7 +33,8 @@ import org.springframework.util.StringUtils;
  * @author Phillip Webb
  * @since 3.1.0
  */
-public record JksSslStoreDetails(String type, String provider, String location, String password) {
+public record JksSslStoreDetails(String type, String provider, String location,
+								 String password) {
 
 	/**
 	 * Return a new {@link JksSslStoreDetails} instance with a new password.
@@ -62,4 +63,8 @@ public record JksSslStoreDetails(String type, String provider, String location, 
 		return new JksSslStoreDetails(null, null, location, null);
 	}
 
+	@Override
+	public String toString() {
+		return "JksSslStoreDetails[type=%s, provider=%s, location=%s]".formatted(this.type, this.provider, this.location);
+	}
 }

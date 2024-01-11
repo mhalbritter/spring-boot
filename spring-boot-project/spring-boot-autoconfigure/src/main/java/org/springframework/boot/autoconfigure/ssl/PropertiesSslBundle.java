@@ -90,6 +90,11 @@ public final class PropertiesSslBundle implements SslBundle {
 		return this.managers;
 	}
 
+	@Override
+	public String toString() {
+		return "PropertiesSslBundle[stores=%s, key=%s, options=%s, protocol=%s, managers=%s]".formatted(this.stores, this.key, this.options, this.protocol, this.managers);
+	}
+
 	/**
 	 * Get an {@link SslBundle} for the given {@link PemSslBundleProperties}.
 	 * @param properties the source properties

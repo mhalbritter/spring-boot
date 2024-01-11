@@ -75,6 +75,10 @@ public interface SslStoreBundle {
 				return keyStorePassword;
 			}
 
+			@Override
+			public String toString() {
+				return "SslStoreBundle[keyStore=%s, trustStore=%s]".formatted(getKeyStore(), getTrustStore());
+			}
 		};
 	}
 

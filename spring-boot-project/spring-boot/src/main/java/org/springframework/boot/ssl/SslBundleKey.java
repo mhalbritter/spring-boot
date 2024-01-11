@@ -94,6 +94,10 @@ public interface SslBundleKey {
 				return alias;
 			}
 
+			@Override
+			public String toString() {
+				return "SslBundleKey[alias=%s]".formatted(getAlias());
+			}
 		};
 	}
 

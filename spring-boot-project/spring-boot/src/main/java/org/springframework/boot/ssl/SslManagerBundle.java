@@ -104,6 +104,10 @@ public interface SslManagerBundle {
 				return trustManagerFactory;
 			}
 
+			@Override
+			public String toString() {
+				return "SslManagerBundle[keyManagerFactory=%s, trustManagerFactory=%s]".formatted(getKeyManagerFactory(), getTrustManagerFactory());
+			}
 		};
 	}
 

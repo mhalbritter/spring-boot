@@ -81,6 +81,10 @@ public interface SslOptions {
 				return enabledProtocols;
 			}
 
+			@Override
+			public String toString() {
+				return "SslOptions[ciphers=%s, enabledProtocols=%s]".formatted(Arrays.toString(getCiphers()), Arrays.toString(getEnabledProtocols()));
+			}
 		};
 	}
 

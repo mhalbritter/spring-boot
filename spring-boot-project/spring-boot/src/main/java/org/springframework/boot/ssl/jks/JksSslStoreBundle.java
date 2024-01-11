@@ -42,6 +42,8 @@ public class JksSslStoreBundle implements SslStoreBundle {
 
 	private final JksSslStoreDetails keyStoreDetails;
 
+	private final JksSslStoreDetails trustStoreDetails;
+
 	private final KeyStore keyStore;
 
 	private final KeyStore trustStore;
@@ -53,6 +55,7 @@ public class JksSslStoreBundle implements SslStoreBundle {
 	 */
 	public JksSslStoreBundle(JksSslStoreDetails keyStoreDetails, JksSslStoreDetails trustStoreDetails) {
 		this.keyStoreDetails = keyStoreDetails;
+		this.trustStoreDetails = trustStoreDetails;
 		this.keyStore = createKeyStore("key", this.keyStoreDetails);
 		this.trustStore = createKeyStore("trust", trustStoreDetails);
 	}
@@ -70,6 +73,11 @@ public class JksSslStoreBundle implements SslStoreBundle {
 	@Override
 	public KeyStore getTrustStore() {
 		return this.trustStore;
+	}
+
+	@Override
+	public String toString() {
+		return "JksSslStoreBundle[keyStoreDetails=%s, trustStoreDetails=%s]".formatted(this.keyStoreDetails, this.trustStoreDetails);
 	}
 
 	private KeyStore createKeyStore(String name, JksSslStoreDetails details) {

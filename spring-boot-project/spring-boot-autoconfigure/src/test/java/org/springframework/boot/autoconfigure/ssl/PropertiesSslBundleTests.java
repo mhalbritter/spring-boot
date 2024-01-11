@@ -137,6 +137,17 @@ class PropertiesSslBundleTests {
 			.withMessageContaining("Private key in keystore matches none of the certificates");
 	}
 
+	@Test
+	void shouldHaveToString() {
+		PemSslBundleProperties properties = new PemSslBundleProperties();
+		properties.getKeystore().setCertificate("classpath:org/springframework/boot/autoconfigure/ssl/key2-chain.crt");
+		properties.getKeystore().setPrivateKey("classpath:org/springframework/boot/autoconfigure/ssl/key2.pem");
+		properties.getKeystore().setVerifyKeys(true);
+		properties.getKey().setAlias("test-alias");
+		SslBundle bundle = PropertiesSslBundle.get(properties);
+		System.out.println(bundle);
+	}
+
 	private Consumer<KeyStore> storeContainingCertAndKey(String keyAlias) {
 		return ThrowingConsumer.of((keyStore) -> {
 			assertThat(keyStore).isNotNull();

@@ -75,6 +75,11 @@ class DefaultSslManagerBundle implements SslManagerBundle {
 		}
 	}
 
+	@Override
+	public String toString() {
+		return "DefaultSslManagerBundle[storeBundle=%s, key=%s]".formatted(this.storeBundle, this.key);
+	}
+
 	protected KeyManagerFactory getKeyManagerFactoryInstance(String algorithm) throws NoSuchAlgorithmException {
 		return KeyManagerFactory.getInstance(algorithm);
 	}

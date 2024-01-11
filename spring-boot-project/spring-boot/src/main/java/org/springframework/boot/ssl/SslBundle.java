@@ -20,6 +20,8 @@ import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 
+import org.hibernate.sql.ast.tree.expression.Over;
+
 import org.springframework.util.StringUtils;
 
 /**
@@ -160,6 +162,10 @@ public interface SslBundle {
 				return managersToUse;
 			}
 
+			@Override
+			public String toString() {
+				return "SslBundle[stores=%s, key=%s, options=%s, protocol=%s, managers=%s]".formatted(getStores(), getKey(), getOptions(), getProtocol(), getManagers());
+			}
 		};
 	}
 

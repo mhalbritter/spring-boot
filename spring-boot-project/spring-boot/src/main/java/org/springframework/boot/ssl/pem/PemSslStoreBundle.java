@@ -79,6 +79,11 @@ public class PemSslStoreBundle implements SslStoreBundle {
 		this(pemKeyStore, pemTrustStore, null);
 	}
 
+	@Override
+	public String toString() {
+		return "PemSslStoreBundle[keyStore=%s, trustStore=%s]".formatted(this.keyStore, this.trustStore);
+	}
+
 	private PemSslStoreBundle(PemSslStore pemKeyStore, PemSslStore pemTrustStore, String alias) {
 		this.keyStore = createKeyStore("key", pemKeyStore, alias);
 		this.trustStore = createKeyStore("trust", pemTrustStore, alias);

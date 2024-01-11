@@ -99,6 +99,11 @@ public final class WebServerSslBundle implements SslBundle {
 		return this.managers;
 	}
 
+	@Override
+	public String toString() {
+		return "WebServerSslBundle[stores=%s, key=%s, options=%s, protocol=%s, managers=%s]".formatted(this.stores, this.key, this.options, this.protocol, this.managers);
+	}
+
 	/**
 	 * Get the {@link SslBundle} that should be used for the given {@link Ssl} instance.
 	 * @param ssl the source ssl instance

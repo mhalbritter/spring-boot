@@ -16,6 +16,14 @@
 
 package org.springframework.boot.ssl;
 
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.util.Set;
+
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.TrustManagerFactory;
+
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -52,4 +60,13 @@ class SslBundleTests {
 		assertThat(bundle.getManagers()).isSameAs(managers);
 	}
 
+	@Test
+	void shouldHaveToString() throws KeyStoreException, NoSuchAlgorithmException {
+		SslStoreBundle stores = SslStoreBundle.of(KeyStore.getInstance("JKS"), "password", KeyStore.getInstance("JKS"));
+		SslBundleKey key = SslBundleKey.of("password", "alias");
+		SslOptions options = SslOptions.of(Set.of("cipher-1"), Set.of("protocol-1"));
+		SslManagerBundle managers = SslManagerBundle.of(KeyManagerFactory.getInstance("PKIX"), TrustManagerFactory.getInstance("PKIX"));
+		SslBundle bundle = SslBundle.of(stores, key, options, "protocol", managers);
+		System.out.println(bundle);
+	}
 }
