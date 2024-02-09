@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2021 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,19 +62,21 @@ class LayerToolsJarModeTests {
 		this.out = new TestPrintStream(this);
 		this.systemOut = System.out;
 		System.setOut(this.out);
-		LayerToolsJarMode.Runner.contextOverride = context;
+		LayerToolsJarMode.contextOverride = context;
+		System.setProperty("jarmode", "layertools");
 	}
 
 	@AfterEach
 	void restore() {
 		System.setOut(this.systemOut);
-		LayerToolsJarMode.Runner.contextOverride = null;
+		LayerToolsJarMode.contextOverride = null;
+		System.clearProperty("jarmode");
 	}
 
 	@Test
 	void mainWithNoParametersShowsHelp() {
 		new LayerToolsJarMode().run("layertools", NO_ARGS);
-		assertThat(this.out).hasSameContentAsResource("help-output.txt");
+		assertThat(this.out).hasSameContentAsResource("layertools-help-output.txt");
 	}
 
 	@Test

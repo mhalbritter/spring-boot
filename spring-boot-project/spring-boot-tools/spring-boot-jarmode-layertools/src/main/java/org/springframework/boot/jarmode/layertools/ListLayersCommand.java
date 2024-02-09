@@ -21,29 +21,26 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The {@code 'list'} tools command.
+ * The {@code 'list-layers'} tools command.
  *
- * Delegates the actual work to {@link ListLayersCommand}.
- *
- * @author Phillip Webb
  * @author Moritz Halbritter
  */
-class ListCommand extends Command {
+class ListLayersCommand extends Command {
 
-	private final ListLayersCommand delegate;
+	private final Context context;
 
-	ListCommand(Context context) {
-		super("list", "List layers from the jar that can be extracted", Options.none(), Parameters.none());
-		this.delegate = new ListLayersCommand(context);
+	ListLayersCommand(Context context) {
+		super("list-layers", "List layers from the jar that can be extracted", Options.none(), Parameters.none());
+		this.context = context;
 	}
 
 	@Override
-	protected void run(Map<Option, String> options, List<String> parameters) {
-		this.delegate.run(options, parameters);
+	public void run(Map<Option, String> options, List<String> parameters) {
+		printLayers(Layers.get(this.context), System.out);
 	}
 
 	void printLayers(Layers layers, PrintStream out) {
-		this.delegate.printLayers(layers, out);
+		layers.forEach(out::println);
 	}
 
 }

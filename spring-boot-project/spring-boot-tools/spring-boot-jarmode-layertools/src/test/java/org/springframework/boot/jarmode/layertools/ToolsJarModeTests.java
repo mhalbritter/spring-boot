@@ -17,8 +17,6 @@
 package org.springframework.boot.jarmode.layertools;
 
 import java.nio.file.Path;
-import java.util.Collections;
-import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,38 +27,44 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 
 /**
- * Tests for {@link HelpCommand}.
+ * Tests for {@link ToolsJarMode}.
  *
- * @author Phillip Webb
+ * @author Moritz Halbritter
  */
-class HelpCommandTests {
+class ToolsJarModeTests {
 
-	private HelpCommand command;
-
-	private TestPrintStream out;
+	private ToolsJarMode mode;
 
 	@TempDir
-	Path temp;
+	private Path temp;
 
 	@BeforeEach
-	void setup() {
+	void setUp() {
 		Context context = Mockito.mock(Context.class);
-		given(context.getArchiveFile()).willReturn(this.temp.resolve("test.jar").toFile());
-		this.command = new HelpCommand(context, List.of(new TestCommand()), "tools");
-		this.out = new TestPrintStream(this);
+		given(context.getArchiveFile()).willReturn(this.temp.resolve("file.jar").toFile());
+		ToolsJarMode.contextOverride = context;
+		this.mode = new ToolsJarMode();
 	}
 
 	@Test
-	void shouldPrintAllCommands() {
-		this.command.run(this.out, Collections.emptyList());
-		assertThat(this.out).hasSameContentAsResource("help-output.txt");
+	void shouldAcceptToolsMode() {
+		assertThat(this.mode.accepts("tools")).isTrue();
+		assertThat(this.mode.accepts("something-else")).isFalse();
 	}
 
 	@Test
-	void shouldPrintCommandSpecificHelp() {
-		this.command.run(this.out, List.of("test"));
-		System.out.println(this.out);
-		assertThat(this.out).hasSameContentAsResource("help-test-output.txt");
+	void help() {
+		run("help");
+	}
+
+	@Test
+	void extract() {
+		// run("extract", "--launcher", "--layers", "layer1,layer2", "--destination",
+		// "/tmp");
+	}
+
+	private void run(String... args) {
+		this.mode.run("tools", args);
 	}
 
 }

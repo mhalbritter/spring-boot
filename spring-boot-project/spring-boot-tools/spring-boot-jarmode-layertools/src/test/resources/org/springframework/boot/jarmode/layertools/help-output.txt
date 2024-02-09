@@ -1,7 +1,6 @@
 Usage:
-  java -Djarmode=layertools -jar test.jar
+  java -Djarmode=tools -jar test.jar
 
 Available commands:
-  list     List layers from the jar that can be extracted
-  extract  Extracts layers from the jar for image creation
-  help     Help about any command
+  test  Description of test
+  help  Help about any command

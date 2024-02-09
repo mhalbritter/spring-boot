@@ -54,13 +54,13 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.mockito.BDDMockito.given;
 
 /**
- * Tests for {@link ExtractCommand}.
+ * Tests for {@link ExtractLayersCommand}.
  *
  * @author Phillip Webb
  * @author Andy Wilkinson
  */
 @ExtendWith(MockitoExtension.class)
-class ExtractCommandTests {
+class ExtractLayersCommandTests {
 
 	private static final Instant NOW = Instant.now();
 
@@ -82,14 +82,14 @@ class ExtractCommandTests {
 
 	private final Layers layers = new TestLayers();
 
-	private ExtractCommand command;
+	private ExtractLayersCommand command;
 
 	@BeforeEach
 	void setup() throws Exception {
 		this.jarFile = createJarFile("test.jar");
 		this.extract = new File(this.temp, "extract");
 		this.extract.mkdir();
-		this.command = new ExtractCommand(this.context, this.layers);
+		this.command = new ExtractLayersCommand(this.context, this.layers);
 	}
 
 	@Test
@@ -145,7 +145,7 @@ class ExtractCommandTests {
 	void runWhenHasDestinationOptionExtractsLayers() {
 		given(this.context.getArchiveFile()).willReturn(this.jarFile);
 		File out = new File(this.extract, "out");
-		this.command.run(Collections.singletonMap(ExtractCommand.DESTINATION_OPTION, out.getAbsolutePath()),
+		this.command.run(Collections.singletonMap(ExtractLayersCommand.DESTINATION_OPTION, out.getAbsolutePath()),
 				Collections.emptyList());
 		assertThat(this.extract.list()).containsOnly("out");
 		assertThat(new File(this.extract, "out/a/a/a.jar")).exists().satisfies(this::timeAttributes);

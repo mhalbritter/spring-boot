@@ -16,34 +16,24 @@
 
 package org.springframework.boot.jarmode.layertools;
 
-import java.io.PrintStream;
 import java.util.List;
 import java.util.Map;
 
 /**
- * The {@code 'list'} tools command.
- *
- * Delegates the actual work to {@link ListLayersCommand}.
- *
- * @author Phillip Webb
  * @author Moritz Halbritter
  */
-class ListCommand extends Command {
+class TestCommand extends Command {
 
-	private final ListLayersCommand delegate;
-
-	ListCommand(Context context) {
-		super("list", "List layers from the jar that can be extracted", Options.none(), Parameters.none());
-		this.delegate = new ListLayersCommand(context);
+	TestCommand() {
+		super("test", "Description of test",
+				Options.of(Option.of("option1", "value1", "Description of option1"),
+						Option.of("option2", "value2", "Description of option2")),
+				Parameters.of("parameter1", "parameter2"));
 	}
 
 	@Override
 	protected void run(Map<Option, String> options, List<String> parameters) {
-		this.delegate.run(options, parameters);
-	}
 
-	void printLayers(Layers layers, PrintStream out) {
-		this.delegate.printLayers(layers, out);
 	}
 
 }

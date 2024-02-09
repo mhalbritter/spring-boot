@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,10 +32,17 @@ class HelpCommand extends Command {
 
 	private final List<Command> commands;
 
+	private final String jarMode;
+
 	HelpCommand(Context context, List<Command> commands) {
+		this(context, commands, System.getProperty("jarmode"));
+	}
+
+	HelpCommand(Context context, List<Command> commands, String jarMode) {
 		super("help", "Help about any command", Options.none(), Parameters.of("[<command]"));
 		this.context = context;
 		this.commands = commands;
+		this.jarMode = (jarMode != null) ? jarMode : "tools";
 	}
 
 	@Override
@@ -98,7 +105,7 @@ class HelpCommand extends Command {
 	}
 
 	private String getJavaCommand() {
-		return "java -Djarmode=layertools -jar " + this.context.getArchiveFile().getName();
+		return "java -Djarmode=" + this.jarMode + " -jar " + this.context.getArchiveFile().getName();
 	}
 
 }

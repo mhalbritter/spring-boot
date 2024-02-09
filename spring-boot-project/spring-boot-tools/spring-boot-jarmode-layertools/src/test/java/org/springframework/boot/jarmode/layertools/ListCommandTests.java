@@ -19,7 +19,6 @@ package org.springframework.boot.jarmode.layertools;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
@@ -35,7 +34,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.util.FileCopyUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
@@ -55,16 +53,14 @@ class ListCommandTests {
 	@Mock
 	private Context context;
 
-	private File jarFile;
-
 	private ListCommand command;
 
 	private TestPrintStream out;
 
 	@BeforeEach
 	void setup() throws Exception {
-		this.jarFile = createJarFile("test.jar");
-		given(this.context.getArchiveFile()).willReturn(this.jarFile);
+		File jarFile = createJarFile("test.jar");
+		given(this.context.getArchiveFile()).willReturn(jarFile);
 		this.command = new ListCommand(this.context);
 		this.out = new TestPrintStream(this);
 	}
@@ -117,9 +113,7 @@ class ListCommandTests {
 	}
 
 	private String getFile(String fileName) throws Exception {
-		ClassPathResource resource = new ClassPathResource(fileName, getClass());
-		InputStreamReader reader = new InputStreamReader(resource.getInputStream());
-		return FileCopyUtils.copyToString(reader);
+		return new ClassPathResource(fileName, getClass()).getContentAsString(StandardCharsets.UTF_8);
 	}
 
 }

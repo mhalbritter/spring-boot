@@ -21,19 +21,18 @@ import java.util.List;
 import org.springframework.boot.loader.jarmode.JarMode;
 
 /**
- * {@link JarMode} providing {@code "layertools"} support.
+ * {@link JarMode} providing {@code "tools"} support.
  *
- * @author Phillip Webb
- * @author Scott Frederick
- * @since 2.3.0
+ * @author Moritz Halbritter
+ * @since 3.3.0
  */
-public class LayerToolsJarMode implements JarMode {
+public class ToolsJarMode implements JarMode {
 
 	static Context contextOverride;
 
 	@Override
 	public boolean accepts(String mode) {
-		return "layertools".equalsIgnoreCase(mode);
+		return "tools".equalsIgnoreCase(mode);
 	}
 
 	@Override
@@ -48,7 +47,7 @@ public class LayerToolsJarMode implements JarMode {
 	}
 
 	static List<Command> getCommands(Context context) {
-		return List.of(new ListCommand(context), new ExtractLayersCommand(context));
+		return List.of(new ExtractCommand(context), new ListLayersCommand(context));
 	}
 
 }

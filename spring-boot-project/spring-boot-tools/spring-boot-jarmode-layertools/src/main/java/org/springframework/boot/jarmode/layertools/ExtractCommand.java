@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,23 +21,38 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributeView;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import org.springframework.util.Assert;
 import org.springframework.util.StreamUtils;
+import org.springframework.util.StringUtils;
 
 /**
  * The {@code 'extract'} tools command.
  *
- * @author Phillip Webb
+ * @author Moritz Halbritter
  */
 class ExtractCommand extends Command {
 
+	private static final Option LAUNCHER_OPTION = Option.of("launcher", null, "");
+
+	/**
+	 * Option to extract layers.
+	 */
+	static final Option LAYERS_OPTION = Option.of("layers", "string list", "Layers to extract");
+
+	/**
+	 * Option to specify the destination to write to.
+	 */
 	static final Option DESTINATION_OPTION = Option.of("destination", "string", "The destination to extract files to");
 
 	private final Context context;
@@ -45,49 +60,73 @@ class ExtractCommand extends Command {
 	private final Layers layers;
 
 	ExtractCommand(Context context) {
-		this(context, Layers.get(context));
+		this(context, null);
 	}
 
 	ExtractCommand(Context context, Layers layers) {
-		super("extract", "Extracts layers from the jar for image creation", Options.of(DESTINATION_OPTION),
-				Parameters.of("[<layer>...]"));
+		super("extract", "TODO", Options.of(LAUNCHER_OPTION, LAYERS_OPTION, DESTINATION_OPTION), Parameters.none());
 		this.context = context;
 		this.layers = layers;
 	}
 
 	@Override
-	protected void run(Map<Option, String> options, List<String> parameters) {
+	public void run(Map<Option, String> options, List<String> parameters) {
 		try {
 			File destination = options.containsKey(DESTINATION_OPTION) ? new File(options.get(DESTINATION_OPTION))
 					: this.context.getWorkingDir();
-			for (String layer : this.layers) {
-				if (parameters.isEmpty() || parameters.contains(layer)) {
-					mkDirs(new File(destination, layer));
-				}
+			List<ExtractedFile> extractedFiles;
+			if (options.containsKey(LAYERS_OPTION)) {
+				extractedFiles = extractWithLayers(destination, options.get(LAYERS_OPTION));
 			}
-			try (ZipInputStream zip = new ZipInputStream(new FileInputStream(this.context.getArchiveFile()))) {
-				ZipEntry entry = zip.getNextEntry();
-				Assert.state(entry != null, "File '" + this.context.getArchiveFile().toString()
-						+ "' is not compatible with layertools; ensure jar file is valid and launch script is not enabled");
-				while (entry != null) {
-					if (!entry.isDirectory()) {
-						String layer = this.layers.getLayer(entry);
-						if (parameters.isEmpty() || parameters.contains(layer)) {
-							write(zip, entry, new File(destination, layer));
-						}
-					}
-					entry = zip.getNextEntry();
-				}
+			else {
+				extractedFiles = extractWithoutLayers(destination);
+			}
+			if (options.containsKey(LAUNCHER_OPTION)) {
+				extractLauncher(extractedFiles);
 			}
 		}
 		catch (IOException ex) {
-			throw new IllegalStateException(ex);
+			throw new UncheckedIOException(ex);
 		}
 	}
 
-	private void write(ZipInputStream zip, ZipEntry entry, File destination) throws IOException {
-		String canonicalOutputPath = destination.getCanonicalPath() + File.separator;
-		File file = new File(destination, entry.getName());
+	private List<ExtractedFile> extractWithLayers(File directory, String layersToExtract) throws IOException {
+		return extractWithLayers(directory, StringUtils.commaDelimitedListToSet(layersToExtract));
+	}
+
+	private List<ExtractedFile> extractWithLayers(File directory, Set<String> layersToExtract) throws IOException {
+		List<ExtractedFile> extractedFiles = new ArrayList<>();
+		Layers layers = (this.layers != null) ? this.layers : Layers.get(this.context);
+		createLayersDirectories(directory, layersToExtract, layers);
+		try (ZipInputStream zip = new ZipInputStream(new FileInputStream(this.context.getArchiveFile()))) {
+			ZipEntry entry = zip.getNextEntry();
+			Assert.state(entry != null, "File '" + this.context.getArchiveFile().toString()
+					+ "' is not compatible with layertools; ensure jar file is valid and launch script is not enabled");
+			while (entry != null) {
+				if (!entry.isDirectory()) {
+					String layer = layers.getLayer(entry);
+					if (layersToExtract.isEmpty() || layersToExtract.contains(layer)) {
+						extractedFiles.add(write(zip, entry, layer, new File(directory, layer)));
+					}
+				}
+				entry = zip.getNextEntry();
+			}
+		}
+		return extractedFiles;
+	}
+
+	private void createLayersDirectories(File directory, Set<String> layersToExtract, Layers layers)
+			throws IOException {
+		for (String layer : layers) {
+			if (layersToExtract.isEmpty() || layersToExtract.contains(layer)) {
+				mkDirs(new File(directory, layer));
+			}
+		}
+	}
+
+	private ExtractedFile write(ZipInputStream zip, ZipEntry entry, String layer, File directory) throws IOException {
+		String canonicalOutputPath = directory.getCanonicalPath() + File.separator;
+		File file = new File(directory, entry.getName());
 		String canonicalEntryPath = file.getCanonicalPath();
 		Assert.state(canonicalEntryPath.startsWith(canonicalOutputPath),
 				() -> "Entry '" + entry.getName() + "' would be written to '" + canonicalEntryPath
@@ -104,6 +143,7 @@ class ExtractCommand extends Command {
 		catch (IOException ex) {
 			// File system does not support setting time attributes. Continue.
 		}
+		return new ExtractedFile(layer, entry.getName(), file);
 	}
 
 	private void mkParentDirs(File file) throws IOException {
@@ -114,6 +154,18 @@ class ExtractCommand extends Command {
 		if (!file.exists() && !file.mkdirs()) {
 			throw new IOException("Unable to create directory " + file);
 		}
+	}
+
+	private List<ExtractedFile> extractWithoutLayers(File directory) {
+		// TODO
+		return Collections.emptyList();
+	}
+
+	private void extractLauncher(List<ExtractedFile> extractedFiles) {
+		// TODO
+	}
+
+	private record ExtractedFile(String layer, String zipEntryName, File destination) {
 	}
 
 }
