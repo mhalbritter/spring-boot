@@ -24,14 +24,19 @@ import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributeView;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.nio.file.attribute.FileTime;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.jar.JarEntry;
+import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import org.springframework.boot.jarmode.layertools.JarStructure.Entry;
+import org.springframework.boot.jarmode.layertools.JarStructure.Entry.Type;
 import org.springframework.util.Assert;
 import org.springframework.util.StreamUtils;
 import org.springframework.util.StringUtils;
@@ -43,17 +48,24 @@ import org.springframework.util.StringUtils;
  */
 class ExtractCommand extends Command {
 
+	/**
+	 * Option to create a launcher.
+	 */
 	private static final Option LAUNCHER_OPTION = Option.of("launcher", null, "");
 
 	/**
 	 * Option to extract layers.
 	 */
-	static final Option LAYERS_OPTION = Option.of("layers", "string list", "Layers to extract");
+	static final Option LAYERS_OPTION = Option.of("layers", "string list", "Layers to extract", true);
 
 	/**
 	 * Option to specify the destination to write to.
 	 */
 	static final Option DESTINATION_OPTION = Option.of("destination", "string", "The destination to extract files to");
+
+	private static final String LIBRARIES_DIRECTORY = "lib/";
+
+	private static final String LAUNCHER_FILENAME = "launcher.jar";
 
 	private final Context context;
 
@@ -64,7 +76,8 @@ class ExtractCommand extends Command {
 	}
 
 	ExtractCommand(Context context, Layers layers) {
-		super("extract", "TODO", Options.of(LAUNCHER_OPTION, LAYERS_OPTION, DESTINATION_OPTION), Parameters.none());
+		super("extract", "Extract the contents from the jar",
+				Options.of(LAUNCHER_OPTION, LAYERS_OPTION, DESTINATION_OPTION), Parameters.none());
 		this.context = context;
 		this.layers = layers;
 	}
@@ -74,15 +87,23 @@ class ExtractCommand extends Command {
 		try {
 			File destination = options.containsKey(DESTINATION_OPTION) ? new File(options.get(DESTINATION_OPTION))
 					: this.context.getWorkingDir();
-			List<ExtractedFile> extractedFiles;
-			if (options.containsKey(LAYERS_OPTION)) {
-				extractedFiles = extractWithLayers(destination, options.get(LAYERS_OPTION));
+			Layers layers = options.containsKey(LAYERS_OPTION) ? new LauncherAwareLayers(getLayersFromContext())
+					: new NoLayers();
+			Set<String> layersToExtract = StringUtils.commaDelimitedListToSet(options.get(LAYERS_OPTION));
+			createLayersDirectories(destination, layersToExtract, layers);
+			if (options.containsKey(LAUNCHER_OPTION)) {
+				JarStructure jarStructure = getJarStructure();
+				extract(destination, layers, layersToExtract, (zipEntry) -> {
+					Entry entry = jarStructure.resolve(zipEntry);
+					if (entry == null || entry.type() != Type.LIBRARY) {
+						return null;
+					}
+					return LIBRARIES_DIRECTORY + entry.location();
+				});
+				createLauncher(destination, jarStructure, layers, layersToExtract);
 			}
 			else {
-				extractedFiles = extractWithoutLayers(destination);
-			}
-			if (options.containsKey(LAUNCHER_OPTION)) {
-				extractLauncher(extractedFiles);
+				extract(destination, layers, layersToExtract);
 			}
 		}
 		catch (IOException ex) {
@@ -90,49 +111,25 @@ class ExtractCommand extends Command {
 		}
 	}
 
-	private List<ExtractedFile> extractWithLayers(File directory, String layersToExtract) throws IOException {
-		return extractWithLayers(directory, StringUtils.commaDelimitedListToSet(layersToExtract));
-	}
-
-	private List<ExtractedFile> extractWithLayers(File directory, Set<String> layersToExtract) throws IOException {
-		List<ExtractedFile> extractedFiles = new ArrayList<>();
-		Layers layers = (this.layers != null) ? this.layers : Layers.get(this.context);
-		createLayersDirectories(directory, layersToExtract, layers);
-		try (ZipInputStream zip = new ZipInputStream(new FileInputStream(this.context.getArchiveFile()))) {
-			ZipEntry entry = zip.getNextEntry();
-			Assert.state(entry != null, "File '" + this.context.getArchiveFile().toString()
-					+ "' is not compatible with layertools; ensure jar file is valid and launch script is not enabled");
-			while (entry != null) {
-				if (!entry.isDirectory()) {
-					String layer = layers.getLayer(entry);
-					if (layersToExtract.isEmpty() || layersToExtract.contains(layer)) {
-						extractedFiles.add(write(zip, entry, layer, new File(directory, layer)));
-					}
-				}
-				entry = zip.getNextEntry();
-			}
-		}
-		return extractedFiles;
+	private JarStructure getJarStructure() {
+		IndexedJarStructure jarStructure = IndexedJarStructure.get(this.context);
+		Assert.state(jarStructure != null, "Couldn't read classpath index");
+		return jarStructure;
 	}
 
 	private void createLayersDirectories(File directory, Set<String> layersToExtract, Layers layers)
 			throws IOException {
 		for (String layer : layers) {
-			if (layersToExtract.isEmpty() || layersToExtract.contains(layer)) {
+			if (shouldExtractLayer(layersToExtract, layer)) {
 				mkDirs(new File(directory, layer));
 			}
 		}
 	}
 
-	private ExtractedFile write(ZipInputStream zip, ZipEntry entry, String layer, File directory) throws IOException {
-		String canonicalOutputPath = directory.getCanonicalPath() + File.separator;
-		File file = new File(directory, entry.getName());
-		String canonicalEntryPath = file.getCanonicalPath();
-		Assert.state(canonicalEntryPath.startsWith(canonicalOutputPath),
-				() -> "Entry '" + entry.getName() + "' would be written to '" + canonicalEntryPath
-						+ "'. This is outside the output location of '" + canonicalOutputPath
-						+ "'. Verify the contents of your archive.");
-		mkParentDirs(file);
+	private void write(ZipInputStream zip, ZipEntry entry, String entryName, File directory) throws IOException {
+		File file = new File(directory, entryName);
+		assertFileIsContainedInDirectory(directory, file, entry);
+		mkDirs(file.getParentFile());
 		try (OutputStream out = new FileOutputStream(file)) {
 			StreamUtils.copy(zip, out);
 		}
@@ -143,11 +140,15 @@ class ExtractCommand extends Command {
 		catch (IOException ex) {
 			// File system does not support setting time attributes. Continue.
 		}
-		return new ExtractedFile(layer, entry.getName(), file);
 	}
 
-	private void mkParentDirs(File file) throws IOException {
-		mkDirs(file.getParentFile());
+	private void assertFileIsContainedInDirectory(File directory, File file, ZipEntry entry) throws IOException {
+		String canonicalOutputPath = directory.getCanonicalPath() + File.separator;
+		String canonicalEntryPath = file.getCanonicalPath();
+		Assert.state(canonicalEntryPath.startsWith(canonicalOutputPath),
+				() -> "Entry '" + entry.getName() + "' would be written to '" + canonicalEntryPath
+						+ "'. This is outside the output location of '" + canonicalOutputPath
+						+ "'. Verify the contents of your archive.");
 	}
 
 	private void mkDirs(File file) throws IOException {
@@ -156,16 +157,128 @@ class ExtractCommand extends Command {
 		}
 	}
 
-	private List<ExtractedFile> extractWithoutLayers(File directory) {
-		// TODO
-		return Collections.emptyList();
+	private void extract(File directory, Layers layers, Set<String> layersToExtract) throws IOException {
+		extract(directory, layers, layersToExtract, ZipEntry::getName);
 	}
 
-	private void extractLauncher(List<ExtractedFile> extractedFiles) {
-		// TODO
+	private void extract(File directory, Layers layers, Set<String> layersToExtract,
+			EntryNameTransformer entryNameTransformer) throws IOException {
+		withZipEntries(this.context.getArchiveFile(), (stream, zipEntry) -> {
+			String name = entryNameTransformer.getName(zipEntry);
+			if (name == null) {
+				return;
+			}
+			String layer = layers.getLayer(zipEntry);
+			if (shouldExtractLayer(layersToExtract, layer)) {
+				File targetDir = (layer != null) ? new File(directory, layer) : directory;
+				write(stream, zipEntry, name, targetDir);
+			}
+		});
 	}
 
-	private record ExtractedFile(String layer, String zipEntryName, File destination) {
+	private Layers getLayersFromContext() {
+		return (this.layers != null) ? this.layers : Layers.get(this.context);
+	}
+
+	private void createLauncher(File directory, JarStructure jarStructure, Layers layers, Set<String> layersToExtract)
+			throws IOException {
+		String layer = layers.getLayer(LAUNCHER_FILENAME);
+		if (!shouldExtractLayer(layersToExtract, layer)) {
+			return;
+		}
+		File targetDir = (layer != null) ? new File(directory, layer) : directory;
+		File launcherJar = new File(targetDir, LAUNCHER_FILENAME);
+		Manifest manifest = jarStructure.createLauncherManifest((library) -> LIBRARIES_DIRECTORY + library);
+		mkDirs(launcherJar.getParentFile());
+		try (JarOutputStream output = new JarOutputStream(Files.newOutputStream(launcherJar.toPath()), manifest)) {
+			withZipEntries(this.context.getArchiveFile(), ((stream, zipEntry) -> {
+				Entry entry = jarStructure.resolve(zipEntry);
+				if (entry == null || entry.type() != Type.APPLICATION_CLASS_OR_RESOURCE) {
+					return;
+				}
+				JarEntry jarEntry = createJarEntry(entry.location(), zipEntry);
+				output.putNextEntry(jarEntry);
+				StreamUtils.copy(stream, output);
+				output.closeEntry();
+			}));
+		}
+	}
+
+	private boolean shouldExtractLayer(Set<String> layersToExtract, String layer) {
+		if (layer == null || layersToExtract.isEmpty()) {
+			return true;
+		}
+		return layersToExtract.contains(layer);
+	}
+
+	private static JarEntry createJarEntry(String location, ZipEntry originalEntry) {
+		JarEntry jarEntry = new JarEntry(location);
+		FileTime lastModifiedTime = originalEntry.getLastModifiedTime();
+		if (lastModifiedTime != null) {
+			jarEntry.setLastModifiedTime(lastModifiedTime);
+		}
+		FileTime lastAccessTime = originalEntry.getLastAccessTime();
+		if (lastAccessTime != null) {
+			jarEntry.setLastAccessTime(lastAccessTime);
+		}
+		FileTime creationTime = originalEntry.getCreationTime();
+		if (creationTime != null) {
+			jarEntry.setCreationTime(creationTime);
+		}
+		return jarEntry;
+	}
+
+	private static void withZipEntries(File file, ThrowingConsumer callback) throws IOException {
+		try (ZipInputStream stream = new ZipInputStream(new FileInputStream(file))) {
+			ZipEntry entry = stream.getNextEntry();
+			Assert.state(entry != null,
+					"File '" + file + "' is not compatible; ensure jar file is valid and launch script is not enabled");
+			while (entry != null) {
+				if (StringUtils.hasLength(entry.getName()) && !entry.isDirectory()) {
+					callback.accept(stream, entry);
+				}
+				entry = stream.getNextEntry();
+			}
+		}
+	}
+
+	@FunctionalInterface
+	private interface EntryNameTransformer {
+
+		String getName(ZipEntry entry);
+
+	}
+
+	@FunctionalInterface
+	private interface ThrowingConsumer {
+
+		void accept(ZipInputStream stream, ZipEntry entry) throws IOException;
+
+	}
+
+	private static final class LauncherAwareLayers implements Layers {
+
+		private static final String APPLICATION_LAYER = "application";
+
+		private final Layers layers;
+
+		LauncherAwareLayers(Layers layers) {
+			this.layers = layers;
+		}
+
+		@Override
+		public Iterator<String> iterator() {
+			return this.layers.iterator();
+		}
+
+		@Override
+		public String getLayer(String entryName) {
+			if (LAUNCHER_FILENAME.equals(entryName)) {
+				return APPLICATION_LAYER;
+			}
+			return this.layers.getLayer(entryName);
+		}
+
 	}
 
 }

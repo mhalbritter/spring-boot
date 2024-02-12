@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,12 +37,16 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  *
  * @author Phillip Webb
  * @author Scott Frederick
+ * @author Moritz Halbritter
  */
 class CommandTests {
 
 	private static final Option VERBOSE_FLAG = Option.flag("verbose", "Verbose output");
 
 	private static final Option LOG_LEVEL_OPTION = Option.of("log-level", "Logging level (debug or info)", "string");
+
+	private static final Option LAYERS_OPTION = Option.of("layers", "Layers (leave empty for all)", "string list",
+			true);
 
 	@Test
 	void getNameReturnsName() {
@@ -144,6 +148,14 @@ class CommandTests {
 		assertThat(option.getName()).isEqualTo("test");
 		assertThat(option.getDescription()).isEqualTo("description");
 		assertThat(option.getValueDescription()).isEqualTo("value description");
+	}
+
+	@Test
+	void shouldNotParseFollowingOptionAsValue() {
+		TestCommand command = new TestCommand("test", LAYERS_OPTION, LOG_LEVEL_OPTION);
+		run(command, "--layers", "--log-level", "debug");
+		assertThat(command.getRunOptions()).containsEntry(LAYERS_OPTION, null);
+		assertThat(command.getRunOptions()).containsEntry(LOG_LEVEL_OPTION, "debug");
 	}
 
 	private void run(TestCommand command, String... args) {

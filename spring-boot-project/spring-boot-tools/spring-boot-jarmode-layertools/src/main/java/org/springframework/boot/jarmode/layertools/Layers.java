@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2020 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import java.util.zip.ZipEntry;
  * Provides information about the jar layers.
  *
  * @author Phillip Webb
+ * @author Moritz Halbritter
  * @see ExtractCommand
  * @see ListCommand
  */
@@ -40,7 +41,16 @@ interface Layers extends Iterable<String> {
 	 * @param entry the entry to check
 	 * @return the layer that the entry is in
 	 */
-	String getLayer(ZipEntry entry);
+	default String getLayer(ZipEntry entry) {
+		return getLayer(entry.getName());
+	}
+
+	/**
+	 * Return the layer that the entry with the given name is in.
+	 * @param entryName the name of the entry to check
+	 * @return the layer that the entry is in
+	 */
+	String getLayer(String entryName);
 
 	/**
 	 * Return a {@link Layers} instance for the currently running application.

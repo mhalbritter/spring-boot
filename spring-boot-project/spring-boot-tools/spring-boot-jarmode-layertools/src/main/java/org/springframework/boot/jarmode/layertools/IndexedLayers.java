@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,6 +56,7 @@ class IndexedLayers implements Layers {
 				this.layers.put(line.substring(3, line.length() - 2), contents);
 			}
 			else if (line.startsWith("  - ")) {
+				Assert.notNull(contents, "Contents must not be null. Check if the index file is malformed!");
 				contents.add(line.substring(5, line.length() - 1));
 			}
 			else {
@@ -71,11 +72,7 @@ class IndexedLayers implements Layers {
 	}
 
 	@Override
-	public String getLayer(ZipEntry entry) {
-		return getLayer(entry.getName());
-	}
-
-	private String getLayer(String name) {
+	public String getLayer(String name) {
 		for (Map.Entry<String, List<String>> entry : this.layers.entrySet()) {
 			for (String candidate : entry.getValue()) {
 				if (candidate.equals(name) || (candidate.endsWith("/") && name.startsWith(candidate))) {

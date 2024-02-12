@@ -16,9 +16,11 @@
 
 package org.springframework.boot.jarmode.layertools;
 
+import java.io.File;
 import java.nio.file.Path;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
@@ -41,7 +43,8 @@ class ToolsJarModeTests {
 	@BeforeEach
 	void setUp() {
 		Context context = Mockito.mock(Context.class);
-		given(context.getArchiveFile()).willReturn(this.temp.resolve("file.jar").toFile());
+		given(context.getArchiveFile())
+			.willReturn(new File("/Users/mkammerer/Downloads/demo/build/libs/demo-0.0.1-SNAPSHOT.jar"));
 		ToolsJarMode.contextOverride = context;
 		this.mode = new ToolsJarMode();
 	}
@@ -53,14 +56,14 @@ class ToolsJarModeTests {
 	}
 
 	@Test
-	void help() {
-		run("help");
-	}
-
-	@Test
+	@Disabled("for manual running")
 	void extract() {
-		// run("extract", "--launcher", "--layers", "layer1,layer2", "--destination",
-		// "/tmp");
+		// run("extract", "--launcher", "--layers=dependencies", "--destination",
+		// "/Users/mkammerer/tmp");
+		// run("extract", "--launcher", "--layers", "--destination",
+		// "/Users/mkammerer/tmp");
+		// run("extract", "--launcher", "--destination", "/Users/mkammerer/tmp");
+		// run("extract", "--destination", "/Users/mkammerer/tmp");
 	}
 
 	private void run(String... args) {

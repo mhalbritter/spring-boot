@@ -174,7 +174,7 @@ class ExtractLayersCommandTests {
 		given(this.context.getWorkingDir()).willReturn(this.extract);
 		assertThatIllegalStateException()
 			.isThrownBy(() -> this.command.run(Collections.emptyMap(), Collections.emptyList()))
-			.withMessageContaining("not compatible with layertools");
+			.withMessageContaining("not compatible");
 	}
 
 	@Test
@@ -247,11 +247,11 @@ class ExtractLayersCommandTests {
 		}
 
 		@Override
-		public String getLayer(ZipEntry entry) {
-			if (entry.getName().startsWith("a")) {
+		public String getLayer(String entryName) {
+			if (entryName.startsWith("a")) {
 				return "a";
 			}
-			if (entry.getName().startsWith("b")) {
+			if (entryName.startsWith("b")) {
 				return "b";
 			}
 			return "c";

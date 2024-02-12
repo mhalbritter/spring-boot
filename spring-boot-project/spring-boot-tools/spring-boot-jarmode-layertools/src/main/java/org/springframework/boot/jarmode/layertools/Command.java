@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2020 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.stream.Stream;
 
 /**
@@ -237,7 +238,7 @@ abstract class Command {
 	/**
 	 * An individual option that the command can accepts. Can either be an option with a
 	 * value (e.g. {@literal --log debug}) or a flag (e.g. {@literal
-	 * --verbose}).
+	 * --verbose}). It also can be both if the value is marked as optional.
 	 */
 	protected static final class Option {
 
@@ -247,10 +248,13 @@ abstract class Command {
 
 		private final String description;
 
-		private Option(String name, String valueDescription, String description) {
+		private final boolean optionalValue;
+
+		private Option(String name, String valueDescription, String description, boolean optionalValue) {
 			this.name = name;
 			this.description = description;
 			this.valueDescription = valueDescription;
+			this.optionalValue = optionalValue;
 		}
 
 		/**
@@ -287,13 +291,24 @@ abstract class Command {
 		}
 
 		private String claimArg(Deque<String> args) {
-			if (this.valueDescription != null) {
-				if (args.isEmpty()) {
-					throw new MissingValueException(this.name);
+			if (this.valueDescription == null) {
+				return null;
+			}
+			if (this.optionalValue) {
+				String nextArg = args.peek();
+				if (nextArg == null || nextArg.startsWith("--")) {
+					return null;
 				}
 				return args.removeFirst();
 			}
-			return null;
+			else {
+				try {
+					return args.removeFirst();
+				}
+				catch (NoSuchElementException ex) {
+					throw new MissingValueException(this.name);
+				}
+			}
 		}
 
 		@Override
@@ -324,7 +339,7 @@ abstract class Command {
 		 * @return a new {@link Option} instance
 		 */
 		protected static Option flag(String name, String description) {
-			return new Option(name, null, description);
+			return new Option(name, null, description, false);
 		}
 
 		/**
@@ -335,7 +350,19 @@ abstract class Command {
 		 * @return a new {@link Option} instance
 		 */
 		protected static Option of(String name, String valueDescription, String description) {
-			return new Option(name, valueDescription, description);
+			return new Option(name, valueDescription, description, false);
+		}
+
+		/**
+		 * Factory method to create value option.
+		 * @param name the name of the option
+		 * @param valueDescription a description of the expected value
+		 * @param description a description of the option
+		 * @param optionalValue whether the value is optional
+		 * @return a new {@link Option} instance
+		 */
+		protected static Option of(String name, String valueDescription, String description, boolean optionalValue) {
+			return new Option(name, valueDescription, description, optionalValue);
 		}
 
 	}
