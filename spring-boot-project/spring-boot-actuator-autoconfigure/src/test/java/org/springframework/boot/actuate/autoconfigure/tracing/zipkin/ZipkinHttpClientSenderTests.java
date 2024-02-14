@@ -48,7 +48,7 @@ import static org.assertj.core.api.Assertions.assertThatIOException;
 
 /**
  * Tests for {@link ZipkinHttpClientSender}.
- * 
+ *
  * @author Moritz Halbritter
  */
 class ZipkinHttpClientSenderTests extends ZipkinHttpSenderTests {
@@ -57,7 +57,7 @@ class ZipkinHttpClientSenderTests extends ZipkinHttpSenderTests {
 
 	private static MockWebServer mockBackEnd;
 
-	private static String ZIPKIN_URL;
+	private static String zipkinUrl;
 
 	@BeforeAll
 	static void beforeAll() throws IOException {
@@ -65,7 +65,7 @@ class ZipkinHttpClientSenderTests extends ZipkinHttpSenderTests {
 		mockBackEnd = new MockWebServer();
 		mockBackEnd.setDispatcher(dispatcher);
 		mockBackEnd.start();
-		ZIPKIN_URL = mockBackEnd.url("/api/v2/spans").toString();
+		zipkinUrl = mockBackEnd.url("/api/v2/spans").toString();
 	}
 
 	@AfterAll
@@ -93,7 +93,7 @@ class ZipkinHttpClientSenderTests extends ZipkinHttpSenderTests {
 	ZipkinHttpClientSender createSender(HttpEndpointSupplier.Factory endpointSupplierFactory, Encoding encoding,
 			Duration timeout) {
 		HttpClient httpClient = HttpClient.newBuilder().connectTimeout(timeout).build();
-		return new ZipkinHttpClientSender(encoding, endpointSupplierFactory, ZIPKIN_URL, httpClient, timeout);
+		return new ZipkinHttpClientSender(encoding, endpointSupplierFactory, zipkinUrl, httpClient, timeout);
 	}
 
 	@Test
@@ -137,7 +137,7 @@ class ZipkinHttpClientSenderTests extends ZipkinHttpSenderTests {
 		try (BytesMessageSender sender = createSender((e) -> new HttpEndpointSupplier() {
 			@Override
 			public String get() {
-				return ZIPKIN_URL + "/" + suffix.incrementAndGet();
+				return zipkinUrl + "/" + suffix.incrementAndGet();
 			}
 
 			@Override
@@ -182,7 +182,7 @@ class ZipkinHttpClientSenderTests extends ZipkinHttpSenderTests {
 			MockResponse response = new MockResponse().setResponseCode(200).setHeadersDelay(100, TimeUnit.MILLISECONDS);
 			mockBackEnd.enqueue(response);
 			assertThatIOException().isThrownBy(() -> sender.send(Collections.emptyList()))
-					.withMessageContaining("timed out");
+				.withMessageContaining("timed out");
 		}
 	}
 

@@ -50,6 +50,7 @@ import static org.mockito.Mockito.mock;
  *
  * @author Moritz Halbritter
  */
+@SuppressWarnings("removal")
 class ZipkinConfigurationsSenderConfigurationTests {
 
 	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()

@@ -94,6 +94,7 @@ class ZipkinConfigurations {
 
 		@Bean
 		@ConditionalOnMissingBean(BytesMessageSender.class)
+		@SuppressWarnings("removal")
 		ZipkinRestTemplateSender restTemplateSender(ZipkinProperties properties, Encoding encoding,
 				ObjectProvider<ZipkinRestTemplateBuilderCustomizer> customizers,
 				ObjectProvider<ZipkinConnectionDetails> connectionDetailsProvider,
@@ -110,6 +111,7 @@ class ZipkinConfigurations {
 					restTemplateBuilder.build());
 		}
 
+		@SuppressWarnings("removal")
 		private RestTemplateBuilder applyCustomizers(RestTemplateBuilder restTemplateBuilder,
 				ObjectProvider<ZipkinRestTemplateBuilderCustomizer> customizers) {
 			Iterable<ZipkinRestTemplateBuilderCustomizer> orderedCustomizers = () -> customizers.orderedStream()
@@ -130,6 +132,7 @@ class ZipkinConfigurations {
 
 		@Bean
 		@ConditionalOnMissingBean(BytesMessageSender.class)
+		@SuppressWarnings("removal")
 		ZipkinWebClientSender webClientSender(ZipkinProperties properties, Encoding encoding,
 				ObjectProvider<ZipkinWebClientBuilderCustomizer> customizers,
 				ObjectProvider<ZipkinConnectionDetails> connectionDetailsProvider,
