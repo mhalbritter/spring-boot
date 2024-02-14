@@ -16,22 +16,22 @@
 
 package org.springframework.boot.actuate.autoconfigure.tracing.zipkin;
 
-import zipkin2.reporter.Encoding;
-
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
+import java.net.http.HttpClient;
 
 /**
- * Configures the bean {@linkplain ZipkinAutoConfiguration} would from properties.
+ * Callback interface that can be implemented by beans wishing to customize the
+ * {@link HttpClient.Builder} used to send spans to Zipkin.
+ *
+ * @author Moritz Halbritter
+ * @since 3.3.0
  */
-@TestConfiguration(proxyBeanMethods = false)
-class DefaultEncodingConfiguration {
+@FunctionalInterface
+public interface ZipkinHttpClientBuilderCustomizer {
 
-	@Bean
-	@ConditionalOnMissingBean
-	Encoding encoding() {
-		return Encoding.JSON;
-	}
+	/**
+	 * Customize the http client builder.
+	 * @param httpClient the http client builder to customize
+	 */
+	void customize(HttpClient.Builder httpClient);
 
 }

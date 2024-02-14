@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,9 @@
  */
 
 package org.springframework.boot.actuate.autoconfigure.tracing.zipkin;
+
+import java.net.http.HttpClient;
+import java.net.http.HttpClient.Builder;
 
 import brave.Tag;
 import brave.Tags;
@@ -54,7 +57,7 @@ class ZipkinConfigurations {
 
 	@Configuration(proxyBeanMethods = false)
 	@Import({ UrlConnectionSenderConfiguration.class, WebClientSenderConfiguration.class,
-			RestTemplateSenderConfiguration.class })
+			RestTemplateSenderConfiguration.class, HttpClientSenderConfiguration.class })
 	static class SenderConfiguration {
 
 	}
@@ -139,6 +142,29 @@ class ZipkinConfigurations {
 			customizers.orderedStream().forEach((customizer) -> customizer.customize(builder));
 			return new ZipkinWebClientSender(encoding, endpointSupplierFactory, connectionDetails.getSpanEndpoint(),
 					builder.build(), properties.getConnectTimeout().plus(properties.getReadTimeout()));
+		}
+
+	}
+
+	@Configuration(proxyBeanMethods = false)
+	@ConditionalOnClass(HttpClient.class)
+	@EnableConfigurationProperties(ZipkinProperties.class)
+	static class HttpClientSenderConfiguration {
+
+		@Bean
+		@ConditionalOnMissingBean(BytesMessageSender.class)
+		ZipkinHttpClientSender httpClientSender(ZipkinProperties properties, Encoding encoding,
+				ObjectProvider<ZipkinHttpClientBuilderCustomizer> customizers,
+				ObjectProvider<ZipkinConnectionDetails> connectionDetailsProvider,
+				ObjectProvider<HttpEndpointSupplier.Factory> endpointSupplierFactoryProvider) {
+			ZipkinConnectionDetails connectionDetails = connectionDetailsProvider
+				.getIfAvailable(() -> new PropertiesZipkinConnectionDetails(properties));
+			HttpEndpointSupplier.Factory endpointSupplierFactory = endpointSupplierFactoryProvider
+				.getIfAvailable(HttpEndpointSuppliers::constantFactory);
+			Builder httpClientBuilder = HttpClient.newBuilder().connectTimeout(properties.getConnectTimeout());
+			customizers.orderedStream().forEach((customizer) -> customizer.customize(httpClientBuilder));
+			return new ZipkinHttpClientSender(encoding, endpointSupplierFactory, connectionDetails.getSpanEndpoint(),
+					httpClientBuilder.build(), properties.getReadTimeout());
 		}
 
 	}
