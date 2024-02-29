@@ -16,6 +16,7 @@
 
 package org.springframework.boot.jarmode.layertools;
 
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -32,6 +33,7 @@ import java.util.stream.Stream;
  *
  * @author Phillip Webb
  * @author Scott Frederick
+ * @author Moritz Halbritter
  */
 abstract class Command {
 
@@ -91,9 +93,10 @@ abstract class Command {
 
 	/**
 	 * Run the command by processing the remaining arguments.
+	 * @param out stream for command output
 	 * @param args a mutable deque of the remaining arguments
 	 */
-	final void run(Deque<String> args) {
+	final void run(PrintStream out, Deque<String> args) {
 		List<String> parameters = new ArrayList<>();
 		Map<Option, String> options = new HashMap<>();
 		while (!args.isEmpty()) {
@@ -106,15 +109,32 @@ abstract class Command {
 				parameters.add(arg);
 			}
 		}
-		run(options, parameters);
+		run(out, options, parameters);
 	}
 
 	/**
 	 * Run the actual command.
+	 * @param out stream for command output
 	 * @param options any options extracted from the arguments
 	 * @param parameters any parameters extracted from the arguments
 	 */
-	protected abstract void run(Map<Option, String> options, List<String> parameters);
+	protected abstract void run(PrintStream out, Map<Option, String> options, List<String> parameters);
+
+	/**
+	 * Whether the command is deprecated.
+	 * @return whether the command is deprecated
+	 */
+	protected boolean isDeprecated() {
+		return false;
+	}
+
+	/**
+	 * Returns the deprecation message.
+	 * @return the deprecation message
+	 */
+	protected String getDeprecationMessage() {
+		return null;
+	}
 
 	/**
 	 * Static method that can be used to find a single command from a collection.

@@ -16,6 +16,7 @@
 
 package org.springframework.boot.jarmode.layertools;
 
+import java.io.PrintStream;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.List;
@@ -159,7 +160,7 @@ class CommandTests {
 	}
 
 	private void run(TestCommand command, String... args) {
-		command.run(new ArrayDeque<>(Arrays.asList(args)));
+		command.run(System.out, new ArrayDeque<>(Arrays.asList(args)));
 	}
 
 	static class TestCommand extends Command {
@@ -177,7 +178,7 @@ class CommandTests {
 		}
 
 		@Override
-		protected void run(Map<Option, String> options, List<String> parameters) {
+		protected void run(PrintStream out, Map<Option, String> options, List<String> parameters) {
 			this.runOptions = options;
 			this.runParameters = parameters;
 		}

@@ -35,11 +35,11 @@ class ListLayersCommand extends Command {
 	}
 
 	@Override
-	public void run(Map<Option, String> options, List<String> parameters) {
-		printLayers(Layers.get(this.context), System.out);
+	public void run(PrintStream out, Map<Option, String> options, List<String> parameters) {
+		printLayers(out, Layers.get(this.context));
 	}
 
-	void printLayers(Layers layers, PrintStream out) {
+	void printLayers(PrintStream out, Layers layers) {
 		layers.forEach(out::println);
 	}
 

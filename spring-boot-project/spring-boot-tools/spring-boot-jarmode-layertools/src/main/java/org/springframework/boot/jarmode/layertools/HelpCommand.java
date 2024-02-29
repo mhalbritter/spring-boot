@@ -25,6 +25,7 @@ import java.util.stream.Stream;
  * Implicit {@code 'help'} command.
  *
  * @author Phillip Webb
+ * @author Moritz Halbritter
  */
 class HelpCommand extends Command {
 
@@ -39,24 +40,34 @@ class HelpCommand extends Command {
 	}
 
 	HelpCommand(Context context, List<Command> commands, String jarMode) {
-		super("help", "Help about any command", Options.none(), Parameters.of("[<command]"));
+		super("help", "Help about any command", Options.none(), Parameters.of("[<command>]"));
 		this.context = context;
 		this.commands = commands;
 		this.jarMode = (jarMode != null) ? jarMode : "tools";
 	}
 
 	@Override
-	protected void run(Map<Option, String> options, List<String> parameters) {
-		run(System.out, parameters);
+	protected void run(PrintStream out, Map<Option, String> options, List<String> parameters) {
+		run(out, parameters);
 	}
 
 	void run(PrintStream out, List<String> parameters) {
-		Command command = (!parameters.isEmpty()) ? Command.find(this.commands, parameters.get(0)) : null;
-		if (command != null) {
-			printCommandHelp(out, command);
+		String commandName = (parameters.isEmpty()) ? null : parameters.get(0);
+		if (commandName == null) {
+			printUsageAndCommands(null, out);
 			return;
 		}
-		printUsageAndCommands(out);
+		if (getName().equals(commandName)) {
+			printCommandHelp(out, this);
+			return;
+		}
+		Command command = Command.find(this.commands, commandName);
+		if (command == null) {
+			printUsageAndCommands(commandName, out);
+		}
+		else {
+			printCommandHelp(out, command);
+		}
 	}
 
 	private void printCommandHelp(PrintStream out, Command command) {
@@ -86,7 +97,10 @@ class HelpCommand extends Command {
 		return usage.toString();
 	}
 
-	private void printUsageAndCommands(PrintStream out) {
+	private void printUsageAndCommands(String commandName, PrintStream out) {
+		if (commandName != null) {
+			printError(out, "Unknown command \"%s\"".formatted(commandName));
+		}
 		out.println("Usage:");
 		out.println("  " + getJavaCommand());
 		out.println();
@@ -106,6 +120,11 @@ class HelpCommand extends Command {
 
 	private String getJavaCommand() {
 		return "java -Djarmode=" + this.jarMode + " -jar " + this.context.getArchiveFile().getName();
+	}
+
+	private void printError(PrintStream out, String errorMessage) {
+		out.println("Error: " + errorMessage);
+		out.println();
 	}
 
 }

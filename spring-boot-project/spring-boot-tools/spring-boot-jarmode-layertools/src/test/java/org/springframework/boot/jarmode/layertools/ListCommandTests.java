@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2021 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,7 +69,7 @@ class ListCommandTests {
 	void listLayersShouldListLayers() {
 		Layers layers = IndexedLayers.get(this.context);
 		this.command.printLayers(layers, this.out);
-		assertThat(this.out).hasSameContentAsResource("list-output.txt");
+		assertThat(this.out).hasSameContentAsResource("list-output-without-deprecation.txt");
 	}
 
 	private File createJarFile(String name) throws Exception {

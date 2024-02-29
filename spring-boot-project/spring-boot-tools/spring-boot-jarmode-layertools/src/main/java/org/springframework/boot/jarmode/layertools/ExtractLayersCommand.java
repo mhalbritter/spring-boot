@@ -16,6 +16,7 @@
 
 package org.springframework.boot.jarmode.layertools;
 
+import java.io.PrintStream;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -45,14 +46,24 @@ class ExtractLayersCommand extends Command {
 	}
 
 	@Override
-	protected void run(Map<Option, String> options, List<String> parameters) {
+	protected boolean isDeprecated() {
+		return true;
+	}
+
+	@Override
+	protected String getDeprecationMessage() {
+		return "Use '-Djarmode=tools extract --layers --launcher' instead.";
+	}
+
+	@Override
+	protected void run(PrintStream out, Map<Option, String> options, List<String> parameters) {
 		Map<Option, String> rewrittenOptions = new HashMap<>();
 		if (options.containsKey(DESTINATION_OPTION)) {
 			rewrittenOptions.put(ExtractCommand.DESTINATION_OPTION, options.get(DESTINATION_OPTION));
 		}
 		rewrittenOptions.put(ExtractCommand.LAYERS_OPTION, StringUtils.collectionToCommaDelimitedString(parameters));
 		rewrittenOptions.put(ExtractCommand.LAUNCHER_OPTION, null);
-		this.delegate.run(rewrittenOptions, Collections.emptyList());
+		this.delegate.run(out, rewrittenOptions, Collections.emptyList());
 	}
 
 }

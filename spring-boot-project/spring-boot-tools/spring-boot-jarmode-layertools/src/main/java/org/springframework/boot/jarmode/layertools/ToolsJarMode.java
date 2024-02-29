@@ -39,7 +39,7 @@ public class ToolsJarMode implements JarMode {
 	public void run(String mode, String[] args) {
 		try {
 			Context context = (contextOverride != null) ? contextOverride : new Context();
-			new Runner(context, getCommands(context)).run(args);
+			new Runner(System.out, context, getCommands(context)).run(args);
 		}
 		catch (Exception ex) {
 			throw new IllegalStateException(ex);

@@ -96,7 +96,7 @@ class ExtractLayersCommandTests {
 	void runExtractsLayers() {
 		given(this.context.getArchiveFile()).willReturn(this.jarFile);
 		given(this.context.getWorkingDir()).willReturn(this.extract);
-		this.command.run(Collections.emptyMap(), Collections.emptyList());
+		this.command.run(System.out, Collections.emptyMap(), Collections.emptyList());
 		assertThat(this.extract.list()).containsOnly("a", "b", "c", "d");
 		assertThat(new File(this.extract, "a/a/a.jar")).exists().satisfies(this::timeAttributes);
 		assertThat(new File(this.extract, "b/b/b.jar")).exists().satisfies(this::timeAttributes);
@@ -145,7 +145,8 @@ class ExtractLayersCommandTests {
 	void runWhenHasDestinationOptionExtractsLayers() {
 		given(this.context.getArchiveFile()).willReturn(this.jarFile);
 		File out = new File(this.extract, "out");
-		this.command.run(Collections.singletonMap(ExtractLayersCommand.DESTINATION_OPTION, out.getAbsolutePath()),
+		this.command.run(System.out,
+				Collections.singletonMap(ExtractLayersCommand.DESTINATION_OPTION, out.getAbsolutePath()),
 				Collections.emptyList());
 		assertThat(this.extract.list()).containsOnly("out");
 		assertThat(new File(this.extract, "out/a/a/a.jar")).exists().satisfies(this::timeAttributes);
@@ -157,7 +158,7 @@ class ExtractLayersCommandTests {
 	void runWhenHasLayerParamsExtractsLimitedLayers() {
 		given(this.context.getArchiveFile()).willReturn(this.jarFile);
 		given(this.context.getWorkingDir()).willReturn(this.extract);
-		this.command.run(Collections.emptyMap(), Arrays.asList("a", "c"));
+		this.command.run(System.out, Collections.emptyMap(), Arrays.asList("a", "c"));
 		assertThat(this.extract.list()).containsOnly("a", "c");
 		assertThat(new File(this.extract, "a/a/a.jar")).exists().satisfies(this::timeAttributes);
 		assertThat(new File(this.extract, "c/c/c.jar")).exists().satisfies(this::timeAttributes);
@@ -173,7 +174,7 @@ class ExtractLayersCommandTests {
 		given(this.context.getArchiveFile()).willReturn(file);
 		given(this.context.getWorkingDir()).willReturn(this.extract);
 		assertThatIllegalStateException()
-			.isThrownBy(() -> this.command.run(Collections.emptyMap(), Collections.emptyList()))
+			.isThrownBy(() -> this.command.run(System.out, Collections.emptyMap(), Collections.emptyList()))
 			.withMessageContaining("not compatible");
 	}
 
@@ -191,7 +192,7 @@ class ExtractLayersCommandTests {
 		given(this.context.getArchiveFile()).willReturn(this.jarFile);
 		given(this.context.getWorkingDir()).willReturn(this.extract);
 		assertThatIllegalStateException()
-			.isThrownBy(() -> this.command.run(Collections.emptyMap(), Collections.emptyList()))
+			.isThrownBy(() -> this.command.run(System.out, Collections.emptyMap(), Collections.emptyList()))
 			.withMessageContaining("Entry 'e/../../e.jar' would be written");
 	}
 

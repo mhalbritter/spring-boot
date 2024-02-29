@@ -21,6 +21,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributeView;
@@ -86,7 +87,7 @@ class ExtractCommand extends Command {
 	}
 
 	@Override
-	public void run(Map<Option, String> options, List<String> parameters) {
+	public void run(PrintStream out, Map<Option, String> options, List<String> parameters) {
 		try {
 			File destination = getWorkingDirectory(options);
 			Layers layers = getLayers(options);

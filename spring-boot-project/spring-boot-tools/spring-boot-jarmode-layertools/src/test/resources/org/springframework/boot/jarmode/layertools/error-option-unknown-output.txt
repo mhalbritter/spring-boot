@@ -1,3 +1,5 @@
+Warning: This command is deprecated. Use '-Djarmode=tools extract --layers --launcher' instead.
+
 Error: Unknown option "--invalid" for the extract command
 
 Extracts layers from the jar for image creation

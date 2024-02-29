@@ -38,12 +38,22 @@ class ListCommand extends Command {
 	}
 
 	@Override
-	protected void run(Map<Option, String> options, List<String> parameters) {
-		this.delegate.run(options, parameters);
+	protected boolean isDeprecated() {
+		return true;
+	}
+
+	@Override
+	protected String getDeprecationMessage() {
+		return "Use '-Djarmode=tools list-layers' instead.";
+	}
+
+	@Override
+	protected void run(PrintStream out, Map<Option, String> options, List<String> parameters) {
+		this.delegate.run(out, options, parameters);
 	}
 
 	void printLayers(Layers layers, PrintStream out) {
-		this.delegate.printLayers(layers, out);
+		this.delegate.printLayers(out, layers);
 	}
 
 }
