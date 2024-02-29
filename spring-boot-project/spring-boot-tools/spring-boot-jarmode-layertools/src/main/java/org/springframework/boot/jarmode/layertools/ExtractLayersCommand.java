@@ -51,6 +51,7 @@ class ExtractLayersCommand extends Command {
 			rewrittenOptions.put(ExtractCommand.DESTINATION_OPTION, options.get(DESTINATION_OPTION));
 		}
 		rewrittenOptions.put(ExtractCommand.LAYERS_OPTION, StringUtils.collectionToCommaDelimitedString(parameters));
+		rewrittenOptions.put(ExtractCommand.LAUNCHER_OPTION, null);
 		this.delegate.run(rewrittenOptions, Collections.emptyList());
 	}
 

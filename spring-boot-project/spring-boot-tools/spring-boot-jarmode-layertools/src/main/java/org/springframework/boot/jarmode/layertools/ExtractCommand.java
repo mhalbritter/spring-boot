@@ -51,7 +51,7 @@ class ExtractCommand extends Command {
 	/**
 	 * Option to create a launcher.
 	 */
-	private static final Option LAUNCHER_OPTION = Option.of("launcher", null, "");
+	static final Option LAUNCHER_OPTION = Option.of("launcher", null, "Whether to extract the Spring Boot launcher");
 
 	/**
 	 * Option to extract layers.
@@ -61,11 +61,14 @@ class ExtractCommand extends Command {
 	/**
 	 * Option to specify the destination to write to.
 	 */
-	static final Option DESTINATION_OPTION = Option.of("destination", "string", "The destination to extract files to");
+	static final Option DESTINATION_OPTION = Option.of("destination", "string",
+			"Directory to extract files to. Defaults to the current working directory");
 
-	private static final String LIBRARIES_DIRECTORY = "lib/";
+	private static final Option LIBRARIES_DIRECTORY_OPTION = Option.of("libraries", "string",
+			"Name of the libraries directory. Only applicable when not using --launcher. Defaults to lib/");
 
-	private static final String LAUNCHER_FILENAME = "launcher.jar";
+	private static final Option RUNNER_FILENAME_OPTION = Option.of("runner-filename", "string",
+			"Name of the runner JAR file. Only applicable when not using --launcher. Defaults to runner.jar");
 
 	private final Context context;
 
@@ -76,8 +79,8 @@ class ExtractCommand extends Command {
 	}
 
 	ExtractCommand(Context context, Layers layers) {
-		super("extract", "Extract the contents from the jar",
-				Options.of(LAUNCHER_OPTION, LAYERS_OPTION, DESTINATION_OPTION), Parameters.none());
+		super("extract", "Extract the contents from the jar", Options.of(LAUNCHER_OPTION, LAYERS_OPTION,
+				DESTINATION_OPTION, LIBRARIES_DIRECTORY_OPTION, RUNNER_FILENAME_OPTION), Parameters.none());
 		this.context = context;
 		this.layers = layers;
 	}
@@ -85,30 +88,62 @@ class ExtractCommand extends Command {
 	@Override
 	public void run(Map<Option, String> options, List<String> parameters) {
 		try {
-			File destination = options.containsKey(DESTINATION_OPTION) ? new File(options.get(DESTINATION_OPTION))
-					: this.context.getWorkingDir();
-			Layers layers = options.containsKey(LAYERS_OPTION) ? new LauncherAwareLayers(getLayersFromContext())
-					: new NoLayers();
-			Set<String> layersToExtract = StringUtils.commaDelimitedListToSet(options.get(LAYERS_OPTION));
+			File destination = getWorkingDirectory(options);
+			Layers layers = getLayers(options);
+			Set<String> layersToExtract = getLayersToExtract(options);
 			createLayersDirectories(destination, layersToExtract, layers);
 			if (options.containsKey(LAUNCHER_OPTION)) {
-				JarStructure jarStructure = getJarStructure();
-				extract(destination, layers, layersToExtract, (zipEntry) -> {
-					Entry entry = jarStructure.resolve(zipEntry);
-					if (entry == null || entry.type() != Type.LIBRARY) {
-						return null;
-					}
-					return LIBRARIES_DIRECTORY + entry.location();
-				});
-				createLauncher(destination, jarStructure, layers, layersToExtract);
+				extract(destination, layers, layersToExtract);
 			}
 			else {
-				extract(destination, layers, layersToExtract);
+				JarStructure jarStructure = getJarStructure();
+				extractLibraries(destination, layers, layersToExtract, jarStructure, options);
+				createRunner(destination, jarStructure, layers, layersToExtract, options);
 			}
 		}
 		catch (IOException ex) {
 			throw new UncheckedIOException(ex);
 		}
+	}
+
+	private void extractLibraries(File destination, Layers layers, Set<String> layersToExtract,
+			JarStructure jarStructure, Map<Option, String> options) throws IOException {
+		extract(destination, layers, layersToExtract, (zipEntry) -> {
+			Entry entry = jarStructure.resolve(zipEntry);
+			if (isType(entry, Type.LIBRARY)) {
+				return getLibrariesDirectory(options) + entry.location();
+			}
+			return null;
+		});
+	}
+
+	private static Object getLibrariesDirectory(Map<Option, String> options) {
+		if (options.containsKey(LIBRARIES_DIRECTORY_OPTION)) {
+			String value = options.get(LIBRARIES_DIRECTORY_OPTION);
+			if (value.endsWith("/")) {
+				return value;
+			}
+			return value + "/";
+		}
+		return "lib/";
+	}
+
+	private static Set<String> getLayersToExtract(Map<Option, String> options) {
+		return StringUtils.commaDelimitedListToSet(options.get(LAYERS_OPTION));
+	}
+
+	private Layers getLayers(Map<Option, String> options) {
+		if (options.containsKey(LAYERS_OPTION)) {
+			return new RunnerAwareLayers(getLayersFromContext(), getRunnerFilename(options));
+		}
+		return new NoLayers();
+	}
+
+	private File getWorkingDirectory(Map<Option, String> options) {
+		if (options.containsKey(DESTINATION_OPTION)) {
+			return new File(options.get(DESTINATION_OPTION));
+		}
+		return this.context.getWorkingDir();
 	}
 
 	private JarStructure getJarStructure() {
@@ -170,38 +205,62 @@ class ExtractCommand extends Command {
 			}
 			String layer = layers.getLayer(zipEntry);
 			if (shouldExtractLayer(layersToExtract, layer)) {
-				File targetDir = (layer != null) ? new File(directory, layer) : directory;
+				File targetDir = getLayerDirectory(directory, layer);
 				write(stream, zipEntry, name, targetDir);
 			}
 		});
 	}
 
-	private Layers getLayersFromContext() {
-		return (this.layers != null) ? this.layers : Layers.get(this.context);
+	private static File getLayerDirectory(File directory, String layer) {
+		if (layer == null) {
+			return directory;
+		}
+		return new File(directory, layer);
 	}
 
-	private void createLauncher(File directory, JarStructure jarStructure, Layers layers, Set<String> layersToExtract)
-			throws IOException {
-		String layer = layers.getLayer(LAUNCHER_FILENAME);
+	private Layers getLayersFromContext() {
+		if (this.layers != null) {
+			return this.layers;
+		}
+		return Layers.get(this.context);
+	}
+
+	private void createRunner(File directory, JarStructure jarStructure, Layers layers, Set<String> layersToExtract,
+			Map<Option, String> options) throws IOException {
+		String runnerFileName = getRunnerFilename(options);
+		String layer = layers.getLayer(runnerFileName);
 		if (!shouldExtractLayer(layersToExtract, layer)) {
 			return;
 		}
-		File targetDir = (layer != null) ? new File(directory, layer) : directory;
-		File launcherJar = new File(targetDir, LAUNCHER_FILENAME);
-		Manifest manifest = jarStructure.createLauncherManifest((library) -> LIBRARIES_DIRECTORY + library);
+		File targetDir = getLayerDirectory(directory, layer);
+		File launcherJar = new File(targetDir, runnerFileName);
+		Manifest manifest = jarStructure.createLauncherManifest((library) -> getLibrariesDirectory(options) + library);
 		mkDirs(launcherJar.getParentFile());
 		try (JarOutputStream output = new JarOutputStream(Files.newOutputStream(launcherJar.toPath()), manifest)) {
 			withZipEntries(this.context.getArchiveFile(), ((stream, zipEntry) -> {
 				Entry entry = jarStructure.resolve(zipEntry);
-				if (entry == null || entry.type() != Type.APPLICATION_CLASS_OR_RESOURCE) {
-					return;
+				if (isType(entry, Type.APPLICATION_CLASS_OR_RESOURCE)) {
+					JarEntry jarEntry = createJarEntry(entry.location(), zipEntry);
+					output.putNextEntry(jarEntry);
+					StreamUtils.copy(stream, output);
+					output.closeEntry();
 				}
-				JarEntry jarEntry = createJarEntry(entry.location(), zipEntry);
-				output.putNextEntry(jarEntry);
-				StreamUtils.copy(stream, output);
-				output.closeEntry();
 			}));
 		}
+	}
+
+	private String getRunnerFilename(Map<Option, String> options) {
+		if (options.containsKey(RUNNER_FILENAME_OPTION)) {
+			return options.get(RUNNER_FILENAME_OPTION);
+		}
+		return "runner.jar";
+	}
+
+	private static boolean isType(Entry entry, Type type) {
+		if (entry == null) {
+			return false;
+		}
+		return entry.type() == type;
 	}
 
 	private boolean shouldExtractLayer(Set<String> layersToExtract, String layer) {
@@ -232,7 +291,8 @@ class ExtractCommand extends Command {
 		try (ZipInputStream stream = new ZipInputStream(new FileInputStream(file))) {
 			ZipEntry entry = stream.getNextEntry();
 			Assert.state(entry != null,
-					"File '" + file + "' is not compatible; ensure jar file is valid and launch script is not enabled");
+					() -> "File '%s' is not compatible; ensure jar file is valid and launch script is not enabled"
+						.formatted(file));
 			while (entry != null) {
 				if (StringUtils.hasLength(entry.getName()) && !entry.isDirectory()) {
 					callback.accept(stream, entry);
@@ -256,14 +316,17 @@ class ExtractCommand extends Command {
 
 	}
 
-	private static final class LauncherAwareLayers implements Layers {
+	private static final class RunnerAwareLayers implements Layers {
 
 		private static final String APPLICATION_LAYER = "application";
 
 		private final Layers layers;
 
-		LauncherAwareLayers(Layers layers) {
+		private final String runnerFilename;
+
+		RunnerAwareLayers(Layers layers, String runnerFilename) {
 			this.layers = layers;
+			this.runnerFilename = runnerFilename;
 		}
 
 		@Override
@@ -273,7 +336,7 @@ class ExtractCommand extends Command {
 
 		@Override
 		public String getLayer(String entryName) {
-			if (LAUNCHER_FILENAME.equals(entryName)) {
+			if (this.runnerFilename.equals(entryName)) {
 				return APPLICATION_LAYER;
 			}
 			return this.layers.getLayer(entryName);
