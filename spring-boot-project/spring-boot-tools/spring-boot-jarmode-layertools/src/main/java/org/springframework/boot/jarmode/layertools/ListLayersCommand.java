@@ -35,7 +35,7 @@ class ListLayersCommand extends Command {
 	}
 
 	@Override
-	public void run(PrintStream out, Map<Option, String> options, List<String> parameters) {
+	void run(PrintStream out, Map<Option, String> options, List<String> parameters) {
 		printLayers(out, Layers.get(this.context));
 	}
 

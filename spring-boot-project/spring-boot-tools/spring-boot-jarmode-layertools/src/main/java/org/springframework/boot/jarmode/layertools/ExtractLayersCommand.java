@@ -46,17 +46,17 @@ class ExtractLayersCommand extends Command {
 	}
 
 	@Override
-	protected boolean isDeprecated() {
+	boolean isDeprecated() {
 		return true;
 	}
 
 	@Override
-	protected String getDeprecationMessage() {
+	String getDeprecationMessage() {
 		return "Use '-Djarmode=tools extract --layers --launcher' instead.";
 	}
 
 	@Override
-	protected void run(PrintStream out, Map<Option, String> options, List<String> parameters) {
+	void run(PrintStream out, Map<Option, String> options, List<String> parameters) {
 		Map<Option, String> rewrittenOptions = new HashMap<>();
 		if (options.containsKey(DESTINATION_OPTION)) {
 			rewrittenOptions.put(ExtractCommand.DESTINATION_OPTION, options.get(DESTINATION_OPTION));

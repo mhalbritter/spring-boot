@@ -47,14 +47,14 @@ class HelpCommand extends Command {
 	}
 
 	@Override
-	protected void run(PrintStream out, Map<Option, String> options, List<String> parameters) {
+	void run(PrintStream out, Map<Option, String> options, List<String> parameters) {
 		run(out, parameters);
 	}
 
 	void run(PrintStream out, List<String> parameters) {
 		String commandName = (parameters.isEmpty()) ? null : parameters.get(0);
 		if (commandName == null) {
-			printUsageAndCommands(null, out);
+			printUsageAndCommands(out);
 			return;
 		}
 		if (getName().equals(commandName)) {
@@ -63,11 +63,11 @@ class HelpCommand extends Command {
 		}
 		Command command = Command.find(this.commands, commandName);
 		if (command == null) {
-			printUsageAndCommands(commandName, out);
+			printError(out, "Unknown command \"%s\"".formatted(commandName));
+			printUsageAndCommands(out);
+			return;
 		}
-		else {
-			printCommandHelp(out, command, true);
-		}
+		printCommandHelp(out, command, true);
 	}
 
 	void printCommandHelp(PrintStream out, Command command, boolean printDeprecationWarning) {
@@ -100,10 +100,7 @@ class HelpCommand extends Command {
 		return usage.toString();
 	}
 
-	private void printUsageAndCommands(String commandName, PrintStream out) {
-		if (commandName != null) {
-			printError(out, "Unknown command \"%s\"".formatted(commandName));
-		}
+	private void printUsageAndCommands(PrintStream out) {
 		out.println("Usage:");
 		out.println("  " + getJavaCommand());
 		out.println();

@@ -16,6 +16,7 @@
 
 package org.springframework.boot.jarmode.layertools;
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.zip.ZipEntry;
 
@@ -63,6 +64,20 @@ interface Layers extends Iterable<String> {
 			throw new IllegalStateException("Failed to load layers.idx which is required by layertools");
 		}
 		return indexedLayers;
+	}
+
+	static Layers none() {
+		return new Layers() {
+			@Override
+			public Iterator<String> iterator() {
+				return Collections.emptyIterator();
+			}
+
+			@Override
+			public String getLayer(String entryName) {
+				return null;
+			}
+		};
 	}
 
 }

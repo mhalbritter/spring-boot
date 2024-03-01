@@ -118,13 +118,13 @@ abstract class Command {
 	 * @param options any options extracted from the arguments
 	 * @param parameters any parameters extracted from the arguments
 	 */
-	protected abstract void run(PrintStream out, Map<Option, String> options, List<String> parameters);
+	abstract void run(PrintStream out, Map<Option, String> options, List<String> parameters);
 
 	/**
 	 * Whether the command is deprecated.
 	 * @return whether the command is deprecated
 	 */
-	protected boolean isDeprecated() {
+	boolean isDeprecated() {
 		return false;
 	}
 
@@ -132,7 +132,7 @@ abstract class Command {
 	 * Returns the deprecation message.
 	 * @return the deprecation message
 	 */
-	protected String getDeprecationMessage() {
+	String getDeprecationMessage() {
 		return null;
 	}
 
@@ -154,7 +154,7 @@ abstract class Command {
 	/**
 	 * Parameters that the command accepts.
 	 */
-	protected static final class Parameters {
+	static final class Parameters {
 
 		private final List<String> descriptions;
 
@@ -179,7 +179,7 @@ abstract class Command {
 		 * Factory method used if there are no expected parameters.
 		 * @return a new {@link Parameters} instance
 		 */
-		protected static Parameters none() {
+		static Parameters none() {
 			return of();
 		}
 
@@ -189,7 +189,7 @@ abstract class Command {
 		 * @param descriptions the parameter descriptions
 		 * @return a new {@link Parameters} instance with the given descriptions
 		 */
-		protected static Parameters of(String... descriptions) {
+		static Parameters of(String... descriptions) {
 			return new Parameters(descriptions);
 		}
 
@@ -198,7 +198,7 @@ abstract class Command {
 	/**
 	 * Options that the command accepts.
 	 */
-	protected static final class Options {
+	static final class Options {
 
 		private final Option[] values;
 
@@ -239,7 +239,7 @@ abstract class Command {
 		 * Factory method used if there are no expected options.
 		 * @return a new {@link Options} instance
 		 */
-		protected static Options none() {
+		static Options none() {
 			return of();
 		}
 
@@ -249,7 +249,7 @@ abstract class Command {
 		 * @param values the option values
 		 * @return a new {@link Options} instance with the given values
 		 */
-		protected static Options of(Option... values) {
+		static Options of(Option... values) {
 			return new Options(values);
 		}
 
@@ -260,7 +260,7 @@ abstract class Command {
 	 * value (e.g. {@literal --log debug}) or a flag (e.g. {@literal
 	 * --verbose}). It also can be both if the value is marked as optional.
 	 */
-	protected static final class Option {
+	static final class Option {
 
 		private final String name;
 
@@ -358,7 +358,7 @@ abstract class Command {
 		 * @param description a description of the option
 		 * @return a new {@link Option} instance
 		 */
-		protected static Option flag(String name, String description) {
+		static Option flag(String name, String description) {
 			return new Option(name, null, description, false);
 		}
 
@@ -369,7 +369,7 @@ abstract class Command {
 		 * @param description a description of the option
 		 * @return a new {@link Option} instance
 		 */
-		protected static Option of(String name, String valueDescription, String description) {
+		static Option of(String name, String valueDescription, String description) {
 			return new Option(name, valueDescription, description, false);
 		}
 
@@ -381,7 +381,7 @@ abstract class Command {
 		 * @param optionalValue whether the value is optional
 		 * @return a new {@link Option} instance
 		 */
-		protected static Option of(String name, String valueDescription, String description, boolean optionalValue) {
+		static Option of(String name, String valueDescription, String description, boolean optionalValue) {
 			return new Option(name, valueDescription, description, optionalValue);
 		}
 

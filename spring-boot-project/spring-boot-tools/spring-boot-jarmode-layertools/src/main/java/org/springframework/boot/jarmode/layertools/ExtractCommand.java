@@ -87,7 +87,7 @@ class ExtractCommand extends Command {
 	}
 
 	@Override
-	public void run(PrintStream out, Map<Option, String> options, List<String> parameters) {
+	void run(PrintStream out, Map<Option, String> options, List<String> parameters) {
 		try {
 			File destination = getWorkingDirectory(options);
 			Layers layers = getLayers(options);
@@ -137,7 +137,7 @@ class ExtractCommand extends Command {
 		if (options.containsKey(LAYERS_OPTION)) {
 			return new RunnerAwareLayers(getLayersFromContext(), getRunnerFilename(options));
 		}
-		return new NoLayers();
+		return Layers.none();
 	}
 
 	private File getWorkingDirectory(Map<Option, String> options) {
