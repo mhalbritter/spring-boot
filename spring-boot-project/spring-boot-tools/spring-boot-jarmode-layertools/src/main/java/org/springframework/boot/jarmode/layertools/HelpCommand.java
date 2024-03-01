@@ -58,7 +58,7 @@ class HelpCommand extends Command {
 			return;
 		}
 		if (getName().equals(commandName)) {
-			printCommandHelp(out, this);
+			printCommandHelp(out, this, true);
 			return;
 		}
 		Command command = Command.find(this.commands, commandName);
@@ -66,11 +66,14 @@ class HelpCommand extends Command {
 			printUsageAndCommands(commandName, out);
 		}
 		else {
-			printCommandHelp(out, command);
+			printCommandHelp(out, command, true);
 		}
 	}
 
-	private void printCommandHelp(PrintStream out, Command command) {
+	void printCommandHelp(PrintStream out, Command command, boolean printDeprecationWarning) {
+		if (command.isDeprecated() && printDeprecationWarning) {
+			printWarning(out, "This command is deprecated. " + command.getDeprecationMessage());
+		}
 		out.println(command.getDescription());
 		out.println();
 		out.println("Usage:");
@@ -106,8 +109,17 @@ class HelpCommand extends Command {
 		out.println();
 		out.println("Available commands:");
 		int maxNameLength = getMaxLength(getName().length(), this.commands.stream().map(Command::getName));
-		this.commands.forEach((command) -> printCommandSummary(out, command, maxNameLength));
+		this.commands.stream()
+			.filter((command) -> !command.isDeprecated())
+			.forEach((command) -> printCommandSummary(out, command, maxNameLength));
 		printCommandSummary(out, this, maxNameLength);
+		List<Command> deprecatedCommands = this.commands.stream().filter(Command::isDeprecated).toList();
+		if (!deprecatedCommands.isEmpty()) {
+			out.println("Deprecated commands:");
+			for (Command command : deprecatedCommands) {
+				printCommandSummary(out, command, maxNameLength);
+			}
+		}
 	}
 
 	private int getMaxLength(int minimum, Stream<String> strings) {
@@ -124,6 +136,11 @@ class HelpCommand extends Command {
 
 	private void printError(PrintStream out, String errorMessage) {
 		out.println("Error: " + errorMessage);
+		out.println();
+	}
+
+	private void printWarning(PrintStream out, String errorMessage) {
+		out.println("Warning: " + errorMessage);
 		out.println();
 	}
 

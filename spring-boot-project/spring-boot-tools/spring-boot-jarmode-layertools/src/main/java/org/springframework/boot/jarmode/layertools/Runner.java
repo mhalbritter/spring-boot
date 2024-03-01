@@ -69,11 +69,11 @@ class Runner {
 		}
 		catch (UnknownOptionException ex) {
 			printError("Unknown option \"" + ex.getMessage() + "\" for the " + command.getName() + " command");
-			this.help.run(this.out, dequeOf(command.getName()));
+			this.help.printCommandHelp(this.out, command, false);
 		}
 		catch (MissingValueException ex) {
 			printError("Option \"" + ex.getMessage() + "\" for the " + command.getName() + " command requires a value");
-			this.help.run(this.out, dequeOf(command.getName()));
+			this.help.printCommandHelp(this.out, command, false);
 		}
 	}
 

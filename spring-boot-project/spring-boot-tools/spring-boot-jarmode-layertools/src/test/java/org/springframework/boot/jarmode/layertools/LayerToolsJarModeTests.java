@@ -82,25 +82,25 @@ class LayerToolsJarModeTests {
 	@Test
 	void mainWithArgRunsCommand() {
 		new LayerToolsJarMode().run("layertools", new String[] { "list" });
-		assertThat(this.out).hasSameContentAsResource("list-output.txt");
+		assertThat(this.out).hasSameContentAsResource("layertools-list-output.txt");
 	}
 
 	@Test
 	void mainWithUnknownCommandShowsErrorAndHelp() {
 		new LayerToolsJarMode().run("layertools", new String[] { "invalid" });
-		assertThat(this.out).hasSameContentAsResource("error-command-unknown-output.txt");
+		assertThat(this.out).hasSameContentAsResource("layertools-error-command-unknown-output.txt");
 	}
 
 	@Test
 	void mainWithUnknownOptionShowsErrorAndCommandHelp() {
 		new LayerToolsJarMode().run("layertools", new String[] { "extract", "--invalid" });
-		assertThat(this.out).hasSameContentAsResource("error-option-unknown-output.txt");
+		assertThat(this.out).hasSameContentAsResource("layertools-error-option-unknown-output.txt");
 	}
 
 	@Test
 	void mainWithOptionMissingRequiredValueShowsErrorAndCommandHelp() {
 		new LayerToolsJarMode().run("layertools", new String[] { "extract", "--destination" });
-		assertThat(this.out).hasSameContentAsResource("error-option-missing-value-output.txt");
+		assertThat(this.out).hasSameContentAsResource("layertools-error-option-missing-value-output.txt");
 	}
 
 	private File createJarFile(String name) throws Exception {
