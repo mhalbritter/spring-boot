@@ -54,6 +54,14 @@ interface Layers extends Iterable<String> {
 	String getLayer(String entryName);
 
 	/**
+	 * Return the name of the layer, which contains the application classes.
+	 * @return the name of the application layer
+	 */
+	default String getApplicationLayerName() {
+		return getLayer("META-INF/");
+	}
+
+	/**
 	 * Return a {@link Layers} instance for the currently running application.
 	 * @param context the command context
 	 * @return a new layers instance

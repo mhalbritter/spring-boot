@@ -319,8 +319,6 @@ class ExtractCommand extends Command {
 
 	private static final class RunnerAwareLayers implements Layers {
 
-		private static final String APPLICATION_LAYER = "application";
-
 		private final Layers layers;
 
 		private final String runnerFilename;
@@ -338,7 +336,7 @@ class ExtractCommand extends Command {
 		@Override
 		public String getLayer(String entryName) {
 			if (this.runnerFilename.equals(entryName)) {
-				return APPLICATION_LAYER;
+				return this.layers.getApplicationLayerName();
 			}
 			return this.layers.getLayer(entryName);
 		}
