@@ -38,6 +38,7 @@ import java.util.zip.ZipInputStream;
 
 import org.springframework.boot.jarmode.layertools.JarStructure.Entry;
 import org.springframework.boot.jarmode.layertools.JarStructure.Entry.Type;
+import org.springframework.boot.jarmode.layertools.Layers.LayersNotEnabledException;
 import org.springframework.util.Assert;
 import org.springframework.util.StreamUtils;
 import org.springframework.util.StringUtils;
@@ -105,6 +106,14 @@ class ExtractCommand extends Command {
 		catch (IOException ex) {
 			throw new UncheckedIOException(ex);
 		}
+		catch (LayersNotEnabledException ex) {
+			printError(out, "Layers are not enabled");
+		}
+	}
+
+	private void printError(PrintStream out, String message) {
+		out.println("Error: " + message);
+		out.println();
 	}
 
 	private void extractLibraries(File destination, Layers layers, Set<String> layersToExtract,

@@ -36,7 +36,7 @@ class ExtractLayersCommand extends Command {
 	private final ExtractCommand delegate;
 
 	ExtractLayersCommand(Context context) {
-		this(context, Layers.get(context));
+		this(context, null);
 	}
 
 	ExtractLayersCommand(Context context, Layers layers) {
