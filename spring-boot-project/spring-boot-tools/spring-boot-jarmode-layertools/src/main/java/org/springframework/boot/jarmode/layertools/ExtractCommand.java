@@ -249,7 +249,7 @@ class ExtractCommand extends Command {
 		try (JarOutputStream output = new JarOutputStream(Files.newOutputStream(launcherJar.toPath()), manifest)) {
 			withZipEntries(this.context.getArchiveFile(), ((stream, zipEntry) -> {
 				Entry entry = jarStructure.resolve(zipEntry);
-				if (isType(entry, Type.APPLICATION_CLASS_OR_RESOURCE)) {
+				if (isType(entry, Type.APPLICATION_CLASS_OR_RESOURCE) && StringUtils.hasLength(entry.location())) {
 					JarEntry jarEntry = createJarEntry(entry.location(), zipEntry);
 					output.putNextEntry(jarEntry);
 					StreamUtils.copy(stream, output);
@@ -304,7 +304,7 @@ class ExtractCommand extends Command {
 					() -> "File '%s' is not compatible; ensure jar file is valid and launch script is not enabled"
 						.formatted(file));
 			while (entry != null) {
-				if (StringUtils.hasLength(entry.getName()) && !entry.isDirectory()) {
+				if (StringUtils.hasLength(entry.getName())) {
 					callback.accept(stream, entry);
 				}
 				entry = stream.getNextEntry();

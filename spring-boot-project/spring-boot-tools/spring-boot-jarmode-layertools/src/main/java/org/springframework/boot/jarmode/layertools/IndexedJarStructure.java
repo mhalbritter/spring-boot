@@ -97,6 +97,9 @@ class IndexedJarStructure implements JarStructure {
 		else if (name.startsWith(this.classesLocation)) {
 			return new Entry(name, name.substring(this.classesLocation.length()), Type.APPLICATION_CLASS_OR_RESOURCE);
 		}
+		else if (name.startsWith("org/springframework/boot/loader")) {
+			return new Entry(name, name, Type.LOADER);
+		}
 		return null;
 	}
 
