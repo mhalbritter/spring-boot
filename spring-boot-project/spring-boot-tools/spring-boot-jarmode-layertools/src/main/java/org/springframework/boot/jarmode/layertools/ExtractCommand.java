@@ -144,7 +144,12 @@ class ExtractCommand extends Command {
 
 	private Layers getLayers(Map<Option, String> options) {
 		if (options.containsKey(LAYERS_OPTION)) {
-			return new RunnerAwareLayers(getLayersFromContext(), getRunnerFilename(options));
+			Layers layers = getLayersFromContext();
+			if (!options.containsKey(LAUNCHER_OPTION)) {
+				return new RunnerAwareLayers(layers, getRunnerFilename(options));
+			}
+			return layers;
+
 		}
 		return Layers.none();
 	}
@@ -209,6 +214,9 @@ class ExtractCommand extends Command {
 	private void extract(File directory, Layers layers, Set<String> layersToExtract,
 			EntryNameTransformer entryNameTransformer) throws IOException {
 		withZipEntries(this.context.getArchiveFile(), (stream, zipEntry) -> {
+			if (zipEntry.isDirectory()) {
+				return;
+			}
 			String name = entryNameTransformer.getName(zipEntry);
 			if (name == null) {
 				return;
