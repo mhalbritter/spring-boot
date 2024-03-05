@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -118,7 +118,7 @@ public abstract class AbstractPackagerMojo extends AbstractDependencyFilterMojo 
 	 * @since 2.3.0
 	 */
 	@Parameter
-	private Layers layers;
+	private Layers layers = new Layers();
 
 	/**
 	 * Return the type of archive that should be packaged by this MOJO.
@@ -164,14 +164,11 @@ public abstract class AbstractPackagerMojo extends AbstractDependencyFilterMojo 
 			getLog().info("Layout: " + layout);
 			packager.setLayout(layout.layout());
 		}
-		if (this.layers == null) {
-			packager.setLayers(IMPLICIT_LAYERS);
-		}
-		else if (this.layers.isEnabled()) {
+		if (this.layers.isEnabled()) {
 			packager.setLayers((this.layers.getConfiguration() != null)
 					? getCustomLayers(this.layers.getConfiguration()) : IMPLICIT_LAYERS);
-			packager.setIncludeRelevantJarModeJars(this.layers.isIncludeLayerTools());
 		}
+		packager.setIncludeRelevantJarModeJars(this.layers.isIncludeLayerTools());
 		return packager;
 	}
 

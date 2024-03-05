@@ -19,6 +19,6 @@ dependencies {
 
 bootWar {
 	layered {
-		enabled = false
+		includeLayerTools = false
 	}
 }

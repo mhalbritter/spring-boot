@@ -511,7 +511,7 @@ public abstract class Packager {
 					addLibrary(library);
 				}
 			});
-			if (isLayered() && Packager.this.includeRelevantJarModeJars) {
+			if (Packager.this.includeRelevantJarModeJars) {
 				addLibrary(JarModeLibrary.LAYER_TOOLS);
 			}
 			this.unpackHandler = new PackagedLibrariesUnpackHandler();

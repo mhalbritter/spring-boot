@@ -361,8 +361,7 @@ class JarIntegrationTests extends AbstractArchiveIntegrationTests {
 			assertThat(jar(repackaged)).hasEntryWithNameStartingWith("BOOT-INF/classes/")
 				.hasEntryWithNameStartingWith("BOOT-INF/lib/jar-release")
 				.hasEntryWithNameStartingWith("BOOT-INF/lib/jar-snapshot")
-				.doesNotHaveEntryWithName("BOOT-INF/layers.idx")
-				.doesNotHaveEntryWithNameStartingWith("BOOT-INF/lib/" + JarModeLibrary.LAYER_TOOLS.getName());
+				.doesNotHaveEntryWithName("BOOT-INF/layers.idx");
 		});
 	}
 

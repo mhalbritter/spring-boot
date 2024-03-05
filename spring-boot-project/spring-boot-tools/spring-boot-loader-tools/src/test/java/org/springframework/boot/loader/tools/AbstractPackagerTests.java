@@ -226,6 +226,7 @@ abstract class AbstractPackagerTests<P extends Packager> {
 		this.testJarFile.addClass("a/b/C.class", ClassWithMainMethod.class);
 		File file = this.testJarFile.getFile();
 		P packager = createPackager(file);
+		packager.setIncludeRelevantJarModeJars(false);
 		execute(packager, (callback) -> {
 			callback.library(newLibrary(libJarFile1, LibraryScope.COMPILE, false));
 			callback.library(newLibrary(libJarFile2, LibraryScope.COMPILE, false));
@@ -606,6 +607,7 @@ abstract class AbstractPackagerTests<P extends Packager> {
 		this.testJarFile.addClass("WEB-INF/classes/com/example/Application.class", ClassWithMainMethod.class);
 		this.testJarFile.addFile("WEB-INF/lib/" + webLibrary.getName(), webLibrary);
 		P packager = createPackager(this.testJarFile.getFile("war"));
+		packager.setIncludeRelevantJarModeJars(false);
 		packager.setLayout(new Layouts.War());
 		execute(packager, (callback) -> {
 			callback.library(newLibrary(webLibrary, LibraryScope.COMPILE, false, false));

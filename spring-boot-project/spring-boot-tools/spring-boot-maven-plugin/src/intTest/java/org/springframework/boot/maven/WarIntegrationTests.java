@@ -179,8 +179,7 @@ class WarIntegrationTests extends AbstractArchiveIntegrationTests {
 			assertThat(jar(repackaged)).hasEntryWithNameStartingWith("WEB-INF/classes/")
 				.hasEntryWithNameStartingWith("WEB-INF/lib/jar-release")
 				.hasEntryWithNameStartingWith("WEB-INF/lib/jar-snapshot")
-				.doesNotHaveEntryWithName("WEB-INF/layers.idx")
-				.doesNotHaveEntryWithNameStartingWith("WEB-INF/lib/" + JarModeLibrary.LAYER_TOOLS.getName());
+				.doesNotHaveEntryWithName("WEB-INF/layers.idx");
 		});
 	}
 
