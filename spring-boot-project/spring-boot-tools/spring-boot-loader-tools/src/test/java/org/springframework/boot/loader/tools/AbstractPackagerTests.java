@@ -300,7 +300,7 @@ abstract class AbstractPackagerTests<P extends Packager> {
 		assertThat(hasPackagedEntry("BOOT-INF/classpath.idx")).isTrue();
 		String classpathIndex = getPackagedEntryContent("BOOT-INF/classpath.idx");
 		assertThat(Arrays.asList(classpathIndex.split("\\n")))
-			.containsExactly("- \"BOOT-INF/lib/spring-boot-jarmode-layertools.jar\"");
+			.containsExactly("- \"BOOT-INF/lib/spring-boot-jarmode-tools.jar\"");
 		assertThat(hasPackagedEntry("BOOT-INF/layers.idx")).isTrue();
 		String layersIndex = getPackagedEntryContent("BOOT-INF/layers.idx");
 		List<String> expectedLayers = new ArrayList<>();

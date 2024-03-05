@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -345,7 +345,7 @@ abstract class AbstractBootArchiveIntegrationTests {
 		assertThat(this.gradleBuild.build(this.taskName).task(":" + this.taskName).getOutcome())
 			.isEqualTo(TaskOutcome.SUCCESS);
 		Map<String, List<String>> indexedLayers;
-		String layerToolsJar = this.libPath + JarModeLibrary.LAYER_TOOLS.getName();
+		String layerToolsJar = this.libPath + JarModeLibrary.TOOLS.getName();
 		try (JarFile jarFile = new JarFile(new File(this.gradleBuild.getProjectDir(), "build/libs").listFiles()[0])) {
 			assertThat(jarFile.getEntry(layerToolsJar)).isNotNull();
 			assertThat(jarFile.getEntry(this.libPath + "commons-lang3-3.9.jar")).isNotNull();
@@ -397,7 +397,7 @@ abstract class AbstractBootArchiveIntegrationTests {
 		assertThat(this.gradleBuild.build(this.taskName).task(":" + this.taskName).getOutcome())
 			.isEqualTo(TaskOutcome.SUCCESS);
 		Map<String, List<String>> indexedLayers;
-		String layerToolsJar = this.libPath + JarModeLibrary.LAYER_TOOLS.getName();
+		String layerToolsJar = this.libPath + JarModeLibrary.TOOLS.getName();
 		try (JarFile jarFile = new JarFile(new File(this.gradleBuild.getProjectDir(), "build/libs").listFiles()[0])) {
 			assertThat(jarFile.getEntry(layerToolsJar)).isNotNull();
 			assertThat(jarFile.getEntry(this.libPath + "alpha-1.2.3.jar")).isNotNull();
@@ -443,7 +443,7 @@ abstract class AbstractBootArchiveIntegrationTests {
 		BuildResult build = this.gradleBuild.build(this.taskName);
 		assertThat(build.task(":" + this.taskName).getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
 		Map<String, List<String>> indexedLayers;
-		String layerToolsJar = this.libPath + JarModeLibrary.LAYER_TOOLS.getName();
+		String layerToolsJar = this.libPath + JarModeLibrary.TOOLS.getName();
 		try (JarFile jarFile = new JarFile(new File(this.gradleBuild.getProjectDir(), "build/libs").listFiles()[0])) {
 			assertThat(jarFile.getEntry(layerToolsJar)).isNotNull();
 			assertThat(jarFile.getEntry(this.libPath + "commons-lang3-3.9.jar")).isNotNull();
@@ -490,7 +490,7 @@ abstract class AbstractBootArchiveIntegrationTests {
 		BuildResult build = this.gradleBuild.build(this.taskName);
 		assertThat(build.task(":" + this.taskName).getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
 		Map<String, List<String>> indexedLayers;
-		String layerToolsJar = this.libPath + JarModeLibrary.LAYER_TOOLS.getName();
+		String layerToolsJar = this.libPath + JarModeLibrary.TOOLS.getName();
 		try (JarFile jarFile = new JarFile(new File(this.gradleBuild.getProjectDir(), "build/libs").listFiles()[0])) {
 			assertThat(jarFile.getEntry(layerToolsJar)).isNotNull();
 			assertThat(jarFile.getEntry(this.libPath + "alpha-1.2.3.jar")).isNotNull();

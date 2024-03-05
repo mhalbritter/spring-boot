@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -496,7 +496,7 @@ abstract class AbstractBootArchiveTests<T extends Jar & BootArchive> {
 			assertThat(jarFile.getManifest().getMainAttributes().getValue("Spring-Boot-Lib")).isEqualTo(this.libPath);
 			assertThat(jarFile.getManifest().getMainAttributes().getValue("Spring-Boot-Layers-Index"))
 				.isEqualTo(this.indexPath + "layers.idx");
-			assertThat(getEntryNames(jarFile)).contains(this.libPath + JarModeLibrary.LAYER_TOOLS.getName());
+			assertThat(getEntryNames(jarFile)).contains(this.libPath + JarModeLibrary.TOOLS.getName());
 		}
 	}
 
@@ -530,7 +530,7 @@ abstract class AbstractBootArchiveTests<T extends Jar & BootArchive> {
 			List<String> index = entryLines(jarFile, this.indexPath + "layers.idx");
 			assertThat(getLayerNames(index)).containsExactly("dependencies", "spring-boot-loader",
 					"snapshot-dependencies", "application");
-			String layerToolsJar = this.libPath + JarModeLibrary.LAYER_TOOLS.getName();
+			String layerToolsJar = this.libPath + JarModeLibrary.TOOLS.getName();
 			List<String> expected = new ArrayList<>();
 			expected.add("- \"dependencies\":");
 			expected.add("  - \"" + this.libPath + "first-library.jar\"");
@@ -584,7 +584,7 @@ abstract class AbstractBootArchiveTests<T extends Jar & BootArchive> {
 			List<String> index = entryLines(jarFile, this.indexPath + "layers.idx");
 			assertThat(getLayerNames(index)).containsExactly("my-deps", "my-internal-deps", "my-snapshot-deps",
 					"resources", "application");
-			String layerToolsJar = this.libPath + JarModeLibrary.LAYER_TOOLS.getName();
+			String layerToolsJar = this.libPath + JarModeLibrary.TOOLS.getName();
 			List<String> expected = new ArrayList<>();
 			expected.add("- \"my-deps\":");
 			expected.add("  - \"" + layerToolsJar + "\"");
@@ -614,7 +614,7 @@ abstract class AbstractBootArchiveTests<T extends Jar & BootArchive> {
 	@Test
 	void whenArchiveIsLayeredThenLayerToolsAreAddedToTheJar() throws IOException {
 		List<String> entryNames = getEntryNames(createLayeredJar());
-		assertThat(entryNames).contains(this.libPath + JarModeLibrary.LAYER_TOOLS.getName());
+		assertThat(entryNames).contains(this.libPath + JarModeLibrary.TOOLS.getName());
 	}
 
 	@Test
@@ -622,7 +622,7 @@ abstract class AbstractBootArchiveTests<T extends Jar & BootArchive> {
 		List<String> entryNames = getEntryNames(
 				createLayeredJar((configuration) -> configuration.getIncludeLayerTools().set(false)));
 		assertThat(entryNames).isNotEmpty()
-			.doesNotContain(this.indexPath + "layers/dependencies/lib/spring-boot-jarmode-layertools.jar");
+			.doesNotContain(this.indexPath + "layers/dependencies/lib/spring-boot-jarmode-tools.jar");
 	}
 
 	protected File jarFile(String name) throws IOException {

@@ -127,7 +127,7 @@ class WarIntegrationTests extends AbstractArchiveIntegrationTests {
 					"WEB-INF/lib/spring-expression", "WEB-INF/lib/spring-jcl",
 					// these libraries are contributed by Spring Boot repackaging, and
 					// sorted separately
-					"WEB-INF/lib/spring-boot-jarmode-layertools");
+					"WEB-INF/lib/spring-boot-jarmode-tools");
 			assertThat(jar(repackaged)).entryNamesInPath("WEB-INF/lib/")
 				.zipSatisfy(sortedLibs,
 						(String jarLib, String expectedLib) -> assertThat(jarLib).startsWith(expectedLib));
@@ -150,8 +150,7 @@ class WarIntegrationTests extends AbstractArchiveIntegrationTests {
 			assertThat(jar(repackaged)).hasEntryWithNameStartingWith("WEB-INF/classes/")
 				.hasEntryWithNameStartingWith("WEB-INF/lib/jar-release")
 				.hasEntryWithNameStartingWith("WEB-INF/lib/jar-snapshot")
-				.hasEntryWithNameStartingWith(
-						"WEB-INF/lib/" + JarModeLibrary.LAYER_TOOLS.getCoordinates().getArtifactId());
+				.hasEntryWithNameStartingWith("WEB-INF/lib/" + JarModeLibrary.TOOLS.getCoordinates().getArtifactId());
 			try (JarFile jarFile = new JarFile(repackaged)) {
 				Map<String, List<String>> layerIndex = readLayerIndex(jarFile);
 				assertThat(layerIndex.keySet()).containsExactly("dependencies", "spring-boot-loader",
@@ -191,7 +190,7 @@ class WarIntegrationTests extends AbstractArchiveIntegrationTests {
 				.hasEntryWithNameStartingWith("WEB-INF/lib/jar-release")
 				.hasEntryWithNameStartingWith("WEB-INF/lib/jar-snapshot")
 				.hasEntryWithNameStartingWith("WEB-INF/layers.idx")
-				.doesNotHaveEntryWithNameStartingWith("WEB-INF/lib/" + JarModeLibrary.LAYER_TOOLS.getName());
+				.doesNotHaveEntryWithNameStartingWith("WEB-INF/lib/" + JarModeLibrary.TOOLS.getName());
 		});
 	}
 

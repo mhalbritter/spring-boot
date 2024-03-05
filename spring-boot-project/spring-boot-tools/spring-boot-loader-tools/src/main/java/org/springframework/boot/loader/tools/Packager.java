@@ -512,7 +512,7 @@ public abstract class Packager {
 				}
 			});
 			if (Packager.this.includeRelevantJarModeJars) {
-				addLibrary(JarModeLibrary.LAYER_TOOLS);
+				addLibrary(JarModeLibrary.TOOLS);
 			}
 			this.unpackHandler = new PackagedLibrariesUnpackHandler();
 			this.libraryLookup = this::lookup;

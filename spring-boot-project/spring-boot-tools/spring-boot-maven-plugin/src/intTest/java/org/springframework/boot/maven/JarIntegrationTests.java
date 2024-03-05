@@ -337,8 +337,7 @@ class JarIntegrationTests extends AbstractArchiveIntegrationTests {
 			assertThat(jar(repackaged)).hasEntryWithNameStartingWith("BOOT-INF/classes/")
 				.hasEntryWithNameStartingWith("BOOT-INF/lib/jar-release")
 				.hasEntryWithNameStartingWith("BOOT-INF/lib/jar-snapshot")
-				.hasEntryWithNameStartingWith(
-						"BOOT-INF/lib/" + JarModeLibrary.LAYER_TOOLS.getCoordinates().getArtifactId());
+				.hasEntryWithNameStartingWith("BOOT-INF/lib/" + JarModeLibrary.TOOLS.getCoordinates().getArtifactId());
 			try (JarFile jarFile = new JarFile(repackaged)) {
 				Map<String, List<String>> layerIndex = readLayerIndex(jarFile);
 				assertThat(layerIndex.keySet()).containsExactly("dependencies", "spring-boot-loader",
@@ -373,7 +372,7 @@ class JarIntegrationTests extends AbstractArchiveIntegrationTests {
 				.hasEntryWithNameStartingWith("BOOT-INF/lib/jar-release")
 				.hasEntryWithNameStartingWith("BOOT-INF/lib/jar-snapshot")
 				.hasEntryWithNameStartingWith("BOOT-INF/layers.idx")
-				.doesNotHaveEntryWithNameStartingWith("BOOT-INF/lib/" + JarModeLibrary.LAYER_TOOLS.getName());
+				.doesNotHaveEntryWithNameStartingWith("BOOT-INF/lib/" + JarModeLibrary.TOOLS.getName());
 		});
 	}
 
@@ -450,7 +449,7 @@ class JarIntegrationTests extends AbstractArchiveIntegrationTests {
 			File repackaged = new File(project, "target/jar-output-timestamp-0.0.1.BUILD-SNAPSHOT.jar");
 			List<String> sortedLibs = Arrays.asList("BOOT-INF/lib/jakarta.servlet-api",
 					"BOOT-INF/lib/micrometer-commons", "BOOT-INF/lib/micrometer-observation", "BOOT-INF/lib/spring-aop",
-					"BOOT-INF/lib/spring-beans", "BOOT-INF/lib/spring-boot-jarmode-layertools",
+					"BOOT-INF/lib/spring-beans", "BOOT-INF/lib/spring-boot-jarmode-tools",
 					"BOOT-INF/lib/spring-context", "BOOT-INF/lib/spring-core", "BOOT-INF/lib/spring-expression",
 					"BOOT-INF/lib/spring-jcl");
 			assertThat(jar(repackaged)).entryNamesInPath("BOOT-INF/lib/")
