@@ -80,6 +80,7 @@ import static org.mockito.Mockito.mock;
  * @param <T> the type of the concrete BootArchive implementation
  * @author Andy Wilkinson
  * @author Scott Frederick
+ * @author Moritz Halbritter
  */
 abstract class AbstractBootArchiveTests<T extends Jar & BootArchive> {
 
@@ -618,11 +619,28 @@ abstract class AbstractBootArchiveTests<T extends Jar & BootArchive> {
 	}
 
 	@Test
+	void shouldAddToolsToTheJar() throws IOException {
+		this.task.getMainClass().set("com.example.Main");
+		executeTask();
+		List<String> entryNames = getEntryNames(this.task.getArchiveFile().get().getAsFile());
+		assertThat(entryNames).isNotEmpty().contains(this.libPath + JarModeLibrary.TOOLS.getName());
+	}
+
+	@Test
+	@SuppressWarnings("removal")
 	void whenArchiveIsLayeredAndIncludeLayerToolsIsFalseThenLayerToolsAreNotAddedToTheJar() throws IOException {
 		List<String> entryNames = getEntryNames(
 				createLayeredJar((configuration) -> configuration.getIncludeLayerTools().set(false)));
-		assertThat(entryNames).isNotEmpty()
-			.doesNotContain(this.indexPath + "layers/dependencies/lib/spring-boot-jarmode-tools.jar");
+		assertThat(entryNames).isNotEmpty().doesNotContain(this.libPath + JarModeLibrary.TOOLS.getName());
+	}
+
+	@Test
+	void whenIncludeToolsIsFalseThenToolsAreNotAddedToTheJar() throws IOException {
+		this.task.getIncludeTools().set(false);
+		this.task.getMainClass().set("com.example.Main");
+		executeTask();
+		List<String> entryNames = getEntryNames(this.task.getArchiveFile().get().getAsFile());
+		assertThat(entryNames).isNotEmpty().doesNotContain(this.libPath + JarModeLibrary.TOOLS.getName());
 	}
 
 	protected File jarFile(String name) throws IOException {

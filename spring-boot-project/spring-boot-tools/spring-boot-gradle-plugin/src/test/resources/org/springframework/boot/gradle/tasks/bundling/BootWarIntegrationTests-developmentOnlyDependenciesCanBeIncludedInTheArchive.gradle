@@ -21,7 +21,5 @@ bootWar {
 }
 
 bootWar {
-	layered {
-		includeLayerTools = false
-	}
+	includeTools = false
 }

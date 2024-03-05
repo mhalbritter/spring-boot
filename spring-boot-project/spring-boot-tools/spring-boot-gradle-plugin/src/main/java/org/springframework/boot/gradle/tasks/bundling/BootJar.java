@@ -88,6 +88,7 @@ public abstract class BootJar extends Jar implements BootArchive {
 		this.projectName = project.provider(project::getName);
 		this.projectVersion = project.provider(project::getVersion);
 		this.resolvedDependencies = new ResolvedDependencies(project);
+		getIncludeTools().convention(true);
 	}
 
 	private void configureBootInfSpec(CopySpec bootInfSpec) {
@@ -148,9 +149,17 @@ public abstract class BootJar extends Jar implements BootArchive {
 		if (!isLayeredDisabled()) {
 			layerResolver = new LayerResolver(this.resolvedDependencies, this.layered, this::isLibrary);
 		}
-		String layerToolsLocation = this.layered.getIncludeLayerTools().get() ? LIB_DIRECTORY : null;
+		String jarmodeToolsLocation = isIncludeJarmodeTools() ? LIB_DIRECTORY : null;
 		return this.support.createCopyAction(this, this.resolvedDependencies, loaderImplementation, true, layerResolver,
-				layerToolsLocation);
+				jarmodeToolsLocation);
+	}
+
+	@SuppressWarnings("removal")
+	private boolean isIncludeJarmodeTools() {
+		if (!this.getIncludeTools().get()) {
+			return false;
+		}
+		return this.layered.getIncludeLayerTools().get();
 	}
 
 	@Override

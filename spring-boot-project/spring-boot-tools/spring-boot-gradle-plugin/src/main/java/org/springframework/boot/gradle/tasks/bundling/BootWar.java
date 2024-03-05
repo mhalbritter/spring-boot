@@ -87,6 +87,7 @@ public abstract class BootWar extends War implements BootArchive {
 		this.projectName = project.provider(project::getName);
 		this.projectVersion = project.provider(project::getVersion);
 		this.resolvedDependencies = new ResolvedDependencies(project);
+		getIncludeTools().convention(true);
 	}
 
 	private Object getProvidedLibFiles() {
@@ -122,9 +123,17 @@ public abstract class BootWar extends War implements BootArchive {
 		if (!isLayeredDisabled()) {
 			layerResolver = new LayerResolver(this.resolvedDependencies, this.layered, this::isLibrary);
 		}
-		String layerToolsLocation = this.layered.getIncludeLayerTools().get() ? LIB_DIRECTORY : null;
+		String jarmodeToolsLocation = isIncludeJarmodeTools() ? LIB_DIRECTORY : null;
 		return this.support.createCopyAction(this, this.resolvedDependencies, loaderImplementation, false,
-				layerResolver, layerToolsLocation);
+				layerResolver, jarmodeToolsLocation);
+	}
+
+	@SuppressWarnings("removal")
+	private boolean isIncludeJarmodeTools() {
+		if (!this.getIncludeTools().get()) {
+			return false;
+		}
+		return this.layered.getIncludeLayerTools().get();
 	}
 
 	@Override

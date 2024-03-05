@@ -21,7 +21,5 @@ bootJar {
 }
 
 bootJar {
-	layered {
-		includeLayerTools = false
-	}
+	includeTools = false
 }
