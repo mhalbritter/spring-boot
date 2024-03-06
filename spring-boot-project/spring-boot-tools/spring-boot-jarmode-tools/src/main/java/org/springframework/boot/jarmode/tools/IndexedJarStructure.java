@@ -19,7 +19,6 @@ package org.springframework.boot.jarmode.tools;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.NoSuchFileException;
 import java.util.ArrayList;
@@ -148,7 +147,7 @@ class IndexedJarStructure implements JarStructure {
 			return null;
 		}
 		catch (IOException ex) {
-			throw new UncheckedIOException(ex);
+			throw new IllegalStateException(ex);
 		}
 	}
 

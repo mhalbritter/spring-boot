@@ -16,37 +16,29 @@
 
 package org.springframework.boot.jarmode.tools;
 
-import java.io.File;
-import java.nio.file.Path;
+import java.io.IOException;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import org.mockito.Mockito;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.BDDMockito.given;
 
 /**
  * Tests for {@link ToolsJarMode}.
  *
  * @author Moritz Halbritter
  */
-class ToolsJarModeTests {
+class ToolsJarModeTests extends AbstractTests {
 
 	private ToolsJarMode mode;
 
-	@TempDir
-	private Path temp;
+	private TestPrintStream out;
 
 	@BeforeEach
-	void setUp() {
-		Context context = Mockito.mock(Context.class);
-		given(context.getArchiveFile())
-			.willReturn(new File("/Users/mkammerer/Downloads/demo/build/libs/demo-0.0.1-SNAPSHOT.jar"));
-		ToolsJarMode.contextOverride = context;
-		this.mode = new ToolsJarMode();
+	void setUp() throws IOException {
+		this.out = new TestPrintStream(this);
+		Context context = new Context(createArchive(), this.tempDir);
+		this.mode = new ToolsJarMode(context, this.out);
 	}
 
 	@Test
@@ -56,14 +48,51 @@ class ToolsJarModeTests {
 	}
 
 	@Test
-	@Disabled("for manual running")
-	void extract() {
-		// run("extract", "--launcher", "--layers=dependencies", "--destination",
-		// "/Users/mkammerer/tmp");
-		// run("extract", "--launcher", "--layers", "--destination",
-		// "/Users/mkammerer/tmp");
-		// run("extract", "--launcher", "--destination", "/Users/mkammerer/tmp");
-		// run("extract", "--destination", "/Users/mkammerer/tmp");
+	void noParametersShowsHelp() {
+		run();
+		assertThat(this.out).hasSameContentAsResource("tools-help-output.txt");
+	}
+
+	@Test
+	void helpForExtract() {
+		run("help", "extract");
+		assertThat(this.out).hasSameContentAsResource("tools-help-extract-output.txt");
+	}
+
+	@Test
+	void helpForListLayers() {
+		run("help", "list-layers");
+		assertThat(this.out).hasSameContentAsResource("tools-help-list-layers-output.txt");
+	}
+
+	@Test
+	void helpForHelp() {
+		run("help", "help");
+		assertThat(this.out).hasSameContentAsResource("tools-help-help-output.txt");
+	}
+
+	@Test
+	void helpForUnknownCommand() {
+		run("help", "unknown-command");
+		assertThat(this.out).hasSameContentAsResource("tools-help-unknown-command-output.txt");
+	}
+
+	@Test
+	void unknownCommandShowsErrorAndHelp() {
+		run("something-invalid");
+		assertThat(this.out).hasSameContentAsResource("tools-error-command-unknown-output.txt");
+	}
+
+	@Test
+	void unknownOptionShowsErrorAndCommandHelp() {
+		run("extract", "--something-invalid");
+		assertThat(this.out).hasSameContentAsResource("tools-error-option-unknown-output.txt");
+	}
+
+	@Test
+	void optionMissingRequiredValueShowsErrorAndCommandHelp() {
+		run("extract", "--destination");
+		assertThat(this.out).hasSameContentAsResource("tools-error-option-missing-value-output.txt");
 	}
 
 	private void run(String... args) {

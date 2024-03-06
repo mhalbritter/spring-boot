@@ -172,7 +172,6 @@ class ExtractLayersCommandTests {
 			writer.write("text");
 		}
 		given(this.context.getArchiveFile()).willReturn(file);
-		given(this.context.getWorkingDir()).willReturn(this.extract);
 		assertThatIllegalStateException()
 			.isThrownBy(() -> this.command.run(System.out, Collections.emptyMap(), Collections.emptyList()))
 			.withMessageContaining("not compatible");

@@ -16,6 +16,7 @@
 
 package org.springframework.boot.jarmode.tools;
 
+import java.io.PrintStream;
 import java.util.List;
 
 import org.springframework.boot.loader.jarmode.JarMode;
@@ -28,7 +29,18 @@ import org.springframework.boot.loader.jarmode.JarMode;
  */
 public class ToolsJarMode implements JarMode {
 
-	static Context contextOverride;
+	private final Context context;
+
+	private final PrintStream out;
+
+	public ToolsJarMode() {
+		this(null, null);
+	}
+
+	public ToolsJarMode(Context context, PrintStream out) {
+		this.context = (context != null) ? context : new Context();
+		this.out = (out != null) ? out : System.out;
+	}
 
 	@Override
 	public boolean accepts(String mode) {
@@ -38,8 +50,7 @@ public class ToolsJarMode implements JarMode {
 	@Override
 	public void run(String mode, String[] args) {
 		try {
-			Context context = (contextOverride != null) ? contextOverride : new Context();
-			new Runner(System.out, context, getCommands(context)).run(args);
+			new Runner(this.out, this.context, getCommands(this.context)).run(args);
 		}
 		catch (Exception ex) {
 			throw new IllegalStateException(ex);
