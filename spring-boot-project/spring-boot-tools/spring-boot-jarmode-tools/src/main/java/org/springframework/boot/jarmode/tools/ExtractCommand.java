@@ -90,6 +90,7 @@ class ExtractCommand extends Command {
 	@Override
 	void run(PrintStream out, Map<Option, String> options, List<String> parameters) {
 		try {
+			checkJarCompatibility();
 			File destination = getWorkingDirectory(options);
 			Layers layers = getLayers(options);
 			Set<String> layersToExtract = getLayersToExtract(options);
@@ -108,6 +109,16 @@ class ExtractCommand extends Command {
 		}
 		catch (LayersNotEnabledException ex) {
 			printError(out, "Layers are not enabled");
+		}
+	}
+
+	private void checkJarCompatibility() throws IOException {
+		File file = this.context.getArchiveFile();
+		try (ZipInputStream stream = new ZipInputStream(new FileInputStream(file))) {
+			ZipEntry entry = stream.getNextEntry();
+			Assert.state(entry != null,
+					() -> "File '%s' is not compatible; ensure jar file is valid and launch script is not enabled"
+						.formatted(file));
 		}
 	}
 
@@ -308,9 +319,6 @@ class ExtractCommand extends Command {
 	private static void withZipEntries(File file, ThrowingConsumer callback) throws IOException {
 		try (ZipInputStream stream = new ZipInputStream(new FileInputStream(file))) {
 			ZipEntry entry = stream.getNextEntry();
-			Assert.state(entry != null,
-					() -> "File '%s' is not compatible; ensure jar file is valid and launch script is not enabled"
-						.formatted(file));
 			while (entry != null) {
 				if (StringUtils.hasLength(entry.getName())) {
 					callback.accept(stream, entry);
