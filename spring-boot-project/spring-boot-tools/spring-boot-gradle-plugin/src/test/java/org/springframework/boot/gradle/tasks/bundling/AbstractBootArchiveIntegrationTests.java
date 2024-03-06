@@ -66,6 +66,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Andy Wilkinson
  * @author Madhura Bhave
  * @author Scott Frederick
+ * @author Moritz Halbritter
  */
 abstract class AbstractBootArchiveIntegrationTests {
 
@@ -327,6 +328,18 @@ abstract class AbstractBootArchiveIntegrationTests {
 			.task(":" + this.taskName)
 			.getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
 		assertThat(this.gradleBuild.scriptProperty("layerTools", "includeLayerTools = false")
+			.build(this.taskName)
+			.task(":" + this.taskName)
+			.getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+	}
+
+	@TestTemplate
+	void notUpToDateWhenBuiltWithToolsAndThenWithoutTools() {
+		assertThat(this.gradleBuild.scriptProperty("includeTools", "")
+			.build(this.taskName)
+			.task(":" + this.taskName)
+			.getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+		assertThat(this.gradleBuild.scriptProperty("includeTools", "includeTools = false")
 			.build(this.taskName)
 			.task(":" + this.taskName)
 			.getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
