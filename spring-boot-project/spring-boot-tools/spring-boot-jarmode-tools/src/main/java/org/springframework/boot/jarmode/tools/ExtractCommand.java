@@ -162,7 +162,7 @@ class ExtractCommand extends Command {
 	}
 
 	private JarStructure getJarStructure() {
-		IndexedJarStructure jarStructure = IndexedJarStructure.get(this.context);
+		IndexedJarStructure jarStructure = IndexedJarStructure.get(this.context.getArchiveFile());
 		Assert.state(jarStructure != null, "Couldn't read classpath index");
 		return jarStructure;
 	}

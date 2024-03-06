@@ -16,8 +16,10 @@
 
 package org.springframework.boot.jarmode.tools;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.NoSuchFileException;
 import java.util.ArrayList;
@@ -89,8 +91,7 @@ class IndexedJarStructure implements JarStructure {
 	}
 
 	@Override
-	public Entry resolve(ZipEntry entry) {
-		String name = entry.getName();
+	public Entry resolve(String name) {
 		if (this.classpathEntries.contains(name)) {
 			return new Entry(name, toStructureDependency(name), Type.LIBRARY);
 		}
@@ -130,9 +131,9 @@ class IndexedJarStructure implements JarStructure {
 		return value;
 	}
 
-	static IndexedJarStructure get(Context context) {
+	static IndexedJarStructure get(File file) {
 		try {
-			try (JarFile jarFile = new JarFile(context.getArchiveFile())) {
+			try (JarFile jarFile = new JarFile(file)) {
 				Manifest manifest = jarFile.getManifest();
 				String location = getMandatoryAttribute(manifest, "Spring-Boot-Classpath-Index");
 				ZipEntry entry = jarFile.getEntry(location);
@@ -147,7 +148,7 @@ class IndexedJarStructure implements JarStructure {
 			return null;
 		}
 		catch (IOException ex) {
-			throw new IllegalStateException(ex);
+			throw new UncheckedIOException(ex);
 		}
 	}
 

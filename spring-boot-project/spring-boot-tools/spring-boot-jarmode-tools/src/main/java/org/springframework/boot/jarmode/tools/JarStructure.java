@@ -34,7 +34,17 @@ interface JarStructure {
 	 * @param entry the entry to handle
 	 * @return the resolved {@link Entry}
 	 */
-	Entry resolve(ZipEntry entry);
+	default Entry resolve(ZipEntry entry) {
+		return resolve(entry.getName());
+	}
+
+	/**
+	 * Resolve the entry with the specified name, return {@code null} if the entry should
+	 * not be handled.
+	 * @param name the name of the entry to handle
+	 * @return the resolved {@link Entry}
+	 */
+	Entry resolve(String name);
 
 	/**
 	 * Create the {@link Manifest} for the launcher jar, applying the specified operator
