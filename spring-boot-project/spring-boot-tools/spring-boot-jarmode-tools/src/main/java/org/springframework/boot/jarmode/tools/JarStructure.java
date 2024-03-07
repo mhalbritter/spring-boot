@@ -55,6 +55,12 @@ interface JarStructure {
 	Manifest createLauncherManifest(UnaryOperator<String> libraryTransformer);
 
 	/**
+	 * Return the location of the application classes.
+	 * @return the location of the application classes
+	 */
+	String getClassesLocation();
+
+	/**
 	 * An entry to handle in the exploded structure.
 	 *
 	 * @param originalLocation the original location

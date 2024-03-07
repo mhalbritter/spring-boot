@@ -90,6 +90,11 @@ class IndexedJarStructure implements JarStructure {
 	}
 
 	@Override
+	public String getClassesLocation() {
+		return this.classesLocation;
+	}
+
+	@Override
 	public Entry resolve(String name) {
 		if (this.classpathEntries.contains(name)) {
 			return new Entry(name, toStructureDependency(name), Type.LIBRARY);

@@ -155,12 +155,7 @@ class ExtractCommand extends Command {
 
 	private Layers getLayers(Map<Option, String> options) {
 		if (options.containsKey(LAYERS_OPTION)) {
-			Layers layers = getLayersFromContext();
-			if (!options.containsKey(LAUNCHER_OPTION)) {
-				return new RunnerAwareLayers(layers, getRunnerFilename(options));
-			}
-			return layers;
-
+			return getLayersFromContext();
 		}
 		return Layers.none();
 	}
@@ -257,7 +252,8 @@ class ExtractCommand extends Command {
 	private void createRunner(File directory, JarStructure jarStructure, Layers layers, Set<String> layersToExtract,
 			Map<Option, String> options) throws IOException {
 		String runnerFileName = getRunnerFilename(options);
-		String layer = layers.getLayer(runnerFileName);
+		RunnerAwareLayers runnerAwareLayers = new RunnerAwareLayers(layers, runnerFileName, jarStructure);
+		String layer = runnerAwareLayers.getLayer(runnerFileName);
 		if (!shouldExtractLayer(layersToExtract, layer)) {
 			return;
 		}
@@ -348,9 +344,12 @@ class ExtractCommand extends Command {
 
 		private final String runnerFilename;
 
-		RunnerAwareLayers(Layers layers, String runnerFilename) {
+		private final JarStructure jarStructure;
+
+		RunnerAwareLayers(Layers layers, String runnerFilename, JarStructure jarStructure) {
 			this.layers = layers;
 			this.runnerFilename = runnerFilename;
+			this.jarStructure = jarStructure;
 		}
 
 		@Override
@@ -361,7 +360,7 @@ class ExtractCommand extends Command {
 		@Override
 		public String getLayer(String entryName) {
 			if (this.runnerFilename.equals(entryName)) {
-				return this.layers.getApplicationLayerName();
+				return this.layers.getLayer(this.jarStructure.getClassesLocation());
 			}
 			return this.layers.getLayer(entryName);
 		}
