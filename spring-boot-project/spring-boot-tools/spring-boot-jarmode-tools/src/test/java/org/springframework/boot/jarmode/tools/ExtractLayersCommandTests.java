@@ -257,6 +257,11 @@ class ExtractLayersCommandTests {
 			return "c";
 		}
 
+		@Override
+		public String getApplicationLayerName() {
+			return "application";
+		}
+
 	}
 
 }

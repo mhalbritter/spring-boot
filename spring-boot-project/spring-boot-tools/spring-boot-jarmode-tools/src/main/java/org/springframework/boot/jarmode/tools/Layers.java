@@ -16,7 +16,6 @@
 
 package org.springframework.boot.jarmode.tools;
 
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.zip.ZipEntry;
 
@@ -54,6 +53,12 @@ interface Layers extends Iterable<String> {
 	String getLayer(String entryName);
 
 	/**
+	 * Return the name of the application layer.
+	 * @return the name of the application layer
+	 */
+	String getApplicationLayerName();
+
+	/**
 	 * Return a {@link Layers} instance for the currently running application.
 	 * @param context the command context
 	 * @return a new layers instance
@@ -65,20 +70,6 @@ interface Layers extends Iterable<String> {
 			throw new LayersNotEnabledException();
 		}
 		return indexedLayers;
-	}
-
-	static Layers none() {
-		return new Layers() {
-			@Override
-			public Iterator<String> iterator() {
-				return Collections.emptyIterator();
-			}
-
-			@Override
-			public String getLayer(String entryName) {
-				return null;
-			}
-		};
 	}
 
 	final class LayersNotEnabledException extends RuntimeException {

@@ -46,46 +46,46 @@ class IndexedLayersTests {
 
 	@Test
 	void createWhenIndexFileIsEmptyThrowsException() {
-		assertThatIllegalStateException().isThrownBy(() -> new IndexedLayers(" \n "))
+		assertThatIllegalStateException().isThrownBy(() -> new IndexedLayers(" \n ", "BOOT-INF/classes"))
 			.withMessage("Empty layer index file loaded");
 	}
 
 	@Test
 	void createWhenIndexFileIsMalformedThrowsException() {
-		assertThatIllegalStateException().isThrownBy(() -> new IndexedLayers("test"))
+		assertThatIllegalStateException().isThrownBy(() -> new IndexedLayers("test", "BOOT-INF/classes"))
 			.withMessage("Layer index file is malformed");
 	}
 
 	@Test
 	void iteratorReturnsLayers() throws Exception {
-		IndexedLayers layers = new IndexedLayers(getIndex());
+		IndexedLayers layers = new IndexedLayers(getIndex(), "BOOT-INF/classes");
 		assertThat(layers).containsExactly("test", "empty", "application");
 	}
 
 	@Test
 	void getLayerWhenMatchesNameReturnsLayer() throws Exception {
-		IndexedLayers layers = new IndexedLayers(getIndex());
+		IndexedLayers layers = new IndexedLayers(getIndex(), "BOOT-INF/classes");
 		assertThat(layers.getLayer(mockEntry("BOOT-INF/lib/a.jar"))).isEqualTo("test");
 		assertThat(layers.getLayer(mockEntry("BOOT-INF/classes/Demo.class"))).isEqualTo("application");
 	}
 
 	@Test
 	void getLayerWhenMatchesNameForMissingLayerThrowsException() throws Exception {
-		IndexedLayers layers = new IndexedLayers(getIndex());
+		IndexedLayers layers = new IndexedLayers(getIndex(), "BOOT-INF/classes");
 		assertThatIllegalStateException().isThrownBy(() -> layers.getLayer(mockEntry("file.jar")))
 			.withMessage("No layer defined in index for file " + "'file.jar'");
 	}
 
 	@Test
 	void getLayerWhenMatchesDirectoryReturnsLayer() throws Exception {
-		IndexedLayers layers = new IndexedLayers(getIndex());
+		IndexedLayers layers = new IndexedLayers(getIndex(), "BOOT-INF/classes");
 		assertThat(layers.getLayer(mockEntry("META-INF/MANIFEST.MF"))).isEqualTo("application");
 		assertThat(layers.getLayer(mockEntry("META-INF/a/sub/directory/and/a/file"))).isEqualTo("application");
 	}
 
 	@Test
 	void getLayerWhenFileHasSpaceReturnsLayer() throws Exception {
-		IndexedLayers layers = new IndexedLayers(getIndex());
+		IndexedLayers layers = new IndexedLayers(getIndex(), "BOOT-INF/classes");
 		assertThat(layers.getLayer(mockEntry("a b/c d"))).isEqualTo("application");
 	}
 

@@ -26,7 +26,6 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.FileTime;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -92,16 +91,15 @@ class ExtractCommand extends Command {
 		try {
 			checkJarCompatibility();
 			File destination = getWorkingDirectory(options);
-			Layers layers = getLayers(options);
-			Set<String> layersToExtract = getLayersToExtract(options);
-			createLayersDirectories(destination, layersToExtract, layers);
+			FileResolver fileResolver = getFileResolver(destination, options);
+			fileResolver.createDirectories();
 			if (options.containsKey(LAUNCHER_OPTION)) {
-				extract(destination, layers, layersToExtract);
+				extractArchive(fileResolver);
 			}
 			else {
 				JarStructure jarStructure = getJarStructure();
-				extractLibraries(destination, layers, layersToExtract, jarStructure, options);
-				createRunner(destination, jarStructure, layers, layersToExtract, options);
+				extractLibraries(fileResolver, jarStructure, options);
+				createRunner(jarStructure, fileResolver, options);
 			}
 		}
 		catch (IOException ex) {
@@ -127,18 +125,19 @@ class ExtractCommand extends Command {
 		out.println();
 	}
 
-	private void extractLibraries(File destination, Layers layers, Set<String> layersToExtract,
-			JarStructure jarStructure, Map<Option, String> options) throws IOException {
-		extract(destination, layers, layersToExtract, (zipEntry) -> {
+	private void extractLibraries(FileResolver fileResolver, JarStructure jarStructure, Map<Option, String> options)
+			throws IOException {
+		String librariesDirectory = getLibrariesDirectory(options);
+		extractArchive(fileResolver, (zipEntry) -> {
 			Entry entry = jarStructure.resolve(zipEntry);
 			if (isType(entry, Type.LIBRARY)) {
-				return getLibrariesDirectory(options) + entry.location();
+				return librariesDirectory + entry.location();
 			}
 			return null;
 		});
 	}
 
-	private static Object getLibrariesDirectory(Map<Option, String> options) {
+	private static String getLibrariesDirectory(Map<Option, String> options) {
 		if (options.containsKey(LIBRARIES_DIRECTORY_OPTION)) {
 			String value = options.get(LIBRARIES_DIRECTORY_OPTION);
 			if (value.endsWith("/")) {
@@ -149,15 +148,14 @@ class ExtractCommand extends Command {
 		return "lib/";
 	}
 
-	private static Set<String> getLayersToExtract(Map<Option, String> options) {
-		return StringUtils.commaDelimitedListToSet(options.get(LAYERS_OPTION));
-	}
-
-	private Layers getLayers(Map<Option, String> options) {
-		if (options.containsKey(LAYERS_OPTION)) {
-			return getLayersFromContext();
+	private FileResolver getFileResolver(File destination, Map<Option, String> options) {
+		String runnerFilename = getRunnerFilename(options);
+		if (!options.containsKey(LAYERS_OPTION)) {
+			return new NoLayersFileResolver(destination, runnerFilename);
 		}
-		return Layers.none();
+		Layers layers = getLayersFromContext();
+		Set<String> layersToExtract = StringUtils.commaDelimitedListToSet(options.get(LAYERS_OPTION));
+		return new LayersFileResolver(destination, layers, layersToExtract, runnerFilename);
 	}
 
 	private File getWorkingDirectory(Map<Option, String> options) {
@@ -173,52 +171,12 @@ class ExtractCommand extends Command {
 		return jarStructure;
 	}
 
-	private void createLayersDirectories(File directory, Set<String> layersToExtract, Layers layers)
+	private void extractArchive(FileResolver fileResolver) throws IOException {
+		extractArchive(fileResolver, ZipEntry::getName);
+	}
+
+	private void extractArchive(FileResolver fileResolver, EntryNameTransformer entryNameTransformer)
 			throws IOException {
-		for (String layer : layers) {
-			if (shouldExtractLayer(layersToExtract, layer)) {
-				mkDirs(new File(directory, layer));
-			}
-		}
-	}
-
-	private void write(ZipInputStream zip, ZipEntry entry, String entryName, File directory) throws IOException {
-		File file = new File(directory, entryName);
-		assertFileIsContainedInDirectory(directory, file, entry);
-		mkDirs(file.getParentFile());
-		try (OutputStream out = new FileOutputStream(file)) {
-			StreamUtils.copy(zip, out);
-		}
-		try {
-			Files.getFileAttributeView(file.toPath(), BasicFileAttributeView.class)
-				.setTimes(entry.getLastModifiedTime(), entry.getLastAccessTime(), entry.getCreationTime());
-		}
-		catch (IOException ex) {
-			// File system does not support setting time attributes. Continue.
-		}
-	}
-
-	private void assertFileIsContainedInDirectory(File directory, File file, ZipEntry entry) throws IOException {
-		String canonicalOutputPath = directory.getCanonicalPath() + File.separator;
-		String canonicalEntryPath = file.getCanonicalPath();
-		Assert.state(canonicalEntryPath.startsWith(canonicalOutputPath),
-				() -> "Entry '" + entry.getName() + "' would be written to '" + canonicalEntryPath
-						+ "'. This is outside the output location of '" + canonicalOutputPath
-						+ "'. Verify the contents of your archive.");
-	}
-
-	private void mkDirs(File file) throws IOException {
-		if (!file.exists() && !file.mkdirs()) {
-			throw new IOException("Unable to create directory " + file);
-		}
-	}
-
-	private void extract(File directory, Layers layers, Set<String> layersToExtract) throws IOException {
-		extract(directory, layers, layersToExtract, ZipEntry::getName);
-	}
-
-	private void extract(File directory, Layers layers, Set<String> layersToExtract,
-			EntryNameTransformer entryNameTransformer) throws IOException {
 		withZipEntries(this.context.getArchiveFile(), (stream, zipEntry) -> {
 			if (zipEntry.isDirectory()) {
 				return;
@@ -227,19 +185,11 @@ class ExtractCommand extends Command {
 			if (name == null) {
 				return;
 			}
-			String layer = layers.getLayer(zipEntry);
-			if (shouldExtractLayer(layersToExtract, layer)) {
-				File targetDir = getLayerDirectory(directory, layer);
-				write(stream, zipEntry, name, targetDir);
+			File file = fileResolver.resolve(zipEntry, name);
+			if (file != null) {
+				extractEntry(stream, zipEntry, file);
 			}
 		});
-	}
-
-	private static File getLayerDirectory(File directory, String layer) {
-		if (layer == null) {
-			return directory;
-		}
-		return new File(directory, layer);
 	}
 
 	private Layers getLayersFromContext() {
@@ -249,19 +199,16 @@ class ExtractCommand extends Command {
 		return Layers.get(this.context);
 	}
 
-	private void createRunner(File directory, JarStructure jarStructure, Layers layers, Set<String> layersToExtract,
-			Map<Option, String> options) throws IOException {
-		String runnerFileName = getRunnerFilename(options);
-		RunnerAwareLayers runnerAwareLayers = new RunnerAwareLayers(layers, runnerFileName, jarStructure);
-		String layer = runnerAwareLayers.getLayer(runnerFileName);
-		if (!shouldExtractLayer(layersToExtract, layer)) {
+	private void createRunner(JarStructure jarStructure, FileResolver fileResolver, Map<Option, String> options)
+			throws IOException {
+		File file = fileResolver.resolveRunner();
+		if (file == null) {
 			return;
 		}
-		File targetDir = getLayerDirectory(directory, layer);
-		File launcherJar = new File(targetDir, runnerFileName);
-		Manifest manifest = jarStructure.createLauncherManifest((library) -> getLibrariesDirectory(options) + library);
-		mkDirs(launcherJar.getParentFile());
-		try (JarOutputStream output = new JarOutputStream(Files.newOutputStream(launcherJar.toPath()), manifest)) {
+		String librariesDirectory = getLibrariesDirectory(options);
+		Manifest manifest = jarStructure.createLauncherManifest((library) -> librariesDirectory + library);
+		mkDirs(file.getParentFile());
+		try (JarOutputStream output = new JarOutputStream(new FileOutputStream(file), manifest)) {
 			withZipEntries(this.context.getArchiveFile(), ((stream, zipEntry) -> {
 				Entry entry = jarStructure.resolve(zipEntry);
 				if (isType(entry, Type.APPLICATION_CLASS_OR_RESOURCE) && StringUtils.hasLength(entry.location())) {
@@ -288,11 +235,24 @@ class ExtractCommand extends Command {
 		return entry.type() == type;
 	}
 
-	private boolean shouldExtractLayer(Set<String> layersToExtract, String layer) {
-		if (layer == null || layersToExtract.isEmpty()) {
-			return true;
+	private static void extractEntry(ZipInputStream zip, ZipEntry entry, File file) throws IOException {
+		mkDirs(file.getParentFile());
+		try (OutputStream out = new FileOutputStream(file)) {
+			StreamUtils.copy(zip, out);
 		}
-		return layersToExtract.contains(layer);
+		try {
+			Files.getFileAttributeView(file.toPath(), BasicFileAttributeView.class)
+				.setTimes(entry.getLastModifiedTime(), entry.getLastAccessTime(), entry.getCreationTime());
+		}
+		catch (IOException ex) {
+			// File system does not support setting time attributes. Continue.
+		}
+	}
+
+	private static void mkDirs(File file) throws IOException {
+		if (!file.exists() && !file.mkdirs()) {
+			throw new IOException("Unable to create directory " + file);
+		}
 	}
 
 	private static JarEntry createJarEntry(String location, ZipEntry originalEntry) {
@@ -324,6 +284,15 @@ class ExtractCommand extends Command {
 		}
 	}
 
+	private static File assertFileIsContainedInDirectory(File directory, File file, String name) throws IOException {
+		String canonicalOutputPath = directory.getCanonicalPath() + File.separator;
+		String canonicalEntryPath = file.getCanonicalPath();
+		Assert.state(canonicalEntryPath.startsWith(canonicalOutputPath),
+				() -> "Entry '%s' would be written to '%s'. This is outside the output location of '%s'. Verify the contents of your archive."
+					.formatted(name, canonicalEntryPath, canonicalOutputPath));
+		return file;
+	}
+
 	@FunctionalInterface
 	private interface EntryNameTransformer {
 
@@ -338,31 +307,128 @@ class ExtractCommand extends Command {
 
 	}
 
-	private static final class RunnerAwareLayers implements Layers {
+	private interface FileResolver {
 
-		private final Layers layers;
+		/**
+		 * Creates needed directories.
+		 * @throws IOException if something went wrong
+		 */
+		void createDirectories() throws IOException;
+
+		/**
+		 * Resolves the given {@link ZipEntry} to a file.
+		 * @param entry the zip entry
+		 * @param newName the new name of the file
+		 * @return file where the contents should be written or {@code null} if this entry
+		 * should be skipped
+		 * @throws IOException if something went wrong
+		 */
+		default File resolve(ZipEntry entry, String newName) throws IOException {
+			return resolve(entry.getName(), newName);
+		}
+
+		/**
+		 * Resolves the given name to a file.
+		 * @param originalName the original name of the file
+		 * @param newName the new name of the file
+		 * @return file where the contents should be written or {@code null} if this name
+		 * should be skipped
+		 * @throws IOException if something went wrong
+		 */
+		File resolve(String originalName, String newName) throws IOException;
+
+		/**
+		 * Resolves the file for the runner.
+		 * @return the file for the runner or {@code null} if the runner should be skipped
+		 * @throws IOException if something went wrong
+		 */
+		File resolveRunner() throws IOException;
+
+	}
+
+	private static final class NoLayersFileResolver implements FileResolver {
+
+		private final File directory;
 
 		private final String runnerFilename;
 
-		private final JarStructure jarStructure;
-
-		RunnerAwareLayers(Layers layers, String runnerFilename, JarStructure jarStructure) {
-			this.layers = layers;
+		private NoLayersFileResolver(File directory, String runnerFilename) {
+			this.directory = directory;
 			this.runnerFilename = runnerFilename;
-			this.jarStructure = jarStructure;
 		}
 
 		@Override
-		public Iterator<String> iterator() {
-			return this.layers.iterator();
+		public void createDirectories() {
 		}
 
 		@Override
-		public String getLayer(String entryName) {
-			if (this.runnerFilename.equals(entryName)) {
-				return this.layers.getLayer(this.jarStructure.getClassesLocation());
+		public File resolve(String originalName, String newName) throws IOException {
+			return assertFileIsContainedInDirectory(this.directory, new File(this.directory, newName), newName);
+		}
+
+		@Override
+		public File resolveRunner() throws IOException {
+			return resolve(this.runnerFilename, this.runnerFilename);
+		}
+
+	}
+
+	private static final class LayersFileResolver implements FileResolver {
+
+		private final Layers layers;
+
+		private final Set<String> layersToExtract;
+
+		private final File directory;
+
+		private final String runnerFilename;
+
+		LayersFileResolver(File directory, Layers layers, Set<String> layersToExtract, String runnerFilename) {
+			this.layers = layers;
+			this.layersToExtract = layersToExtract;
+			this.directory = directory;
+			this.runnerFilename = runnerFilename;
+		}
+
+		@Override
+		public void createDirectories() throws IOException {
+			for (String layer : this.layers) {
+				if (shouldExtractLayer(layer)) {
+					mkDirs(getLayerDirectory(layer));
+				}
 			}
-			return this.layers.getLayer(entryName);
+		}
+
+		@Override
+		public File resolve(String originalName, String newName) throws IOException {
+			String layer = this.layers.getLayer(originalName);
+			if (shouldExtractLayer(layer)) {
+				File directory = getLayerDirectory(layer);
+				return assertFileIsContainedInDirectory(directory, new File(directory, newName), newName);
+			}
+			return null;
+		}
+
+		@Override
+		public File resolveRunner() throws IOException {
+			String layer = this.layers.getApplicationLayerName();
+			if (shouldExtractLayer(layer)) {
+				File directory = getLayerDirectory(layer);
+				return assertFileIsContainedInDirectory(directory, new File(directory, this.runnerFilename),
+						this.runnerFilename);
+			}
+			return null;
+		}
+
+		private File getLayerDirectory(String layer) {
+			return new File(this.directory, layer);
+		}
+
+		private boolean shouldExtractLayer(String layer) {
+			if (this.layersToExtract.isEmpty()) {
+				return true;
+			}
+			return this.layersToExtract.contains(layer);
 		}
 
 	}

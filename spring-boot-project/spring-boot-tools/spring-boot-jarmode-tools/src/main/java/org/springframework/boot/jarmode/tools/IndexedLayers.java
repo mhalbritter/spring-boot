@@ -39,12 +39,16 @@ import org.springframework.util.StringUtils;
  *
  * @author Phillip Webb
  * @author Madhura Bhave
+ * @author Moritz Halbritter
  */
 class IndexedLayers implements Layers {
 
 	private final Map<String, List<String>> layers = new LinkedHashMap<>();
 
-	IndexedLayers(String indexFile) {
+	private final String classesLocation;
+
+	IndexedLayers(String indexFile, String classesLocation) {
+		this.classesLocation = classesLocation;
 		String[] lines = Arrays.stream(indexFile.split("\n"))
 			.map((line) -> line.replace("\r", ""))
 			.filter(StringUtils::hasText)
@@ -64,6 +68,11 @@ class IndexedLayers implements Layers {
 			}
 		}
 		Assert.state(!this.layers.isEmpty(), "Empty layer index file loaded");
+	}
+
+	@Override
+	public String getApplicationLayerName() {
+		return getLayer(this.classesLocation);
 	}
 
 	@Override
@@ -97,7 +106,8 @@ class IndexedLayers implements Layers {
 				ZipEntry entry = (location != null) ? jarFile.getEntry(location) : null;
 				if (entry != null) {
 					String indexFile = StreamUtils.copyToString(jarFile.getInputStream(entry), StandardCharsets.UTF_8);
-					return new IndexedLayers(indexFile);
+					String classesLocation = manifest.getMainAttributes().getValue("Spring-Boot-Classes");
+					return new IndexedLayers(indexFile, classesLocation);
 				}
 			}
 			return null;
