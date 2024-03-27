@@ -29,6 +29,7 @@ import java.util.stream.StreamSupport;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.context.properties.bind.PlaceholdersResolver;
 import org.springframework.boot.context.properties.source.ConfigurationPropertySource;
+import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.PropertySource;
 import org.springframework.util.CollectionUtils;
@@ -235,7 +236,7 @@ class ConfigDataEnvironmentContributor implements Iterable<ConfigDataEnvironment
 			ConfigDataActivationContext activationContext) {
 		Iterable<ConfigurationPropertySource> sources = Collections.singleton(getConfigurationPropertySource());
 		PlaceholdersResolver placeholdersResolver = new ConfigDataEnvironmentContributorPlaceholdersResolver(
-				contributors, activationContext, this, true);
+				contributors, activationContext, this, true, DefaultConversionService.getSharedInstance());
 		Binder binder = new Binder(sources, placeholdersResolver, null, null, null);
 		ConfigDataProperties properties = ConfigDataProperties.get(binder);
 		if (properties != null && this.configDataOptions.contains(ConfigData.Option.IGNORE_IMPORTS)) {

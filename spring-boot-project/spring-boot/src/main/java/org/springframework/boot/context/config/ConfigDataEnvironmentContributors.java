@@ -39,6 +39,7 @@ import org.springframework.boot.context.properties.bind.PlaceholdersResolver;
 import org.springframework.boot.context.properties.source.ConfigurationPropertyName;
 import org.springframework.boot.context.properties.source.ConfigurationPropertySource;
 import org.springframework.boot.logging.DeferredLogFactory;
+import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.core.log.LogMessage;
 import org.springframework.util.ObjectUtils;
 
@@ -214,7 +215,7 @@ class ConfigDataEnvironmentContributors implements Iterable<ConfigDataEnvironmen
 		Iterable<ConfigurationPropertySource> sources = () -> getBinderSources(
 				filter.and((contributor) -> failOnInactiveSource || contributor.isActive(activationContext)));
 		PlaceholdersResolver placeholdersResolver = new ConfigDataEnvironmentContributorPlaceholdersResolver(this.root,
-				activationContext, null, failOnInactiveSource);
+				activationContext, null, failOnInactiveSource, DefaultConversionService.getSharedInstance());
 		BindHandler bindHandler = !failOnInactiveSource ? null : new InactiveSourceChecker(activationContext);
 		return new Binder(sources, placeholdersResolver, null, null, bindHandler);
 	}
