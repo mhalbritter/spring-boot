@@ -22,7 +22,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
@@ -293,6 +292,7 @@ public class DockerApi {
 			URI saveUri = buildUrl("/images/" + reference + "/get");
 			Response response = http().get(saveUri);
 			Path exportFile = copyToTemp(response.getContent());
+
 			ImageArchiveManifest manifest = getManifest(reference, exportFile);
 			try (TarArchiveInputStream tar = new TarArchiveInputStream(new FileInputStream(exportFile.toFile()))) {
 				TarArchiveEntry entry = tar.getNextTarEntry();
@@ -366,9 +366,7 @@ public class DockerApi {
 
 		private Path copyToTemp(InputStream in) throws IOException {
 			Path path = Files.createTempFile("create-builder-scratch-", null);
-			try (OutputStream out = Files.newOutputStream(path)) {
-				StreamUtils.copy(in, out);
-			}
+			Files.copy(in, path);
 			return path;
 		}
 

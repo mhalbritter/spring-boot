@@ -28,7 +28,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.boot.buildpack.platform.json.MappedObject;
 
 /**
- * Image archive manifest information.
+ * Image archive manifest information as provided by {@code manifest.json}.
  *
  * @author Scott Frederick
  * @since 2.7.10
@@ -39,7 +39,11 @@ public class ImageArchiveManifest extends MappedObject {
 
 	protected ImageArchiveManifest(JsonNode node) {
 		super(node, MethodHandles.lookup());
-		getNode().elements().forEachRemaining((element) -> this.entries.add(ManifestEntry.of(element)));
+		getNode().elements().forEachRemaining(this::addEntry);
+	}
+
+	private boolean addEntry(JsonNode node) {
+		return this.entries.add(ManifestEntry.of(node));
 	}
 
 	/**
