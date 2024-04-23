@@ -16,14 +16,17 @@
 
 package org.springframework.boot.buildpack.platform.build;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.zip.GZIPInputStream;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -109,6 +112,56 @@ final class ImageBuildpack implements Buildpack {
 		}
 	}
 
+	enum FileType {
+
+		TAR(new byte[] { 0x75, 0x73, 0x74, 0x61, 0x72 }, 257) {
+			@Override
+			InputStream wrap(InputStream stream) {
+				return stream;
+			}
+		},
+		TAR_GZIP(new byte[] { 0x1f, (byte) 0x8b }, 0) {
+			@Override
+			InputStream wrap(InputStream stream) throws IOException {
+				return new GZIPInputStream(stream);
+			}
+		},
+		TAR_ZSTD(new byte[] { 0x28, (byte) 0xb5, 0x2f, (byte) 0xfd }, 0) {
+			@Override
+			InputStream wrap(InputStream stream) {
+				throw new IllegalStateException("zstd compression is not supported");
+			}
+		};
+
+		private final int offset;
+
+		private final byte[] magic;
+
+		FileType(byte[] magic, int offset) {
+			this.offset = offset;
+			this.magic = magic;
+		}
+
+		abstract InputStream wrap(InputStream stream) throws IOException;
+
+		static FileType detect(Path path) throws IOException {
+			try (FileInputStream stream = new FileInputStream(path.toFile())) {
+				for (FileType value : FileType.values()) {
+					byte[] magic = new byte[value.magic.length];
+					stream.getChannel().position(value.offset);
+					if (stream.read(magic) == -1) {
+						continue;
+					}
+					if (Arrays.equals(magic, value.magic)) {
+						return value;
+					}
+				}
+				return FileType.TAR;
+			}
+		}
+
+	}
+
 	private static class ExportedLayers {
 
 		private final List<Path> layerFiles;
@@ -128,7 +181,8 @@ final class ImageBuildpack implements Buildpack {
 		}
 
 		private void copyLayerTar(Path path, OutputStream out) throws IOException {
-			try (TarArchiveInputStream tarIn = new TarArchiveInputStream(Files.newInputStream(path));
+			FileType fileType = FileType.detect(path);
+			try (TarArchiveInputStream tarIn = new TarArchiveInputStream(fileType.wrap(Files.newInputStream(path)));
 					TarArchiveOutputStream tarOut = new TarArchiveOutputStream(out)) {
 				tarOut.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX);
 				TarArchiveEntry entry = tarIn.getNextEntry();

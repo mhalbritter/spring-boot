@@ -21,8 +21,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -34,6 +36,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 
+import org.springframework.boot.buildpack.platform.build.ImageBuildpack.FileType;
 import org.springframework.boot.buildpack.platform.docker.type.Image;
 import org.springframework.boot.buildpack.platform.docker.type.ImageReference;
 import org.springframework.boot.buildpack.platform.io.IOBiConsumer;
@@ -172,6 +175,22 @@ class ImageBuildpackTests extends AbstractJsonTests {
 		BuildpackResolverContext resolverContext = mock(BuildpackResolverContext.class);
 		Buildpack buildpack = ImageBuildpack.resolve(resolverContext, reference);
 		assertThat(buildpack).isNull();
+	}
+
+	@Test
+	void detectsType() throws IOException {
+		assertThat(FileType.detect(extractResource("empty.tar"))).isEqualTo(FileType.TAR);
+		assertThat(FileType.detect(extractResource("empty.tar.gz"))).isEqualTo(FileType.TAR_GZIP);
+		assertThat(FileType.detect(extractResource("empty.tar.zst"))).isEqualTo(FileType.TAR_ZSTD);
+	}
+
+	private static Path extractResource(String resource) throws IOException {
+		Path file = Files.createTempFile("ImageBuildpackTests", ".tmp");
+		try (InputStream stream = ImageBuildpackTests.class.getResourceAsStream(resource)) {
+			assertThat(stream).as("Resource %s", resource).isNotNull();
+			Files.copy(stream, file, StandardCopyOption.REPLACE_EXISTING);
+		}
+		return file;
 	}
 
 	private Object withMockLayers(InvocationOnMock invocation) {
