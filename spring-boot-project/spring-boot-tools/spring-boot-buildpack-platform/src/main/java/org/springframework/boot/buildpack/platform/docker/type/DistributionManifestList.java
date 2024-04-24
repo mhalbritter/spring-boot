@@ -16,6 +16,8 @@
 
 package org.springframework.boot.buildpack.platform.docker.type;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.invoke.MethodHandles;
 import java.util.List;
 
@@ -57,6 +59,16 @@ public class DistributionManifestList extends MappedObject {
 
 	public List<Manifest> getManifests() {
 		return this.manifests;
+	}
+
+	/**
+	 * Create an {@link DistributionManifestList} from the provided JSON input stream.
+	 * @param content the JSON input stream
+	 * @return a new {@link DistributionManifestList} instance
+	 * @throws IOException on IO error
+	 */
+	public static DistributionManifestList of(InputStream content) throws IOException {
+		return of(content, DistributionManifestList::new);
 	}
 
 	public static class Manifest extends MappedObject {

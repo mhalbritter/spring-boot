@@ -16,6 +16,8 @@
 
 package org.springframework.boot.buildpack.platform.docker.type;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.invoke.MethodHandles;
 import java.util.List;
 
@@ -57,6 +59,16 @@ public class DistributionManifest extends MappedObject {
 
 	public List<Layer> getLayers() {
 		return this.layers;
+	}
+
+	/**
+	 * Create an {@link DistributionManifest} from the provided JSON input stream.
+	 * @param content the JSON input stream
+	 * @return a new {@link DistributionManifest} instance
+	 * @throws IOException on IO error
+	 */
+	public static DistributionManifest of(InputStream content) throws IOException {
+		return of(content, DistributionManifest::new);
 	}
 
 	public static class Layer extends MappedObject {

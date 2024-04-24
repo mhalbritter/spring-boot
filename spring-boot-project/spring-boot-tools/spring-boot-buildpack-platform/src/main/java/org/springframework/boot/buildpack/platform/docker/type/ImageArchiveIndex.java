@@ -16,6 +16,8 @@
 
 package org.springframework.boot.buildpack.platform.docker.type;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.invoke.MethodHandles;
 import java.util.List;
 
@@ -50,6 +52,16 @@ public class ImageArchiveIndex extends MappedObject {
 
 	public List<Manifest> getManifests() {
 		return this.manifests;
+	}
+
+	/**
+	 * Create an {@link ImageArchiveIndex} from the provided JSON input stream.
+	 * @param content the JSON input stream
+	 * @return a new {@link ImageArchiveIndex} instance
+	 * @throws IOException on IO error
+	 */
+	public static ImageArchiveIndex of(InputStream content) throws IOException {
+		return of(content, ImageArchiveIndex::new);
 	}
 
 	public static class Manifest extends MappedObject {
