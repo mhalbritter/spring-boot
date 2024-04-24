@@ -63,7 +63,7 @@ class ExportableLayersTar implements Closeable {
 		Files.copy(inputStream, this.path, StandardCopyOption.REPLACE_EXISTING);
 		ImageArchiveManifest manifest = null;
 		ImageArchiveIndex index = null;
-		try (TarArchiveInputStream tar = openTar()) {
+		try (TarArchiveInputStream tar = openTar(this.path)) {
 			TarArchiveEntry entry = tar.getNextTarEntry();
 			while (entry != null) {
 				if ("manifest.json".equals(entry.getName())) {
@@ -80,18 +80,18 @@ class ExportableLayersTar implements Closeable {
 	}
 
 	private Map<String, String> getLayerDigestMediaTypes(ImageArchiveIndex index) throws IOException {
-		Map<String, String> digestMediaTypes = new HashMap<>();
 		Set<String> distributionManifestListDigests = getDistributionManifestListDigests(index);
 		List<DistributionManifestList> distributionManifestLists = getDistributionManifestLists(this.path,
 				distributionManifestListDigests);
 		List<DistributionManifest> distributionManifests = getDistributionManifests(this.path,
 				distributionManifestLists);
+		Map<String, String> digestMediaTypes = new HashMap<>();
 		for (DistributionManifest distributionManifest : distributionManifests) {
 			for (DistributionManifest.Layer layer : distributionManifest.getLayers()) {
 				digestMediaTypes.put(layer.getDigest(), layer.getMediaType());
 			}
 		}
-		return digestMediaTypes;
+		return Collections.unmodifiableMap(digestMediaTypes);
 	}
 
 	private static Set<String> getDistributionManifestListDigests(ImageArchiveIndex index) {
@@ -102,7 +102,7 @@ class ExportableLayersTar implements Closeable {
 				digests.add(manifest.getDigest());
 			}
 		}
-		return digests;
+		return Collections.unmodifiableSet(digests);
 	}
 
 	private static List<DistributionManifestList> getDistributionManifestLists(Path path, Set<String> digests)
@@ -111,7 +111,7 @@ class ExportableLayersTar implements Closeable {
 			return Collections.emptyList();
 		}
 		List<DistributionManifestList> distributionManifestLists = new ArrayList<>();
-		try (TarArchiveInputStream tar = new TarArchiveInputStream(Files.newInputStream(path))) {
+		try (TarArchiveInputStream tar = openTar(path)) {
 			TarArchiveEntry entry = tar.getNextTarEntry();
 			while (entry != null) {
 				if (isDigestMatch(entry, digests)) {
@@ -138,7 +138,7 @@ class ExportableLayersTar implements Closeable {
 			}
 		}
 		List<DistributionManifest> distributionManifests = new ArrayList<>();
-		try (TarArchiveInputStream tar = new TarArchiveInputStream(Files.newInputStream(path))) {
+		try (TarArchiveInputStream tar = openTar(path)) {
 			TarArchiveEntry entry = tar.getNextTarEntry();
 			while (entry != null) {
 				if (isDigestMatch(entry, digests)) {
@@ -172,7 +172,7 @@ class ExportableLayersTar implements Closeable {
 	}
 
 	void export(IOBiConsumer<String, TarArchive> exports) throws IOException {
-		try (TarArchiveInputStream tar = openTar()) {
+		try (TarArchiveInputStream tar = openTar(this.path)) {
 			TarArchiveEntry entry = tar.getNextTarEntry();
 			while (entry != null) {
 				if (isLayer(entry)) {
@@ -197,12 +197,11 @@ class ExportableLayersTar implements Closeable {
 	}
 
 	private boolean isLayer(TarArchiveEntry entry) {
-		// FIXME also check layerDigestMediaTypes?
 		return this.manifest.getEntries().stream().anyMatch((content) -> content.getLayers().contains(entry.getName()));
 	}
 
-	private TarArchiveInputStream openTar() throws IOException {
-		return new TarArchiveInputStream(Files.newInputStream(this.path));
+	private static TarArchiveInputStream openTar(Path path) throws IOException {
+		return new TarArchiveInputStream(Files.newInputStream(path));
 	}
 
 	@Override
