@@ -19,18 +19,20 @@ package org.springframework.boot.buildpack.platform.docker;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
@@ -58,7 +60,7 @@ class ExportableLayersTar implements Closeable {
 
 	ExportableLayersTar(InputStream inputStream) throws IOException {
 		this.path = Files.createTempFile("docker-layers-", null);
-		Files.copy(inputStream, this.path);
+		Files.copy(inputStream, this.path, StandardCopyOption.REPLACE_EXISTING);
 		ImageArchiveManifest manifest = null;
 		ImageArchiveIndex index = null;
 		try (TarArchiveInputStream tar = openTar()) {
@@ -79,7 +81,7 @@ class ExportableLayersTar implements Closeable {
 
 	private Map<String, String> getLayerDigestMediaTypes(ImageArchiveIndex index) throws IOException {
 		Map<String, String> digestMediaTypes = new HashMap<>();
-		List<String> distributionManifestListDigests = getDistributionManifestListDigests(index);
+		Set<String> distributionManifestListDigests = getDistributionManifestListDigests(index);
 		List<DistributionManifestList> distributionManifestLists = getDistributionManifestLists(this.path,
 				distributionManifestListDigests);
 		List<DistributionManifest> distributionManifests = getDistributionManifests(this.path,
@@ -92,8 +94,8 @@ class ExportableLayersTar implements Closeable {
 		return digestMediaTypes;
 	}
 
-	private static List<String> getDistributionManifestListDigests(ImageArchiveIndex index) {
-		List<String> digests = new ArrayList<>();
+	private static Set<String> getDistributionManifestListDigests(ImageArchiveIndex index) {
+		Set<String> digests = new HashSet<>();
 		for (ImageArchiveIndex.Manifest manifest : index.getManifests()) {
 			if (manifest.getMediaType().startsWith("application/vnd.docker.distribution.manifest.list.v")
 					&& manifest.getMediaType().endsWith("+json")) {
@@ -103,13 +105,13 @@ class ExportableLayersTar implements Closeable {
 		return digests;
 	}
 
-	private static List<DistributionManifestList> getDistributionManifestLists(Path path, List<String> digests)
+	private static List<DistributionManifestList> getDistributionManifestLists(Path path, Set<String> digests)
 			throws IOException {
 		if (digests.isEmpty()) {
 			return Collections.emptyList();
 		}
 		List<DistributionManifestList> distributionManifestLists = new ArrayList<>();
-		try (TarArchiveInputStream tar = new TarArchiveInputStream(new FileInputStream(path.toFile()))) {
+		try (TarArchiveInputStream tar = new TarArchiveInputStream(Files.newInputStream(path))) {
 			TarArchiveEntry entry = tar.getNextTarEntry();
 			while (entry != null) {
 				if (isDigestMatch(entry, digests)) {
@@ -126,7 +128,7 @@ class ExportableLayersTar implements Closeable {
 		if (distributionManifestLists.isEmpty()) {
 			return Collections.emptyList();
 		}
-		List<String> digests = new ArrayList<>();
+		Set<String> digests = new HashSet<>();
 		for (DistributionManifestList manifestList : distributionManifestLists) {
 			for (DistributionManifestList.Manifest manifest : manifestList.getManifests()) {
 				if (manifest.getMediaType().startsWith("application/vnd.docker.distribution.manifest.v")
@@ -136,7 +138,7 @@ class ExportableLayersTar implements Closeable {
 			}
 		}
 		List<DistributionManifest> distributionManifests = new ArrayList<>();
-		try (TarArchiveInputStream tar = new TarArchiveInputStream(new FileInputStream(path.toFile()))) {
+		try (TarArchiveInputStream tar = new TarArchiveInputStream(Files.newInputStream(path))) {
 			TarArchiveEntry entry = tar.getNextTarEntry();
 			while (entry != null) {
 				if (isDigestMatch(entry, digests)) {
@@ -148,8 +150,19 @@ class ExportableLayersTar implements Closeable {
 		return Collections.unmodifiableList(distributionManifests);
 	}
 
-	private static boolean isDigestMatch(TarArchiveEntry entry, List<String> digests) {
-		throw new UnsupportedOperationException("Auto-generated method stub");
+	private static boolean isDigestMatch(TarArchiveEntry entry, Set<String> digests) {
+		String hash = getEntryHash(entry);
+		return digests.contains(hash);
+	}
+
+	private static String getEntryHash(TarArchiveEntry entry) {
+		String entryName = entry.getName();
+		if (entryName.startsWith("blobs/")) {
+			String hash = entryName.substring("blobs/".length());
+			hash = hash.replace('/', ':');
+			return hash.contains(":") ? hash : null;
+		}
+		return null;
 	}
 
 	private static <T> T readJson(TarArchiveInputStream in, ThrowingFunction<InputStream, T> factory) {
@@ -162,10 +175,8 @@ class ExportableLayersTar implements Closeable {
 		try (TarArchiveInputStream tar = openTar()) {
 			TarArchiveEntry entry = tar.getNextTarEntry();
 			while (entry != null) {
-				if (isLayer(entry.getName())) {
-					// FIXME if we're a regular layer
-					// FIXME lookup from layerDigestMediaTypes
-					Compression compression = Compression.NONE;
+				if (isLayer(entry)) {
+					Compression compression = getLayerCompression(entry);
 					exports.accept(entry.getName(), TarArchive.fromInputStream(tar, compression));
 				}
 				entry = tar.getNextTarEntry();
@@ -173,13 +184,25 @@ class ExportableLayersTar implements Closeable {
 		}
 	}
 
-	private boolean isLayer(String name) {
+	private Compression getLayerCompression(TarArchiveEntry entry) {
+		String hash = getEntryHash(entry);
+		String mediaType = this.layerDigestMediaTypes.get(hash);
+		if (mediaType == null) {
+			return Compression.NONE;
+		}
+		return switch (mediaType) {
+			case "application/vnd.docker.image.rootfs.diff.tar.gzip" -> Compression.GZIP;
+			default -> Compression.NONE;
+		};
+	}
+
+	private boolean isLayer(TarArchiveEntry entry) {
 		// FIXME also check layerDigestMediaTypes?
-		return this.manifest.getEntries().stream().anyMatch((content) -> content.getLayers().contains(name));
+		return this.manifest.getEntries().stream().anyMatch((content) -> content.getLayers().contains(entry.getName()));
 	}
 
 	private TarArchiveInputStream openTar() throws IOException {
-		return new TarArchiveInputStream(new FileInputStream(this.path.toFile()));
+		return new TarArchiveInputStream(Files.newInputStream(this.path));
 	}
 
 	@Override

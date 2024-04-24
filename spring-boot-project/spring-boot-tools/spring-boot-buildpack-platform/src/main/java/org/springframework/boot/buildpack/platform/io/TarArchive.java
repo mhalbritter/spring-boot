@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2020 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import java.io.OutputStream;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.zip.GZIPInputStream;
 
 import org.springframework.util.StreamUtils;
 
@@ -92,7 +93,7 @@ public interface TarArchive {
 
 			@Override
 			public void writeTo(OutputStream outputStream) throws IOException {
-				StreamUtils.copy(inputStream, outputStream);
+				StreamUtils.copy(compression.wrap(inputStream), outputStream);
 			}
 
 			@Override
@@ -108,7 +109,22 @@ public interface TarArchive {
 	 */
 	enum Compression {
 
-		NONE, GZIP, ZSTD
+		NONE, GZIP {
+			@Override
+			InputStream wrap(InputStream inputStream) throws IOException {
+				return new GZIPInputStream(inputStream);
+			}
+		},
+		ZSTD {
+			@Override
+			InputStream wrap(InputStream inputStream) {
+				throw new IllegalStateException("zstd compression is not supported");
+			}
+		};
+
+		InputStream wrap(InputStream inputStream) throws IOException {
+			return inputStream;
+		}
 
 	}
 
