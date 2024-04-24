@@ -24,41 +24,48 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.boot.buildpack.platform.json.MappedObject;
 
 /**
- * Image archive index information as provided by {@code index.json}.
+ * A distribution manifest list as defined in
+ * {@code application/vnd.docker.distribution.manifest} files.
  *
  * @author Phillip Webb
  * @since 3.1.12
- * @see <a href=
- * "https://github.com/opencontainers/image-spec/blob/main/image-index.md">OCI Image Index
- * Specification</a>
+ * @see <a href="https://github.com/opencontainers/image-spec/blob/main/manifest.md">OCI
+ * Image Manifest Specification</a>
  */
-public class ImageArchiveIndex extends MappedObject {
+public class DistributionManifest extends MappedObject {
 
 	private final Integer schemaVersion;
 
-	private final List<Manifest> manifests;
+	private final String mediaType;
 
-	protected ImageArchiveIndex(JsonNode node) {
+	private final List<Layer> layers;
+
+	protected DistributionManifest(JsonNode node) {
 		super(node, MethodHandles.lookup());
 		this.schemaVersion = valueAt("/schemaVersion", Integer.class);
-		this.manifests = childrenAt("/manifests", Manifest::new);
+		this.mediaType = valueAt("/mediaType", String.class);
+		this.layers = childrenAt("/layers", Layer::new);
 	}
 
 	public Integer getSchemaVersion() {
 		return this.schemaVersion;
 	}
 
-	public List<Manifest> getManifests() {
-		return this.manifests;
+	public String getMediaType() {
+		return this.mediaType;
 	}
 
-	public static class Manifest extends MappedObject {
+	public List<Layer> getLayers() {
+		return this.layers;
+	}
+
+	public static class Layer extends MappedObject {
 
 		private final String mediaType;
 
 		private final String digest;
 
-		protected Manifest(JsonNode node) {
+		protected Layer(JsonNode node) {
 			super(node, MethodHandles.lookup());
 			this.mediaType = valueAt("/mediaType", String.class);
 			this.digest = valueAt("/digest", String.class);

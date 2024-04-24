@@ -23,6 +23,9 @@ import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.function.Function;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -69,6 +72,25 @@ public class MappedObject {
 	 */
 	protected <T> T valueAt(String expression, Class<T> type) {
 		return valueAt(this, this.node, this.lookup, expression, type);
+	}
+
+	/**
+	 * Get children at the given JSON path expression by constructing them using the given
+	 * factory.
+	 * @param <T> the child type
+	 * @param expression the JSON path expression
+	 * @param factory factory used to create the child
+	 * @return a list of children
+	 * @since 3.1.12
+	 */
+	protected <T> List<T> childrenAt(String expression, Function<JsonNode, T> factory) {
+		JsonNode node = (expression != null) ? this.node.at(expression) : this.node;
+		if (node.isEmpty()) {
+			return Collections.emptyList();
+		}
+		List<T> children = new ArrayList<>();
+		node.elements().forEachRemaining((childNode) -> children.add(factory.apply(childNode)));
+		return Collections.unmodifiableList(children);
 	}
 
 	@SuppressWarnings("unchecked")

@@ -17,10 +17,7 @@
 package org.springframework.boot.buildpack.platform.docker.type;
 
 import java.lang.invoke.MethodHandles;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.function.Function;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -43,23 +40,11 @@ public class DistributionManifestList extends MappedObject {
 
 	private final List<Manifest> manifests;
 
-	private final List<Layer> layers;
-
 	protected DistributionManifestList(JsonNode node) {
 		super(node, MethodHandles.lookup());
 		this.schemaVersion = valueAt("/schemaVersion", Integer.class);
 		this.mediaType = valueAt("/mediaType", String.class);
-		this.manifests = loadChildren(getNode().at("/manifests"), Manifest::new);
-		this.layers = loadChildren(getNode().at("/layers"), Layer::new);
-	}
-
-	private static <T> List<T> loadChildren(JsonNode node, Function<JsonNode, T> factory) {
-		if (node.isEmpty()) {
-			return Collections.emptyList();
-		}
-		List<T> children = new ArrayList<>();
-		node.elements().forEachRemaining((childNode) -> children.add(factory.apply(childNode)));
-		return Collections.unmodifiableList(children);
+		this.manifests = childrenAt("/manifests", Manifest::new);
 	}
 
 	public Integer getSchemaVersion() {
@@ -74,10 +59,6 @@ public class DistributionManifestList extends MappedObject {
 		return this.manifests;
 	}
 
-	public List<Layer> getLayers() {
-		return this.layers;
-	}
-
 	public static class Manifest extends MappedObject {
 
 		private final String mediaType;
@@ -85,28 +66,6 @@ public class DistributionManifestList extends MappedObject {
 		private final String digest;
 
 		protected Manifest(JsonNode node) {
-			super(node, MethodHandles.lookup());
-			this.mediaType = valueAt("/mediaType", String.class);
-			this.digest = valueAt("/digest", String.class);
-		}
-
-		public String getMediaType() {
-			return this.mediaType;
-		}
-
-		public String getDigest() {
-			return this.digest;
-		}
-
-	}
-
-	public static class Layer extends MappedObject {
-
-		private final String mediaType;
-
-		private final String digest;
-
-		protected Layer(JsonNode node) {
 			super(node, MethodHandles.lookup());
 			this.mediaType = valueAt("/mediaType", String.class);
 			this.digest = valueAt("/digest", String.class);

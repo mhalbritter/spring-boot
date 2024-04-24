@@ -29,19 +29,19 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Phillip Webb
  */
-class DistributionManifestListTests extends AbstractJsonTests {
+class DistributionManifestTests extends AbstractJsonTests {
 
 	@Test
-	void loadJsonWhenHasManifests() throws IOException {
-		String content = getContentAsString("distribution-manifest-list.json");
-		DistributionManifestList manifestList = getManifestList(content);
+	void loadJsonWhenHasLayers() throws IOException {
+		String content = getContentAsString("distribution-manifest.json");
+		DistributionManifest manifestList = getManifest(content);
 		assertThat(manifestList.getSchemaVersion()).isEqualTo(2);
-		assertThat(manifestList.getMediaType()).isEqualTo("application/vnd.docker.distribution.manifest.list.v2+json");
-		assertThat(manifestList.getManifests()).hasSize(2);
+		assertThat(manifestList.getMediaType()).isEqualTo("application/vnd.docker.distribution.manifest.v2+json");
+		assertThat(manifestList.getLayers()).hasSize(1);
 	}
 
-	private DistributionManifestList getManifestList(String content) throws IOException {
-		return new DistributionManifestList(getObjectMapper().readTree(content));
+	private DistributionManifest getManifest(String content) throws IOException {
+		return new DistributionManifest(getObjectMapper().readTree(content));
 	}
 
 }

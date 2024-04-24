@@ -19,7 +19,6 @@ package org.springframework.boot.buildpack.platform.docker.type;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.invoke.MethodHandles;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -35,15 +34,11 @@ import org.springframework.boot.buildpack.platform.json.MappedObject;
  */
 public class ImageArchiveManifest extends MappedObject {
 
-	private final List<ManifestEntry> entries = new ArrayList<>();
+	private final List<ManifestEntry> entries;
 
 	protected ImageArchiveManifest(JsonNode node) {
 		super(node, MethodHandles.lookup());
-		getNode().elements().forEachRemaining(this::addEntry);
-	}
-
-	private boolean addEntry(JsonNode node) {
-		return this.entries.add(ManifestEntry.of(node));
+		this.entries = childrenAt(null, ManifestEntry::new);
 	}
 
 	/**
@@ -79,10 +74,6 @@ public class ImageArchiveManifest extends MappedObject {
 		 */
 		public List<String> getLayers() {
 			return this.layers;
-		}
-
-		static ManifestEntry of(JsonNode node) {
-			return new ManifestEntry(node);
 		}
 
 		@SuppressWarnings("unchecked")
