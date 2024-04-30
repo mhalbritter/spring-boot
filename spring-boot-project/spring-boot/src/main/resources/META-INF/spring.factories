@@ -61,6 +61,7 @@ org.springframework.boot.reactor.ReactorEnvironmentPostProcessor
 
 # Failure Analyzers
 org.springframework.boot.diagnostics.FailureAnalyzer=\
+org.springframework.boot.AotInitializerNotFoundFailureAnalyzer,\
 org.springframework.boot.context.config.ConfigDataNotFoundFailureAnalyzer,\
 org.springframework.boot.context.properties.IncompatibleConfigurationFailureAnalyzer,\
 org.springframework.boot.context.properties.NotConstructorBoundInjectionFailureAnalyzer,\
