@@ -18,17 +18,23 @@ package org.springframework.boot.loader.nio.file;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 /**
  * URL Path Encoder based.
  *
  * @author Phillip Webb
+ * @author Moritz Halbritter
  */
 final class UriPathEncoder {
 
 	// Based on org.springframework.web.util.UriUtils
 
-	private static char[] ALLOWED = "/:@-._~!$&\'()*+,;=".toCharArray();
+	private static final char[] ALLOWED = "/:@-._~!$&'()*+,;=".toCharArray();
+
+	static {
+		Arrays.sort(ALLOWED);
+	}
 
 	private UriPathEncoder() {
 	}
@@ -36,7 +42,7 @@ final class UriPathEncoder {
 	static String encode(String path) {
 		byte[] bytes = path.getBytes(StandardCharsets.UTF_8);
 		for (byte b : bytes) {
-			if (isAllowed(b)) {
+			if (!isAllowed(b)) {
 				return encode(bytes);
 			}
 		}
@@ -58,11 +64,9 @@ final class UriPathEncoder {
 		return result.toString(StandardCharsets.UTF_8);
 	}
 
-	private static boolean isAllowed(int ch) {
-		for (char allowed : ALLOWED) {
-			if (ch == allowed) {
-				return true;
-			}
+	private static boolean isAllowed(byte ch) {
+		if (Arrays.binarySearch(ALLOWED, (char) ch) >= 0) {
+			return true;
 		}
 		return isAlpha(ch) || isDigit(ch);
 	}

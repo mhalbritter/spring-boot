@@ -32,6 +32,8 @@ class UriPathEncoderTests {
 		assertThat(UriPathEncoder.encode("/foo/bar")).isEqualTo("/foo/bar");
 		assertThat(UriPathEncoder.encode("/foo bar")).isEqualTo("/foo%20bar");
 		assertThat(UriPathEncoder.encode("/Z\u00fcrich")).isEqualTo("/Z%C3%BCrich");
+		assertThat(UriPathEncoder.encode("/")).isEqualTo("/");
+		assertThat(UriPathEncoder.encode(" ")).isEqualTo("%20");
 	}
 
 }
