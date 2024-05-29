@@ -70,9 +70,9 @@ final class CycloneDxPluginAction implements PluginApplicationAction {
 			SourceSet main = javaPluginExtension.getSourceSets().getByName(SourceSet.MAIN_SOURCE_SET_NAME);
 			configureTask(project, main.getProcessResourcesTaskName(), Copy.class, (copy) -> {
 				copy.dependsOn(cycloneDxTaskProvider);
-				CycloneDxTask cycloneDxTask = cycloneDxTaskProvider.get();
-				String sbomFileName = cycloneDxTask.getOutputName().get() + getSbomExtension(cycloneDxTask);
-				copy.from(cycloneDxTask, (spec) -> spec.include(sbomFileName).into("META-INF/sbom"));
+				Provider<String> sbomFileName = cycloneDxTaskProvider
+					.map((cycloneDxTask) -> cycloneDxTask.getOutputName().get() + getSbomExtension(cycloneDxTask));
+				copy.from(cycloneDxTaskProvider, (spec) -> spec.include(sbomFileName.get()).into("META-INF/sbom"));
 			});
 		});
 	}
@@ -94,16 +94,16 @@ final class CycloneDxPluginAction implements PluginApplicationAction {
 				(bootWar) -> configureBootWarTask(bootWar, cycloneDxTaskProvider));
 	}
 
-	private void configureBootJarTask(BootJar task, TaskProvider<CycloneDxTask> cycloneDxTaskTaskProvider) {
-		configureJarTask(task, cycloneDxTaskTaskProvider);
+	private void configureBootJarTask(BootJar task, TaskProvider<CycloneDxTask> cycloneDxTaskProvider) {
+		configureJarTask(task, cycloneDxTaskProvider);
 	}
 
-	private void configureBootWarTask(BootWar task, TaskProvider<CycloneDxTask> cycloneDxTaskTaskProvider) {
-		configureJarTask(task, cycloneDxTaskTaskProvider);
+	private void configureBootWarTask(BootWar task, TaskProvider<CycloneDxTask> cycloneDxTaskProvider) {
+		configureJarTask(task, cycloneDxTaskProvider);
 	}
 
-	private void configureJarTask(Jar task, TaskProvider<CycloneDxTask> cycloneDxTaskTaskProvider) {
-		Provider<String> sbomFileName = cycloneDxTaskTaskProvider.map((cycloneDxTask) -> "META-INF/sbom/"
+	private void configureJarTask(Jar task, TaskProvider<CycloneDxTask> cycloneDxTaskProvider) {
+		Provider<String> sbomFileName = cycloneDxTaskProvider.map((cycloneDxTask) -> "META-INF/sbom/"
 				+ cycloneDxTask.getOutputName().get() + getSbomExtension(cycloneDxTask));
 		task.manifest((manifest) -> {
 			manifest.getAttributes().put("Sbom-Format", "CycloneDX");
