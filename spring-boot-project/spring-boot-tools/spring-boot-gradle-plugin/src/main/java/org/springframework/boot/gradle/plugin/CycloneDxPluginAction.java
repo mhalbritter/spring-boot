@@ -81,7 +81,6 @@ final class CycloneDxPluginAction implements PluginApplicationAction {
 	}
 
 	private void configureTask(Jar task, TaskProvider<CycloneDxTask> cycloneDxTaskTaskProvider) {
-		task.dependsOn(cycloneDxTaskTaskProvider);
 		CycloneDxTask cycloneDxTask = cycloneDxTaskTaskProvider.get();
 		String sbomFileName = cycloneDxTask.getOutputName().get() + getSbomExtension(cycloneDxTask);
 		task.manifest((manifest) -> {
