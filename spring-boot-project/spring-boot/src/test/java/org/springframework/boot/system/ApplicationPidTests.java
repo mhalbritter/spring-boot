@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,15 +71,15 @@ class ApplicationPidTests {
 	}
 
 	@Test
-	void toLong() {
+	void asLong() {
 		ApplicationPid pid = new ApplicationPid(123L);
-		assertThat(pid.toLong()).isEqualTo(123L);
+		assertThat(pid.asLong()).isEqualTo(123L);
 	}
 
 	@Test
-	void toLongWhenNotAvailable() {
+	void asLongWhenNotAvailable() {
 		ApplicationPid pid = new ApplicationPid(null);
-		assertThat(pid.toLong()).isNull();
+		assertThat(pid.asLong()).isNull();
 	}
 
 	@Test

@@ -71,7 +71,7 @@ public class ApplicationPid {
 	 * @return the application PID or {@code null}
 	 * @since 3.4.0
 	 */
-	public Long toLong() {
+	public Long asLong() {
 		return this.pid;
 	}
 

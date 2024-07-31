@@ -525,6 +525,7 @@ public class SpringApplication {
 		if (!CollectionUtils.isEmpty(this.defaultProperties)) {
 			DefaultPropertiesPropertySource.addOrMerge(this.defaultProperties, sources);
 		}
+		sources.addLast(new ApplicationInfoPropertySource(this.mainApplicationClass));
 		if (this.addCommandLineProperties && args.length > 0) {
 			String name = CommandLinePropertySource.COMMAND_LINE_PROPERTY_SOURCE_NAME;
 			if (sources.contains(name)) {

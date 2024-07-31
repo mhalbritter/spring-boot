@@ -20,7 +20,6 @@ import java.io.PrintStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +46,7 @@ import org.springframework.util.StreamUtils;
  * @author Vedran Pavic
  * @author Toshiaki Maki
  * @author Krzysztof Krason
+ * @author Moritz Halbritter
  * @since 1.2.0
  */
 public class ResourceBanner implements Banner {
@@ -89,42 +89,29 @@ public class ResourceBanner implements Banner {
 		if (environment instanceof ConfigurableEnvironment configurableEnvironment) {
 			configurableEnvironment.getPropertySources().forEach(sources::addLast);
 		}
-		sources.addLast(getTitleSource(sourceClass));
+		sources.addLast(getTitleSource(environment));
 		sources.addLast(getAnsiSource());
-		sources.addLast(getVersionSource(sourceClass));
+		sources.addLast(getVersionSource(environment));
 		List<PropertyResolver> resolvers = new ArrayList<>();
 		resolvers.add(new PropertySourcesPropertyResolver(sources));
 		return resolvers;
 	}
 
-	private MapPropertySource getTitleSource(Class<?> sourceClass) {
-		String applicationTitle = getApplicationTitle(sourceClass);
-		Map<String, Object> titleMap = Collections.singletonMap("application.title",
-				(applicationTitle != null) ? applicationTitle : "");
-		return new MapPropertySource("title", titleMap);
-	}
-
-	/**
-	 * Return the application title that should be used for the source class. By default
-	 * will use {@link Package#getImplementationTitle()}.
-	 * @param sourceClass the source class
-	 * @return the application title
-	 */
-	protected String getApplicationTitle(Class<?> sourceClass) {
-		Package sourcePackage = (sourceClass != null) ? sourceClass.getPackage() : null;
-		return (sourcePackage != null) ? sourcePackage.getImplementationTitle() : null;
+	private MapPropertySource getTitleSource(Environment environment) {
+		String title = environment.getProperty("spring.application.title");
+		return new MapPropertySource("title", Map.of("application.title", (title != null) ? title : ""));
 	}
 
 	private AnsiPropertySource getAnsiSource() {
 		return new AnsiPropertySource("ansi", true);
 	}
 
-	private MapPropertySource getVersionSource(Class<?> sourceClass) {
-		return new MapPropertySource("version", getVersionsMap(sourceClass));
+	private MapPropertySource getVersionSource(Environment environment) {
+		return new MapPropertySource("version", getVersionsMap(environment));
 	}
 
-	private Map<String, Object> getVersionsMap(Class<?> sourceClass) {
-		String appVersion = getApplicationVersion(sourceClass);
+	private Map<String, Object> getVersionsMap(Environment environment) {
+		String appVersion = environment.getProperty("spring.application.version");
 		String bootVersion = getBootVersion();
 		Map<String, Object> versions = new HashMap<>();
 		versions.put("application.version", getVersionString(appVersion, false));
@@ -132,11 +119,6 @@ public class ResourceBanner implements Banner {
 		versions.put("application.formatted-version", getVersionString(appVersion, true));
 		versions.put("spring-boot.formatted-version", getVersionString(bootVersion, true));
 		return versions;
-	}
-
-	protected String getApplicationVersion(Class<?> sourceClass) {
-		Package sourcePackage = (sourceClass != null) ? sourceClass.getPackage() : null;
-		return (sourcePackage != null) ? sourcePackage.getImplementationVersion() : null;
 	}
 
 	protected String getBootVersion() {

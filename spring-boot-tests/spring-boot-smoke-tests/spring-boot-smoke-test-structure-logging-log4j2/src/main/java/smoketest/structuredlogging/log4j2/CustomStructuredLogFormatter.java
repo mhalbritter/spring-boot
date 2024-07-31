@@ -20,22 +20,22 @@ import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.impl.ThrowableProxy;
 
 import org.springframework.boot.logging.structured.StructuredLogFormatter;
-import org.springframework.boot.system.ApplicationPid;
+import org.springframework.core.env.Environment;
 
 public class CustomStructuredLogFormatter implements StructuredLogFormatter<LogEvent> {
 
-	private final ApplicationPid pid;
+	private final Environment environment;
 
-	public CustomStructuredLogFormatter(ApplicationPid pid) {
-		this.pid = pid;
+	public CustomStructuredLogFormatter(Environment environment) {
+		this.environment = environment;
 	}
 
 	@Override
 	public String format(LogEvent event) {
 		StringBuilder result = new StringBuilder();
 		result.append("epoch=").append(event.getInstant().getEpochMillisecond());
-		if (this.pid.isAvailable()) {
-			result.append(" pid=").append(this.pid);
+		if (this.environment.containsProperty("spring.application.pid")) {
+			result.append(" pid=").append(this.environment.getProperty("spring.application.pid"));
 		}
 		result.append(" msg=\"").append(event.getMessage().getFormattedMessage()).append('"');
 		ThrowableProxy throwable = event.getThrownProxy();

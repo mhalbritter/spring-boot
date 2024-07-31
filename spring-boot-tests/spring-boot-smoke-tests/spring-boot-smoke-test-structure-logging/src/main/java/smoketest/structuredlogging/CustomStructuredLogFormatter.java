@@ -21,16 +21,16 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.IThrowableProxy;
 
 import org.springframework.boot.logging.structured.StructuredLogFormatter;
-import org.springframework.boot.system.ApplicationPid;
+import org.springframework.core.env.Environment;
 
 public class CustomStructuredLogFormatter implements StructuredLogFormatter<ILoggingEvent> {
 
-	private final ApplicationPid pid;
+	private final Environment environment;
 
 	private final ThrowableProxyConverter throwableProxyConverter;
 
-	public CustomStructuredLogFormatter(ApplicationPid pid, ThrowableProxyConverter throwableProxyConverter) {
-		this.pid = pid;
+	public CustomStructuredLogFormatter(Environment environment, ThrowableProxyConverter throwableProxyConverter) {
+		this.environment = environment;
 		this.throwableProxyConverter = throwableProxyConverter;
 	}
 
@@ -38,8 +38,8 @@ public class CustomStructuredLogFormatter implements StructuredLogFormatter<ILog
 	public String format(ILoggingEvent event) {
 		StringBuilder result = new StringBuilder();
 		result.append("epoch=").append(event.getInstant().toEpochMilli());
-		if (this.pid.isAvailable()) {
-			result.append(" pid=").append(this.pid);
+		if (this.environment.containsProperty("spring.application.pid")) {
+			result.append(" pid=").append(this.environment.getProperty("spring.application.pid"));
 		}
 		result.append(" msg=\"").append(event.getFormattedMessage()).append('"');
 		IThrowableProxy throwable = event.getThrowableProxy();
