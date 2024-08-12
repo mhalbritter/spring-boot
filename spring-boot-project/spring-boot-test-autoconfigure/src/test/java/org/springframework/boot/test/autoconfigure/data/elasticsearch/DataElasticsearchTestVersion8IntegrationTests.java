@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,12 +26,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnectionAutoConfiguration;
 import org.springframework.boot.testsupport.testcontainers.DockerImageNames;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.Bean;
 import org.springframework.data.elasticsearch.client.elc.ElasticsearchTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,7 +43,7 @@ import static org.springframework.boot.test.autoconfigure.AutoConfigurationImpor
  * @author Scott Frederick
  */
 @Testcontainers(disabledWithoutDocker = true)
-@DataElasticsearchTest(properties = { "spring.elasticsearch.restclient.ssl.bundle=elasticsearch-container" })
+@DataElasticsearchTest
 class DataElasticsearchTestVersion8IntegrationTests {
 
 	@Container
@@ -87,16 +85,6 @@ class DataElasticsearchTestVersion8IntegrationTests {
 	@Test
 	void serviceConnectionAutoConfigurationWasImported() {
 		assertThat(this.applicationContext).has(importedAutoConfiguration(ServiceConnectionAutoConfiguration.class));
-	}
-
-	@TestConfiguration
-	static class ElasticsearchContainerSslBundleConfiguration {
-
-		@Bean
-		ElasticsearchContainerSslBundleRegistrar elasticsearchContainerSslBundleRegistrar() {
-			return new ElasticsearchContainerSslBundleRegistrar("elasticsearch-container", elasticsearch);
-		}
-
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -94,9 +94,15 @@ class ElasticsearchRestClientConfigurations {
 				.toArray(HttpHost[]::new));
 			builder.setHttpClientConfigCallback((httpClientBuilder) -> {
 				builderCustomizers.orderedStream().forEach((customizer) -> customizer.customize(httpClientBuilder));
-				String sslBundleName = this.properties.getRestclient().getSsl().getBundle();
-				if (StringUtils.hasText(sslBundleName)) {
-					configureSsl(httpClientBuilder, sslBundles.getObject().getBundle(sslBundleName));
+				SslBundle sslBundle = connectionDetails.getSslBundle();
+				if (sslBundle == null) {
+					String sslBundleName = this.properties.getRestclient().getSsl().getBundle();
+					if (StringUtils.hasText(sslBundleName)) {
+						sslBundle = sslBundles.getObject().getBundle(sslBundleName);
+					}
+				}
+				if (sslBundle != null) {
+					configureSsl(httpClientBuilder, sslBundle);
 				}
 				return httpClientBuilder;
 			});

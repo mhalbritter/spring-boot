@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,18 @@ package org.springframework.boot.testcontainers.service.connection.elasticsearch
 
 import java.util.List;
 
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
+
 import org.testcontainers.elasticsearch.ElasticsearchContainer;
 import org.testcontainers.utility.ComparableVersion;
 import org.testcontainers.utility.DockerImageName;
 
 import org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchConnectionDetails;
 import org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchConnectionDetails.Node.Protocol;
+import org.springframework.boot.ssl.SslBundle;
+import org.springframework.boot.ssl.SslManagerBundle;
 import org.springframework.boot.testcontainers.service.connection.ContainerConnectionDetailsFactory;
 import org.springframework.boot.testcontainers.service.connection.ContainerConnectionSource;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -79,6 +85,30 @@ class ElasticsearchContainerConnectionDetailsFactory
 		@Override
 		public String getPassword() {
 			return isVersion8OrGreater() ? getContainer().getEnvMap().get(PASSWORD_ENV_KEY) : null;
+		}
+
+		@Override
+		public SslBundle getSslBundle() {
+			return isVersion8OrGreater() ? createSslBundle() : null;
+		}
+
+		private SslBundle createSslBundle() {
+			return SslBundle.of(null, null, null, null, new SslManagerBundle() {
+				@Override
+				public KeyManagerFactory getKeyManagerFactory() {
+					return null;
+				}
+
+				@Override
+				public TrustManagerFactory getTrustManagerFactory() {
+					return null;
+				}
+
+				@Override
+				public SSLContext createSslContext(String protocol) {
+					return getContainer().createSslContextFromCa();
+				}
+			});
 		}
 
 		private boolean isVersion8OrGreater() {
