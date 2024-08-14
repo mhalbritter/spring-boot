@@ -38,7 +38,7 @@ class PropertiesRabbitConnectionDetailsTests {
 		RabbitProperties properties = new RabbitProperties();
 		properties.setAddresses(List.of("localhost", "localhost:1234", "[::1]", "[::1]:32863"));
 		PropertiesRabbitConnectionDetails propertiesRabbitConnectionDetails = new PropertiesRabbitConnectionDetails(
-				properties);
+				properties, null);
 		List<Address> addresses = propertiesRabbitConnectionDetails.getAddresses();
 		assertThat(addresses.size()).isEqualTo(4);
 		assertThat(addresses.get(0).host()).isEqualTo("localhost");
