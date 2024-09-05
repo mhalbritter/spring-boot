@@ -21,7 +21,7 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.boot.ssl.SslBundle;
 import org.springframework.boot.ssl.SslBundleKey;
 import org.springframework.boot.ssl.SslOptions;
@@ -33,6 +33,7 @@ import org.springframework.boot.ssl.pem.PemSslStoreDetails;
 import org.springframework.core.annotation.MergedAnnotation;
 import org.springframework.core.annotation.MergedAnnotations;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 /**
  * {@link SslBundle} source created from annotations. Used as a cache key and as a
@@ -52,14 +53,15 @@ record SslBundleSource(Ssl ssl, PemKeyStore pemKeyStore, PemTrustStore pemTrustS
 		ssl = (ssl != null) ? ssl : MergedAnnotation.of(Ssl.class).synthesize();
 		boolean hasPem = (pemKeyStore != null || pemTrustStore != null);
 		boolean hasJks = (jksKeyStore != null || jksTrustStore != null);
-		Assert.state((!hasPem && !hasJks) || (hasPem && !hasJks) || (!hasPem && hasJks),
+		Assert.state(hasPem || hasJks, "Either PEM or JKS has to be configured");
+		Assert.state((hasPem && !hasJks) || (!hasPem && hasJks),
 				"PEM and JKS store annotations cannot be used together");
 	}
 
 	SslBundle getSslBundle() {
 		SslStoreBundle stores = stores();
-		SslOptions options = SslOptions.of(this.ssl.ciphers(), this.ssl.enabledProtocols());
-		SslBundleKey key = SslBundleKey.of(this.ssl.keyPassword(), this.ssl.keyAlias());
+		SslOptions options = SslOptions.of(nullIfEmpty(this.ssl.ciphers()), nullIfEmpty(this.ssl.enabledProtocols()));
+		SslBundleKey key = SslBundleKey.of(nullIfEmpty(this.ssl.keyPassword()), nullIfEmpty(this.ssl.keyAlias()));
 		String protocol = this.ssl.protocol();
 		return SslBundle.of(stores, key, options, protocol);
 	}
@@ -76,34 +78,47 @@ record SslBundleSource(Ssl ssl, PemKeyStore pemKeyStore, PemTrustStore pemTrustS
 
 	private PemSslStoreDetails pemKeyStoreDetails() {
 		PemKeyStore store = this.pemKeyStore;
-		return (store != null) ? new PemSslStoreDetails(store.type(), store.certificate(), store.privateKey(),
-				store.privateKeyPassword()) : null;
+		return (store != null) ? new PemSslStoreDetails(nullIfEmpty(store.type()), nullIfEmpty(store.certificate()),
+				nullIfEmpty(store.privateKey()), nullIfEmpty(store.privateKeyPassword())) : null;
 	}
 
 	private PemSslStoreDetails pemTrustStoreDetails() {
 		PemTrustStore store = this.pemTrustStore;
-		return (store != null) ? new PemSslStoreDetails(store.type(), store.certificate(), store.privateKey(),
-				store.privateKeyPassword()) : null;
-	}
-
-	private JksSslStoreDetails jksTrustStoreDetails() {
-		JksKeyStore store = this.jksKeyStore;
-		return (store != null)
-				? new JksSslStoreDetails(store.type(), store.provider(), store.location(), store.password()) : null;
+		return (store != null) ? new PemSslStoreDetails(nullIfEmpty(store.type()), nullIfEmpty(store.certificate()),
+				nullIfEmpty(store.privateKey()), nullIfEmpty(store.privateKeyPassword())) : null;
 	}
 
 	private JksSslStoreDetails jksKeyStoreDetails() {
+		JksKeyStore store = this.jksKeyStore;
+		return (store != null) ? new JksSslStoreDetails(nullIfEmpty(store.type()), nullIfEmpty(store.provider()),
+				nullIfEmpty(store.location()), nullIfEmpty(store.password())) : null;
+	}
+
+	private JksSslStoreDetails jksTrustStoreDetails() {
 		JksTrustStore store = this.jksTrustStore;
-		return (store != null)
-				? new JksSslStoreDetails(store.type(), store.provider(), store.location(), store.password()) : null;
+		return (store != null) ? new JksSslStoreDetails(nullIfEmpty(store.type()), nullIfEmpty(store.provider()),
+				nullIfEmpty(store.location()), nullIfEmpty(store.password())) : null;
+	}
+
+	private String nullIfEmpty(String string) {
+		if (StringUtils.hasLength(string)) {
+			return string;
+		}
+		return null;
+	}
+
+	private String[] nullIfEmpty(String[] array) {
+		if (array == null || array.length == 0) {
+			return null;
+		}
+		return array;
 	}
 
 	static SslBundleSource get(MergedAnnotations annotations) {
 		return get(null, null, annotations);
 	}
 
-	static SslBundleSource get(ConfigurableListableBeanFactory beanFactory, String beanName,
-			MergedAnnotations annotations) {
+	static SslBundleSource get(ListableBeanFactory beanFactory, String beanName, MergedAnnotations annotations) {
 		Ssl ssl = getAnnotation(beanFactory, beanName, annotations, Ssl.class);
 		PemKeyStore pemKeyStore = getAnnotation(beanFactory, beanName, annotations, PemKeyStore.class);
 		PemTrustStore pemTrustStore = getAnnotation(beanFactory, beanName, annotations, PemTrustStore.class);
@@ -116,7 +131,7 @@ record SslBundleSource(Ssl ssl, PemKeyStore pemKeyStore, PemTrustStore pemTrustS
 		return new SslBundleSource(ssl, pemKeyStore, pemTrustStore, jksKeyStore, jksTrustStore);
 	}
 
-	private static <A extends Annotation> A getAnnotation(ConfigurableListableBeanFactory beanFactory, String beanName,
+	private static <A extends Annotation> A getAnnotation(ListableBeanFactory beanFactory, String beanName,
 			MergedAnnotations annotations, Class<A> annotationType) {
 		Set<A> found = (beanFactory != null) ? beanFactory.findAllAnnotationsOnBean(beanName, annotationType, false)
 				: Collections.emptySet();
@@ -124,9 +139,10 @@ record SslBundleSource(Ssl ssl, PemKeyStore pemKeyStore, PemTrustStore pemTrustS
 			found = new LinkedHashSet<>(found);
 			annotations.stream(annotationType).map(MergedAnnotation::synthesize).forEach(found::add);
 		}
-		Assert.state(found.size() <= 1,
-				() -> "Unable to find single %s annotation".formatted(annotationType.getName()));
-		return (!found.isEmpty()) ? found.iterator().next() : null;
+		int size = found.size();
+		Assert.state(size <= 1,
+				() -> "Expected single %s annotation, but found %d".formatted(annotationType.getName(), size));
+		return (size > 0) ? found.iterator().next() : null;
 	}
 
 }
