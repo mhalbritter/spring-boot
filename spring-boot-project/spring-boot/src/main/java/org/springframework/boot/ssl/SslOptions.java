@@ -38,7 +38,7 @@ public interface SslOptions {
 	/**
 	 * {@link SslOptions} that returns {@code null} results.
 	 */
-	SslOptions NONE = of((Set<String>) null, (Set<String>) null);
+	SslOptions NONE = of(null, (Set<String>) null);
 
 	/**
 	 * Return if any SSL options have been specified.
