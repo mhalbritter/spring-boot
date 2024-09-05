@@ -25,6 +25,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.data.elasticsearch.DataElasticsearchTest;
+import org.springframework.boot.testcontainers.service.connection.PemTrustStore;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.testsupport.container.TestImage;
 import org.springframework.data.elasticsearch.client.elc.ElasticsearchTemplate;
@@ -37,12 +38,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Moritz Halbritter
  */
 @Testcontainers(disabledWithoutDocker = true)
-@DataElasticsearchTest(properties = { "spring.ssl.bundle.pem.client.truststore.certificate=classpath:ssl.crt",
-		"spring.elasticsearch.connection-timeout=120s", "spring.elasticsearch.socket-timeout=120s" })
+@DataElasticsearchTest(
+		properties = { "spring.elasticsearch.connection-timeout=120s", "spring.elasticsearch.socket-timeout=120s" })
 class SampleElasticSearchSslApplicationTests {
 
 	@Container
-	@ServiceConnection(sslBundle = "client")
+	@ServiceConnection
+	@PemTrustStore(certificate = "classpath:ssl.crt")
 	static final ElasticsearchContainer elasticSearch = TestImage.container(SecureElasticsearchContainer.class);
 
 	@Autowired
