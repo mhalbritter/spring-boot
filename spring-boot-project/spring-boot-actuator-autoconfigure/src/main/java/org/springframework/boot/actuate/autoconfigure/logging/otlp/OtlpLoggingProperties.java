@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.actuate.autoconfigure.logging.opentelemetry.otlp;
+package org.springframework.boot.actuate.autoconfigure.logging.otlp;
 
 import java.time.Duration;
 import java.util.HashMap;

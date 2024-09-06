@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.actuate.autoconfigure.logging.opentelemetry.otlp;
+package org.springframework.boot.actuate.autoconfigure.logging.otlp;
 
 import org.springframework.boot.actuate.autoconfigure.opentelemetry.otlp.Transport;
 import org.springframework.boot.autoconfigure.service.connection.ConnectionDetails;

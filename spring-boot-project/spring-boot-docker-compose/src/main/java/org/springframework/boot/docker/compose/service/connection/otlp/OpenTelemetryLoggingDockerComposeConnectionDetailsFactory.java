@@ -16,7 +16,7 @@
 
 package org.springframework.boot.docker.compose.service.connection.otlp;
 
-import org.springframework.boot.actuate.autoconfigure.logging.opentelemetry.otlp.OtlpLoggingConnectionDetails;
+import org.springframework.boot.actuate.autoconfigure.logging.otlp.OtlpLoggingConnectionDetails;
 import org.springframework.boot.actuate.autoconfigure.opentelemetry.otlp.Transport;
 import org.springframework.boot.docker.compose.core.RunningService;
 import org.springframework.boot.docker.compose.service.connection.DockerComposeConnectionDetailsFactory;
@@ -37,7 +37,7 @@ class OpenTelemetryLoggingDockerComposeConnectionDetailsFactory
 
 	OpenTelemetryLoggingDockerComposeConnectionDetailsFactory() {
 		super("otel/opentelemetry-collector-contrib",
-				"org.springframework.boot.actuate.autoconfigure.logging.opentelemetry.otlp.OtlpLoggingAutoConfiguration");
+				"org.springframework.boot.actuate.autoconfigure.logging.otlp.OtlpLoggingAutoConfiguration");
 	}
 
 	@Override

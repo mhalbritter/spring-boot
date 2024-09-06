@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.actuate.autoconfigure.logging.opentelemetry.otlp;
+package org.springframework.boot.actuate.autoconfigure.logging.otlp;
 
 import io.opentelemetry.exporter.otlp.http.logs.OtlpHttpLogRecordExporter;
 import io.opentelemetry.exporter.otlp.logs.OtlpGrpcLogRecordExporter;
@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import org.springframework.boot.actuate.autoconfigure.logging.opentelemetry.otlp.OtlpLoggingConfigurations.ConnectionDetails.PropertiesOtlpLoggingConnectionDetails;
+import org.springframework.boot.actuate.autoconfigure.logging.otlp.OtlpLoggingConfigurations.ConnectionDetails.PropertiesOtlpLoggingConnectionDetails;
 import org.springframework.boot.actuate.autoconfigure.opentelemetry.otlp.Transport;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.FilteredClassLoader;
