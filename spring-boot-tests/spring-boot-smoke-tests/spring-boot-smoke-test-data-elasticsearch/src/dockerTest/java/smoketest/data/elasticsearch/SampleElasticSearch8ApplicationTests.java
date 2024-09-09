@@ -32,17 +32,18 @@ import org.springframework.data.elasticsearch.client.elc.ElasticsearchTemplate;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Smoke tests for Elasticsearch.
+ * Smoke tests for Elasticsearch 8.
  *
  * @author Moritz Halbritter
  */
 @Testcontainers(disabledWithoutDocker = true)
 @DataElasticsearchTest
-class SampleElasticSearchApplicationTests {
+class SampleElasticSearch8ApplicationTests {
 
 	@Container
 	@ServiceConnection
-	static final ElasticsearchContainer elasticSearch = TestImage.container(ElasticsearchContainer.class);
+	static final ElasticsearchContainer elasticSearch = new ElasticsearchContainer(TestImage.ELASTICSEARCH_8.toString())
+		.withPassword("my-custom-password");
 
 	@Autowired
 	private ElasticsearchTemplate elasticsearchTemplate;
