@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,29 @@
 
 package org.springframework.boot.docker.compose.service.connection;
 
+import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Set;
 import java.util.function.Predicate;
 
 import org.springframework.boot.autoconfigure.service.connection.ConnectionDetails;
 import org.springframework.boot.autoconfigure.service.connection.ConnectionDetailsFactory;
+import org.springframework.boot.docker.compose.core.DockerComposeFile;
 import org.springframework.boot.docker.compose.core.RunningService;
 import org.springframework.boot.origin.Origin;
 import org.springframework.boot.origin.OriginProvider;
+import org.springframework.boot.ssl.SslBundle;
+import org.springframework.boot.ssl.SslBundleKey;
+import org.springframework.boot.ssl.SslOptions;
+import org.springframework.boot.ssl.jks.JksSslStoreBundle;
+import org.springframework.boot.ssl.jks.JksSslStoreDetails;
+import org.springframework.boot.ssl.pem.PemSslStoreBundle;
+import org.springframework.boot.ssl.pem.PemSslStoreDetails;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
 
 /**
  * Base class for {@link ConnectionDetailsFactory} implementations that provide
@@ -106,6 +118,8 @@ public abstract class DockerComposeConnectionDetailsFactory<D extends Connection
 
 		private final Origin origin;
 
+		private volatile SslBundle sslBundle;
+
 		/**
 		 * Create a new {@link DockerComposeConnectionDetails} instance.
 		 * @param runningService the source {@link RunningService}
@@ -118,6 +132,110 @@ public abstract class DockerComposeConnectionDetailsFactory<D extends Connection
 		@Override
 		public Origin getOrigin() {
 			return this.origin;
+		}
+
+		protected SslBundle getSslBundle(RunningService service) {
+			if (this.sslBundle != null) {
+				return this.sslBundle;
+			}
+			SslBundle jksSslBundle = getJksSslBundle(service);
+			SslBundle pemSslBundle = getPemSslBundle(service);
+			if (jksSslBundle == null && pemSslBundle == null) {
+				return null;
+			}
+			if (jksSslBundle != null && pemSslBundle != null) {
+				throw new IllegalStateException("Mutually exclusive JKS and PEM ssl bundles have been configured");
+			}
+			SslBundle sslBundle = (jksSslBundle != null) ? jksSslBundle : pemSslBundle;
+			this.sslBundle = sslBundle;
+			return sslBundle;
+		}
+
+		private SslBundle getJksSslBundle(RunningService service) {
+			JksSslStoreDetails keyStoreDetails = getJksSslStoreDetails(service, "keystore");
+			JksSslStoreDetails trustStoreDetails = getJksSslStoreDetails(service, "truststore");
+			if (keyStoreDetails == null && trustStoreDetails == null) {
+				return null;
+			}
+			SslBundleKey key = SslBundleKey.of(
+					service.labels().get("org.springframework.boot.ssl-bundle.jks.key.alias"),
+					service.labels().get("org.springframework.boot.ssl-bundle.jks.key.password"));
+			SslOptions options = createSslOptions(
+					service.labels().get("org.springframework.boot.ssl-bundle.jks.options.ciphers"),
+					service.labels().get("org.springframework.boot.ssl-bundle.jks.options.enabled-protocols"));
+			String protocol = service.labels().get("org.springframework.boot.ssl-bundle.jks.protocol");
+			return SslBundle.of(new JksSslStoreBundle(keyStoreDetails, trustStoreDetails), key, options, protocol);
+		}
+
+		private JksSslStoreDetails getJksSslStoreDetails(RunningService service, String storeType) {
+			String type = service.labels().get("org.springframework.boot.ssl-bundle.jks.%s.type".formatted(storeType));
+			String provider = service.labels()
+				.get("org.springframework.boot.ssl-bundle.jks.%s.provider".formatted(storeType));
+			String location = service.labels()
+				.get("org.springframework.boot.ssl-bundle.jks.%s.location".formatted(storeType));
+			String password = service.labels()
+				.get("org.springframework.boot.ssl-bundle.jks.%s.password".formatted(storeType));
+			if (location == null) {
+				return null;
+			}
+			Path workingDirectory = getWorkingDirectory(service);
+			return new JksSslStoreDetails(type, provider, "file:" + workingDirectory.resolve(location).toAbsolutePath(),
+					password);
+		}
+
+		private Path getWorkingDirectory(RunningService runningService) {
+			DockerComposeFile composeFile = runningService.composeFile();
+			if (composeFile == null || CollectionUtils.isEmpty(composeFile.getFiles())) {
+				return Path.of(".").toAbsolutePath();
+			}
+			return composeFile.getFiles().get(0).toPath().getParent();
+		}
+
+		private SslOptions createSslOptions(String ciphers, String enabledProtocols) {
+			Set<String> ciphersSet = null;
+			if (StringUtils.hasLength(ciphers)) {
+				ciphersSet = StringUtils.commaDelimitedListToSet(ciphers);
+			}
+			Set<String> enabledProtocolsSet = null;
+			if (StringUtils.hasLength(enabledProtocols)) {
+				enabledProtocolsSet = StringUtils.commaDelimitedListToSet(enabledProtocols);
+			}
+			return SslOptions.of(ciphersSet, enabledProtocolsSet);
+		}
+
+		private SslBundle getPemSslBundle(RunningService service) {
+			PemSslStoreDetails keyStoreDetails = getPemSslStoreDetails(service, "keystore");
+			PemSslStoreDetails trustStoreDetails = getPemSslStoreDetails(service, "truststore");
+			if (keyStoreDetails == null && trustStoreDetails == null) {
+				return null;
+			}
+			SslBundleKey key = SslBundleKey.of(
+					service.labels().get("org.springframework.boot.ssl-bundle.pem.key.alias"),
+					service.labels().get("org.springframework.boot.ssl-bundle.pem.key.password"));
+			SslOptions options = createSslOptions(
+					service.labels().get("org.springframework.boot.ssl-bundle.pem.options.ciphers"),
+					service.labels().get("org.springframework.boot.ssl-bundle.pem.options.enabled-protocols"));
+			String protocol = service.labels().get("org.springframework.boot.ssl-bundle.pem.protocol");
+			return SslBundle.of(new PemSslStoreBundle(keyStoreDetails, trustStoreDetails), key, options, protocol);
+		}
+
+		private PemSslStoreDetails getPemSslStoreDetails(RunningService service, String storeType) {
+			String type = service.labels().get("org.springframework.boot.ssl-bundle.pem.%s.type".formatted(storeType));
+			String certificate = service.labels()
+				.get("org.springframework.boot.ssl-bundle.pem.%s.certificate".formatted(storeType));
+			String privateKey = service.labels()
+				.get("org.springframework.boot.ssl-bundle.pem.%s.private-key".formatted(storeType));
+			String privateKeyPassword = service.labels()
+				.get("org.springframework.boot.ssl-bundle.pem.%s.private-key-password".formatted(storeType));
+			if (certificate == null && privateKey == null) {
+				return null;
+			}
+			Path workingDirectory = getWorkingDirectory(service);
+			String certificatePath = (certificate != null)
+					? "file:" + workingDirectory.resolve(certificate).toAbsolutePath() : null;
+			String privateKeyPath = (privateKey != null)
+					? "file:" + workingDirectory.resolve(privateKey).toAbsolutePath() : null;
+			return new PemSslStoreDetails(type, certificatePath, privateKeyPath, privateKeyPassword);
 		}
 
 	}

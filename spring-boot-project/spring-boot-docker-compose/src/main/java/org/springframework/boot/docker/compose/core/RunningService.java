@@ -64,4 +64,13 @@ public interface RunningService {
 	 */
 	Map<String, String> labels();
 
+	/**
+	 * Return the Docker Compose file for the service.
+	 * @return the Docker Compose file
+	 * @since 3.4.0
+	 */
+	default DockerComposeFile composeFile() {
+		return null;
+	}
+
 }

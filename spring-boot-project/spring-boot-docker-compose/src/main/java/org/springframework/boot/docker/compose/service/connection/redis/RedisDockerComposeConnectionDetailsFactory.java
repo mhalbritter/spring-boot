@@ -57,7 +57,7 @@ class RedisDockerComposeConnectionDetailsFactory extends DockerComposeConnection
 
 		RedisDockerComposeConnectionDetails(RunningService service) {
 			super(service);
-			this.standalone = Standalone.of(service.host(), service.ports().get(REDIS_PORT));
+			this.standalone = Standalone.of(service.host(), service.ports().get(REDIS_PORT), getSslBundle(service));
 		}
 
 		@Override
