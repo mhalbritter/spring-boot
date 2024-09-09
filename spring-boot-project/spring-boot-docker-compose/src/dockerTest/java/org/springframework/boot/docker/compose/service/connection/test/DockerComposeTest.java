@@ -44,6 +44,7 @@ import org.springframework.boot.testsupport.process.DisabledIfProcessUnavailable
  * closed.
  *
  * @author Andy Wilkinson
+ * @author Moritz Halbritter
  */
 @Test
 @Target(ElementType.METHOD)
@@ -62,6 +63,13 @@ public @interface DockerComposeTest {
 	 * @return the compose file
 	 */
 	String composeFile();
+
+	/**
+	 * Additional resources to copy next to the compose file. Loaded as a classpath
+	 * resource relative to the test class.
+	 * @return the additional resources to copy
+	 */
+	String[] additionalResources() default {};
 
 	/**
 	 * The Docker image reference.
