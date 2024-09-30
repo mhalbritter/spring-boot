@@ -26,6 +26,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.data.elasticsearch.DataElasticsearchTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.boot.testcontainers.service.connection.Ssl;
 import org.springframework.boot.testsupport.container.TestImage;
 import org.springframework.data.elasticsearch.client.elc.ElasticsearchTemplate;
 
@@ -42,6 +43,8 @@ class SampleElasticSearch8ApplicationTests {
 
 	@Container
 	@ServiceConnection
+	// TODO MH: Is it possible to use @Ssl as a signal to auto-extract the cert? Putting @Jks... on it switches of the extraction
+	@Ssl
 	static final ElasticsearchContainer elasticSearch = new ElasticsearchContainer(TestImage.ELASTICSEARCH_8.toString())
 		.withPassword("my-custom-password");
 

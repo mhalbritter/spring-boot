@@ -9,13 +9,14 @@ services:
       - ssl-cert
     command: 'redis-server --tls-port 6379 --port 0 --tls-cert-file /run/secrets/ssl-cert --tls-key-file /run/secrets/ssl-key --tls-ca-cert-file /run/secrets/ssl-ca'
     labels:
+      # TODO MH: Try to add support for classpath: prefixes. Look what the resource loader does.
       - 'org.springframework.boot.ssl-bundle.pem.keystore.certificate=client.crt'
       - 'org.springframework.boot.ssl-bundle.pem.keystore.private-key=client.key'
       - 'org.springframework.boot.ssl-bundle.pem.truststore.certificate=ca.crt'
 secrets:
   ssl-ca:
-    file: './ca.crt'
+    file: 'ca.crt'
   ssl-key:
-    file: './server.key'
+    file: 'server.key'
   ssl-cert:
-    file: './server.crt'
+    file: 'server.crt'
