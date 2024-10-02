@@ -28,6 +28,7 @@ import java.util.function.Supplier;
 import org.springframework.boot.io.ApplicationResourceLoader;
 import org.springframework.boot.ssl.SslStoreBundle;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.style.ToStringCreator;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -49,15 +50,30 @@ public class JksSslStoreBundle implements SslStoreBundle {
 
 	private final Supplier<KeyStore> trustStore;
 
+	private final ResourceLoader resourceLoader;
+
 	/**
 	 * Create a new {@link JksSslStoreBundle} instance.
 	 * @param keyStoreDetails the key store details
 	 * @param trustStoreDetails the trust store details
 	 */
 	public JksSslStoreBundle(JksSslStoreDetails keyStoreDetails, JksSslStoreDetails trustStoreDetails) {
+		this(keyStoreDetails, trustStoreDetails, null);
+	}
+
+	/**
+	 * Create a new {@link JksSslStoreBundle} instance.
+	 * @param keyStoreDetails the key store details
+	 * @param trustStoreDetails the trust store details
+	 * @param resourceLoader the resource loader to use
+	 * @since 3.4.0
+	 */
+	public JksSslStoreBundle(JksSslStoreDetails keyStoreDetails, JksSslStoreDetails trustStoreDetails,
+			ResourceLoader resourceLoader) {
 		this.keyStoreDetails = keyStoreDetails;
 		this.keyStore = SingletonSupplier.of(() -> createKeyStore("key", this.keyStoreDetails));
 		this.trustStore = SingletonSupplier.of(() -> createKeyStore("trust", trustStoreDetails));
+		this.resourceLoader = (resourceLoader != null) ? resourceLoader : new ApplicationResourceLoader();
 	}
 
 	@Override
@@ -116,7 +132,7 @@ public class JksSslStoreBundle implements SslStoreBundle {
 	private void loadKeyStore(KeyStore store, String location, char[] password) {
 		Assert.state(StringUtils.hasText(location), () -> "Location must not be empty or null");
 		try {
-			Resource resource = new ApplicationResourceLoader().getResource(location);
+			Resource resource = this.resourceLoader.getResource(location);
 			try (InputStream stream = resource.getInputStream()) {
 				store.load(stream, password);
 			}

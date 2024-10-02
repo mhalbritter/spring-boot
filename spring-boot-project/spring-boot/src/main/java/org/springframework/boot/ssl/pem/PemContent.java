@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.boot.io.ApplicationResourceLoader;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.util.Assert;
 import org.springframework.util.StreamUtils;
 import org.springframework.util.StringUtils;
@@ -42,6 +43,7 @@ import org.springframework.util.StringUtils;
  *
  * @author Scott Frederick
  * @author Phillip Webb
+ * @author Moritz Halbritter
  * @since 3.2.0
  */
 public final class PemContent {
@@ -114,6 +116,19 @@ public final class PemContent {
 	 * @throws IOException on IO error
 	 */
 	static PemContent load(String content) throws IOException {
+		return load(content, null);
+	}
+
+	/**
+	 * Load {@link PemContent} from the given content (either the PEM content itself or a
+	 * reference to the resource to load).
+	 * @param content the content to load
+	 * @param resourceLoader the resource loader to use
+	 * @return a new {@link PemContent} instance or {@code null}
+	 * @throws IOException on IO error
+	 * @since 3.4.0
+	 */
+	static PemContent load(String content, ResourceLoader resourceLoader) throws IOException {
 		if (!StringUtils.hasLength(content)) {
 			return null;
 		}
@@ -121,7 +136,9 @@ public final class PemContent {
 			return new PemContent(content);
 		}
 		try {
-			Resource resource = new ApplicationResourceLoader().getResource(content);
+			ResourceLoader resourceLoaderToUse = (resourceLoader != null) ? resourceLoader
+					: new ApplicationResourceLoader();
+			Resource resource = resourceLoaderToUse.getResource(content);
 			return load(resource.getInputStream());
 		}
 		catch (IOException | UncheckedIOException ex) {

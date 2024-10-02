@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.List;
 
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.util.Assert;
 
 /**
@@ -90,13 +91,25 @@ public interface PemSslStore {
 	 * Return a {@link PemSslStore} instance loaded using the given
 	 * {@link PemSslStoreDetails}.
 	 * @param details the PEM store details
-	 * @return a loaded {@link PemSslStore} or {@code null}.
+	 * @return a loaded {@link PemSslStore} or {@code null}
 	 */
 	static PemSslStore load(PemSslStoreDetails details) {
+		return load(details, null);
+	}
+
+	/**
+	 * Return a {@link PemSslStore} instance loaded using the given
+	 * {@link PemSslStoreDetails}.
+	 * @param details the PEM store details
+	 * @param resourceLoader the resource loader to use
+	 * @return a loaded {@link PemSslStore} or {@code null}
+	 * @since 3.4.0
+	 */
+	static PemSslStore load(PemSslStoreDetails details, ResourceLoader resourceLoader) {
 		if (details == null || details.isEmpty()) {
 			return null;
 		}
-		return new LoadedPemSslStore(details);
+		return new LoadedPemSslStore(details, resourceLoader);
 	}
 
 	/**

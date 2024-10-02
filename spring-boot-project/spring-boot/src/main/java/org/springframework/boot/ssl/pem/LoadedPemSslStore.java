@@ -23,6 +23,7 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.function.Supplier;
 
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.function.SingletonSupplier;
@@ -42,11 +43,14 @@ final class LoadedPemSslStore implements PemSslStore {
 
 	private final Supplier<PrivateKey> privateKeySupplier;
 
-	LoadedPemSslStore(PemSslStoreDetails details) {
+	private final ResourceLoader resourceLoader;
+
+	LoadedPemSslStore(PemSslStoreDetails details, ResourceLoader resourceLoader) {
 		Assert.notNull(details, "Details must not be null");
 		this.details = details;
 		this.certificatesSupplier = supplier(() -> loadCertificates(details));
 		this.privateKeySupplier = supplier(() -> loadPrivateKey(details));
+		this.resourceLoader = resourceLoader;
 	}
 
 	private static <T> Supplier<T> supplier(ThrowingSupplier<T> supplier) {
@@ -57,8 +61,8 @@ final class LoadedPemSslStore implements PemSslStore {
 		return new UncheckedIOException(message, (IOException) cause);
 	}
 
-	private static List<X509Certificate> loadCertificates(PemSslStoreDetails details) throws IOException {
-		PemContent pemContent = PemContent.load(details.certificates());
+	private List<X509Certificate> loadCertificates(PemSslStoreDetails details) throws IOException {
+		PemContent pemContent = PemContent.load(details.certificates(), this.resourceLoader);
 		if (pemContent == null) {
 			return null;
 		}
@@ -67,8 +71,8 @@ final class LoadedPemSslStore implements PemSslStore {
 		return certificates;
 	}
 
-	private static PrivateKey loadPrivateKey(PemSslStoreDetails details) throws IOException {
-		PemContent pemContent = PemContent.load(details.privateKey());
+	private PrivateKey loadPrivateKey(PemSslStoreDetails details) throws IOException {
+		PemContent pemContent = PemContent.load(details.privateKey(), this.resourceLoader);
 		return (pemContent != null) ? pemContent.getPrivateKey(details.privateKeyPassword()) : null;
 	}
 
@@ -99,12 +103,12 @@ final class LoadedPemSslStore implements PemSslStore {
 
 	@Override
 	public PemSslStore withAlias(String alias) {
-		return new LoadedPemSslStore(this.details.withAlias(alias));
+		return new LoadedPemSslStore(this.details.withAlias(alias), this.resourceLoader);
 	}
 
 	@Override
 	public PemSslStore withPassword(String password) {
-		return new LoadedPemSslStore(this.details.withPassword(password));
+		return new LoadedPemSslStore(this.details.withPassword(password), this.resourceLoader);
 	}
 
 }
