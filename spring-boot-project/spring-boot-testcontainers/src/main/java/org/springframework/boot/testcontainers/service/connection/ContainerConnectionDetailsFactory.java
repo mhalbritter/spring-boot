@@ -213,6 +213,8 @@ public abstract class ContainerConnectionDetailsFactory<C extends Container<?>, 
 			return sslBundle;
 		}
 
+		// TODO: Add something more generic, like getting the annotations of the field / @Bean method?
+
 		/**
 		 * Whether {@link SslBundle} extraction is enabled.
 		 * @return whether {@link SslBundle} extraction is enabled.
