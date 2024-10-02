@@ -45,24 +45,32 @@ import org.springframework.util.StringUtils;
  * @param jksKeyStore the {@link JksKeyStore @JksKeyStore} annotation
  * @param jksTrustStore the {@link JksTrustStore @JksTrustStore} annotation
  * @author Phillip Webb
+ * @author Moritz Halbritter
  */
 record SslBundleSource(Ssl ssl, PemKeyStore pemKeyStore, PemTrustStore pemTrustStore, JksKeyStore jksKeyStore,
 		JksTrustStore jksTrustStore) {
 
 	SslBundleSource {
-		ssl = (ssl != null) ? ssl : MergedAnnotation.of(Ssl.class).synthesize();
 		boolean hasPem = (pemKeyStore != null || pemTrustStore != null);
 		boolean hasJks = (jksKeyStore != null || jksTrustStore != null);
-		Assert.state(hasPem || hasJks, "Either PEM or JKS has to be configured");
-		Assert.state((hasPem && !hasJks) || (!hasPem && hasJks),
-				"PEM and JKS store annotations cannot be used together");
+		if (hasJks && hasPem) {
+			throw new IllegalStateException("PEM and JKS store annotations cannot be used together");
+		}
+	}
+
+	boolean hasSslAnnotation() {
+		return this.ssl != null;
 	}
 
 	SslBundle getSslBundle() {
 		SslStoreBundle stores = stores();
-		SslOptions options = SslOptions.of(nullIfEmpty(this.ssl.ciphers()), nullIfEmpty(this.ssl.enabledProtocols()));
-		SslBundleKey key = SslBundleKey.of(nullIfEmpty(this.ssl.keyPassword()), nullIfEmpty(this.ssl.keyAlias()));
-		String protocol = this.ssl.protocol();
+		if (stores == null) {
+			return null;
+		}
+		Ssl ssl = (this.ssl != null) ? this.ssl : MergedAnnotation.of(Ssl.class).synthesize();
+		SslOptions options = SslOptions.of(nullIfEmpty(ssl.ciphers()), nullIfEmpty(ssl.enabledProtocols()));
+		SslBundleKey key = SslBundleKey.of(nullIfEmpty(ssl.keyPassword()), nullIfEmpty(ssl.keyAlias()));
+		String protocol = ssl.protocol();
 		return SslBundle.of(stores, key, options, protocol);
 	}
 

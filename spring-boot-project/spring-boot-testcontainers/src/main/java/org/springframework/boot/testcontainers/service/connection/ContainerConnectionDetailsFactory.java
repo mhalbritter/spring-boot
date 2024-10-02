@@ -213,6 +213,17 @@ public abstract class ContainerConnectionDetailsFactory<C extends Container<?>, 
 			return sslBundle;
 		}
 
+		/**
+		 * Whether {@link SslBundle} extraction is enabled.
+		 * @return whether {@link SslBundle} extraction is enabled.
+		 */
+		protected boolean isSslBundleExtractionEnabled() {
+			if (this.source.getSslBundleSource() == null) {
+				return false;
+			}
+			return this.source.getSslBundleSource().hasSslAnnotation();
+		}
+
 		@Override
 		public Origin getOrigin() {
 			return this.source.getOrigin();

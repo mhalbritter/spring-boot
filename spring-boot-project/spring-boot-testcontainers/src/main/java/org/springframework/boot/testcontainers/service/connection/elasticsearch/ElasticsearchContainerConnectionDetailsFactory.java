@@ -97,12 +97,14 @@ class ElasticsearchContainerConnectionDetailsFactory
 				this.sslBundle = sslBundle;
 				return sslBundle;
 			}
-			byte[] caCertificate = getContainer().caCertAsBytes().orElse(null);
-			if (caCertificate != null) {
-				KeyStore trustStore = createTrustStore(caCertificate);
-				sslBundle = createSslBundleWithTrustStore(trustStore);
-				this.sslBundle = sslBundle;
-				return sslBundle;
+			if (isSslBundleExtractionEnabled()) {
+				byte[] caCertificate = getContainer().caCertAsBytes().orElse(null);
+				if (caCertificate != null) {
+					KeyStore trustStore = createTrustStore(caCertificate);
+					sslBundle = createSslBundleWithTrustStore(trustStore);
+					this.sslBundle = sslBundle;
+					return sslBundle;
+				}
 			}
 			return null;
 		}

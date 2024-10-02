@@ -16,6 +16,11 @@
 
 package org.springframework.boot.testcontainers.service.connection;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
 import org.springframework.boot.ssl.SslBundle;
 import org.springframework.boot.ssl.SslBundleKey;
 import org.springframework.boot.ssl.SslOptions;
@@ -24,10 +29,15 @@ import org.springframework.boot.ssl.SslOptions;
  * Configures the {@link SslOptions}, {@link SslBundleKey @SslBundleKey} and
  * {@link SslBundle#getProtocol() protocol} to use with an {@link SslBundle SSL} supported
  * {@link ServiceConnection @ServiceConnection}.
+ * <p>
+ * Also serves as a signal to enable automatic {@link SslBundle} extraction from supported
+ * containers.
  *
  * @author Phillip Webb
  * @since 3.4.0
  */
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ ElementType.FIELD, ElementType.METHOD, ElementType.ANNOTATION_TYPE })
 public @interface Ssl {
 
 	/**
