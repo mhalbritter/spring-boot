@@ -16,6 +16,11 @@
 
 package org.springframework.boot.io;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Path;
+
 import org.springframework.core.io.ContextResource;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.FileSystemResource;
@@ -30,9 +35,12 @@ import org.springframework.core.io.support.SpringFactoriesLoader;
  * {@code DefaultResourceLoader}, which resolves unqualified paths to classpath resources.
  *
  * @author Scott Frederick
+ * @author Moritz Halbritter
  * @since 3.3.0
  */
 public class ApplicationResourceLoader extends DefaultResourceLoader {
+
+	private final Path workingDirectory;
 
 	/**
 	 * Create a new {@code ApplicationResourceLoader}.
@@ -48,9 +56,47 @@ public class ApplicationResourceLoader extends DefaultResourceLoader {
 	 * resource access
 	 */
 	public ApplicationResourceLoader(ClassLoader classLoader) {
+		this(classLoader, null);
+	}
+
+	/**
+	 * Create a new {@code ApplicationResourceLoader} with the given working directory.
+	 * @param classLoader the {@link ClassLoader} to load class path resources with, or
+	 * {@code null} for using the thread context class loader at the time of actual
+	 * resource access
+	 * @param workingDirectory the working directory to resolve relative filenames against
+	 * @since 3.4.0
+	 */
+	public ApplicationResourceLoader(ClassLoader classLoader, Path workingDirectory) {
 		super(classLoader);
 		SpringFactoriesLoader loader = SpringFactoriesLoader.forDefaultResourceLocation(classLoader);
 		getProtocolResolvers().addAll(loader.load(ProtocolResolver.class));
+		this.workingDirectory = workingDirectory;
+	}
+
+	@Override
+	public Resource getResource(String location) {
+		Resource resource = super.getResource(location);
+		if (this.workingDirectory == null) {
+			return resource;
+		}
+		if (!resource.isFile()) {
+			return resource;
+		}
+		return resolveFile(resource);
+	}
+
+	private Resource resolveFile(Resource resource) {
+		try {
+			File file = resource.getFile();
+			if (file.isAbsolute()) {
+				return resource;
+			}
+			return new FileSystemContextResource(new File(this.workingDirectory.toFile(), file.getPath()).getPath());
+		}
+		catch (IOException ex) {
+			throw new UncheckedIOException(ex);
+		}
 	}
 
 	@Override
