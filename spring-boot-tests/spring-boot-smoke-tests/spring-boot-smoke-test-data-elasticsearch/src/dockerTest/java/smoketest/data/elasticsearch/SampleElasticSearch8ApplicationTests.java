@@ -43,7 +43,8 @@ class SampleElasticSearch8ApplicationTests {
 
 	@Container
 	@ServiceConnection
-	// TODO MH: Is it possible to use @Ssl as a signal to auto-extract the cert? Putting @Jks... on it switches of the extraction
+	// TODO MH: Is it possible to use @Ssl as a signal to auto-extract the cert? Putting
+	// @Jks... on it switches of the extraction
 	@Ssl
 	static final ElasticsearchContainer elasticSearch = new ElasticsearchContainer(TestImage.ELASTICSEARCH_8.toString())
 		.withPassword("my-custom-password");

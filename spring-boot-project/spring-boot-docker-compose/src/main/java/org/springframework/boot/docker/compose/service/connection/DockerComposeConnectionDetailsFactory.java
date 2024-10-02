@@ -25,6 +25,7 @@ import org.springframework.boot.autoconfigure.service.connection.ConnectionDetai
 import org.springframework.boot.autoconfigure.service.connection.ConnectionDetailsFactory;
 import org.springframework.boot.docker.compose.core.DockerComposeFile;
 import org.springframework.boot.docker.compose.core.RunningService;
+import org.springframework.boot.io.ApplicationResourceLoader;
 import org.springframework.boot.origin.Origin;
 import org.springframework.boot.origin.OriginProvider;
 import org.springframework.boot.ssl.SslBundle;
@@ -32,6 +33,7 @@ import org.springframework.boot.ssl.SslBundleKey;
 import org.springframework.boot.ssl.SslOptions;
 import org.springframework.boot.ssl.jks.JksSslStoreBundle;
 import org.springframework.boot.ssl.jks.JksSslStoreDetails;
+import org.springframework.boot.ssl.pem.PemSslStore;
 import org.springframework.boot.ssl.pem.PemSslStoreBundle;
 import org.springframework.boot.ssl.pem.PemSslStoreDetails;
 import org.springframework.util.Assert;
@@ -164,7 +166,11 @@ public abstract class DockerComposeConnectionDetailsFactory<D extends Connection
 					service.labels().get("org.springframework.boot.ssl-bundle.jks.options.ciphers"),
 					service.labels().get("org.springframework.boot.ssl-bundle.jks.options.enabled-protocols"));
 			String protocol = service.labels().get("org.springframework.boot.ssl-bundle.jks.protocol");
-			return SslBundle.of(new JksSslStoreBundle(keyStoreDetails, trustStoreDetails), key, options, protocol);
+			Path workingDirectory = getWorkingDirectory(service);
+			return SslBundle.of(
+					new JksSslStoreBundle(keyStoreDetails, trustStoreDetails,
+							new ApplicationResourceLoader(getClass().getClassLoader(), workingDirectory)),
+					key, options, protocol);
 		}
 
 		private JksSslStoreDetails getJksSslStoreDetails(RunningService service, String storeType) {
@@ -178,15 +184,13 @@ public abstract class DockerComposeConnectionDetailsFactory<D extends Connection
 			if (location == null) {
 				return null;
 			}
-			Path workingDirectory = getWorkingDirectory(service);
-			return new JksSslStoreDetails(type, provider, "file:" + workingDirectory.resolve(location).toAbsolutePath(),
-					password);
+			return new JksSslStoreDetails(type, provider, location, password);
 		}
 
 		private Path getWorkingDirectory(RunningService runningService) {
 			DockerComposeFile composeFile = runningService.composeFile();
 			if (composeFile == null || CollectionUtils.isEmpty(composeFile.getFiles())) {
-				return Path.of(".").toAbsolutePath();
+				return Path.of(".");
 			}
 			return composeFile.getFiles().get(0).toPath().getParent();
 		}
@@ -216,7 +220,11 @@ public abstract class DockerComposeConnectionDetailsFactory<D extends Connection
 					service.labels().get("org.springframework.boot.ssl-bundle.pem.options.ciphers"),
 					service.labels().get("org.springframework.boot.ssl-bundle.pem.options.enabled-protocols"));
 			String protocol = service.labels().get("org.springframework.boot.ssl-bundle.pem.protocol");
-			return SslBundle.of(new PemSslStoreBundle(keyStoreDetails, trustStoreDetails), key, options, protocol);
+			Path workingDirectory = getWorkingDirectory(service);
+			ApplicationResourceLoader resourceLoader = new ApplicationResourceLoader(getClass().getClassLoader(),
+					workingDirectory);
+			return SslBundle.of(new PemSslStoreBundle(PemSslStore.load(keyStoreDetails, resourceLoader),
+					PemSslStore.load(trustStoreDetails, resourceLoader)), key, options, protocol);
 		}
 
 		private PemSslStoreDetails getPemSslStoreDetails(RunningService service, String storeType) {
@@ -230,12 +238,7 @@ public abstract class DockerComposeConnectionDetailsFactory<D extends Connection
 			if (certificate == null && privateKey == null) {
 				return null;
 			}
-			Path workingDirectory = getWorkingDirectory(service);
-			String certificatePath = (certificate != null)
-					? "file:" + workingDirectory.resolve(certificate).toAbsolutePath() : null;
-			String privateKeyPath = (privateKey != null)
-					? "file:" + workingDirectory.resolve(privateKey).toAbsolutePath() : null;
-			return new PemSslStoreDetails(type, certificatePath, privateKeyPath, privateKeyPassword);
+			return new PemSslStoreDetails(type, certificate, privateKey, privateKeyPassword);
 		}
 
 	}
