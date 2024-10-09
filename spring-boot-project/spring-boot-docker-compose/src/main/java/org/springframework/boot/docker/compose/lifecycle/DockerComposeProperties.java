@@ -62,6 +62,11 @@ public class DockerComposeProperties {
 	private String host;
 
 	/**
+	 * Arguments to pass to Docker Compose.
+	 */
+	private final List<String> arguments = new ArrayList<>();
+
+	/**
 	 * Start configuration.
 	 */
 	private final Start start = new Start();
@@ -90,6 +95,10 @@ public class DockerComposeProperties {
 
 	public List<File> getFile() {
 		return this.file;
+	}
+
+	public List<String> getArguments() {
+		return this.arguments;
 	}
 
 	public LifecycleManagement getLifecycleManagement() {

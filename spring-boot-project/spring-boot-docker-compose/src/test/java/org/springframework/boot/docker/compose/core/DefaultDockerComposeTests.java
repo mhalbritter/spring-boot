@@ -50,39 +50,43 @@ class DefaultDockerComposeTests {
 
 	@Test
 	void upRunsUpCommand() {
-		DefaultDockerCompose compose = new DefaultDockerCompose(this.cli, HOST);
+		DefaultDockerCompose compose = new DefaultDockerCompose(this.cli, HOST, List.of("--dry-run"));
 		compose.up(LogLevel.OFF, Collections.emptyList());
-		then(this.cli).should().run(new DockerCliCommand.ComposeUp(LogLevel.OFF, Collections.emptyList()));
+		then(this.cli).should()
+			.run(new DockerCliCommand.ComposeUp(LogLevel.OFF, List.of("--dry-run"), Collections.emptyList()));
 	}
 
 	@Test
 	void downRunsDownCommand() {
-		DefaultDockerCompose compose = new DefaultDockerCompose(this.cli, HOST);
+		DefaultDockerCompose compose = new DefaultDockerCompose(this.cli, HOST, List.of("--dry-run"));
 		Duration timeout = Duration.ofSeconds(1);
 		compose.down(timeout, Collections.emptyList());
-		then(this.cli).should().run(new DockerCliCommand.ComposeDown(timeout, Collections.emptyList()));
+		then(this.cli).should()
+			.run(new DockerCliCommand.ComposeDown(timeout, List.of("--dry-run"), Collections.emptyList()));
 	}
 
 	@Test
 	void startRunsStartCommand() {
-		DefaultDockerCompose compose = new DefaultDockerCompose(this.cli, HOST);
+		DefaultDockerCompose compose = new DefaultDockerCompose(this.cli, HOST, List.of("--dry-run"));
 		compose.start(LogLevel.OFF, Collections.emptyList());
-		then(this.cli).should().run(new DockerCliCommand.ComposeStart(LogLevel.OFF, Collections.emptyList()));
+		then(this.cli).should()
+			.run(new DockerCliCommand.ComposeStart(LogLevel.OFF, List.of("--dry-run"), Collections.emptyList()));
 	}
 
 	@Test
 	void stopRunsStopCommand() {
-		DefaultDockerCompose compose = new DefaultDockerCompose(this.cli, HOST);
+		DefaultDockerCompose compose = new DefaultDockerCompose(this.cli, HOST, List.of("--dry-run"));
 		Duration timeout = Duration.ofSeconds(1);
 		compose.stop(timeout, Collections.emptyList());
-		then(this.cli).should().run(new DockerCliCommand.ComposeStop(timeout, Collections.emptyList()));
+		then(this.cli).should()
+			.run(new DockerCliCommand.ComposeStop(timeout, List.of("--dry-run"), Collections.emptyList()));
 	}
 
 	@Test
 	void hasDefinedServicesWhenComposeConfigServicesIsEmptyReturnsFalse() {
 		willReturn(new DockerCliComposeConfigResponse("test", Collections.emptyMap())).given(this.cli)
-			.run(new DockerCliCommand.ComposeConfig());
-		DefaultDockerCompose compose = new DefaultDockerCompose(this.cli, HOST);
+			.run(new DockerCliCommand.ComposeConfig(List.of("--dry-run")));
+		DefaultDockerCompose compose = new DefaultDockerCompose(this.cli, HOST, List.of("--dry-run"));
 		assertThat(compose.hasDefinedServices()).isFalse();
 	}
 
@@ -91,8 +95,8 @@ class DefaultDockerComposeTests {
 		willReturn(new DockerCliComposeConfigResponse("test",
 				Map.of("redis", new DockerCliComposeConfigResponse.Service("redis"))))
 			.given(this.cli)
-			.run(new DockerCliCommand.ComposeConfig());
-		DefaultDockerCompose compose = new DefaultDockerCompose(this.cli, HOST);
+			.run(new DockerCliCommand.ComposeConfig(List.of("--dry-run")));
+		DefaultDockerCompose compose = new DefaultDockerCompose(this.cli, HOST, List.of("--dry-run"));
 		assertThat(compose.hasDefinedServices()).isTrue();
 	}
 
@@ -106,9 +110,9 @@ class DefaultDockerComposeTests {
 		HostConfig hostConfig = null;
 		DockerCliInspectResponse inspectResponse = new DockerCliInspectResponse(id, config, networkSettings,
 				hostConfig);
-		willReturn(List.of(psResponse)).given(this.cli).run(new DockerCliCommand.ComposePs());
+		willReturn(List.of(psResponse)).given(this.cli).run(new DockerCliCommand.ComposePs(List.of("--dry-run")));
 		willReturn(List.of(inspectResponse)).given(this.cli).run(new DockerCliCommand.Inspect(List.of(id)));
-		DefaultDockerCompose compose = new DefaultDockerCompose(this.cli, HOST);
+		DefaultDockerCompose compose = new DefaultDockerCompose(this.cli, HOST, List.of("--dry-run"));
 		List<RunningService> runningServices = compose.getRunningServices();
 		assertThat(runningServices).hasSize(1);
 		RunningService runningService = runningServices.get(0);
@@ -132,9 +136,9 @@ class DefaultDockerComposeTests {
 				hostConfig);
 		willReturn(List.of(new DockerCliContextResponse("test", true, "https://192.168.1.1"))).given(this.cli)
 			.run(new DockerCliCommand.Context());
-		willReturn(List.of(psResponse)).given(this.cli).run(new DockerCliCommand.ComposePs());
+		willReturn(List.of(psResponse)).given(this.cli).run(new DockerCliCommand.ComposePs(List.of("--dry-run")));
 		willReturn(List.of(inspectResponse)).given(this.cli).run(new DockerCliCommand.Inspect(List.of(id)));
-		DefaultDockerCompose compose = new DefaultDockerCompose(this.cli, null);
+		DefaultDockerCompose compose = new DefaultDockerCompose(this.cli, null, List.of("--dry-run"));
 		List<RunningService> runningServices = compose.getRunningServices();
 		assertThat(runningServices).hasSize(1);
 		RunningService runningService = runningServices.get(0);
@@ -150,9 +154,9 @@ class DefaultDockerComposeTests {
 		DockerCliInspectResponse inspectResponse = new DockerCliInspectResponse(longId, config, null, null);
 		willReturn(List.of(new DockerCliContextResponse("test", true, "https://192.168.1.1"))).given(this.cli)
 			.run(new DockerCliCommand.Context());
-		willReturn(List.of(psResponse)).given(this.cli).run(new DockerCliCommand.ComposePs());
+		willReturn(List.of(psResponse)).given(this.cli).run(new DockerCliCommand.ComposePs(List.of("--dry-run")));
 		willReturn(List.of(inspectResponse)).given(this.cli).run(new DockerCliCommand.Inspect(List.of(shortId)));
-		DefaultDockerCompose compose = new DefaultDockerCompose(this.cli, null);
+		DefaultDockerCompose compose = new DefaultDockerCompose(this.cli, null, List.of("--dry-run"));
 		List<RunningService> runningServices = compose.getRunningServices();
 		assertThat(runningServices).hasSize(1);
 	}

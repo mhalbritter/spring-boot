@@ -71,30 +71,30 @@ class DockerCliIntegrationTests {
 		DockerCli cli = new DockerCli(null, DockerComposeFile.of(composeFile), Collections.emptySet());
 		try {
 			// Verify that no services are running (this is a fresh compose project)
-			List<DockerCliComposePsResponse> ps = cli.run(new ComposePs());
+			List<DockerCliComposePsResponse> ps = cli.run(new ComposePs(Collections.emptyList()));
 			assertThat(ps).isEmpty();
 			// List the config and verify that redis is there
-			DockerCliComposeConfigResponse config = cli.run(new ComposeConfig());
+			DockerCliComposeConfigResponse config = cli.run(new ComposeConfig(Collections.emptyList()));
 			assertThat(config.services()).containsOnlyKeys("redis");
 			// Run up
-			cli.run(new ComposeUp(LogLevel.INFO, Collections.emptyList()));
+			cli.run(new ComposeUp(LogLevel.INFO, Collections.emptyList(), Collections.emptyList()));
 			// Run ps and use id to run inspect on the id
-			ps = cli.run(new ComposePs());
+			ps = cli.run(new ComposePs(Collections.emptyList()));
 			assertThat(ps).hasSize(1);
 			String id = ps.get(0).id();
 			List<DockerCliInspectResponse> inspect = cli.run(new Inspect(List.of(id)));
 			assertThat(inspect).isNotEmpty();
 			assertThat(inspect.get(0).id()).startsWith(id);
 			// Run stop, then run ps and verify the services are stopped
-			cli.run(new ComposeStop(Duration.ofSeconds(10), Collections.emptyList()));
-			ps = cli.run(new ComposePs());
+			cli.run(new ComposeStop(Duration.ofSeconds(10), Collections.emptyList(), Collections.emptyList()));
+			ps = cli.run(new ComposePs(Collections.emptyList()));
 			assertThat(ps).isEmpty();
 			// Run start, verify service is there, then run down and verify they are gone
-			cli.run(new ComposeStart(LogLevel.INFO, Collections.emptyList()));
-			ps = cli.run(new ComposePs());
+			cli.run(new ComposeStart(LogLevel.INFO, Collections.emptyList(), Collections.emptyList()));
+			ps = cli.run(new ComposePs(Collections.emptyList()));
 			assertThat(ps).hasSize(1);
-			cli.run(new ComposeDown(Duration.ofSeconds(10), Collections.emptyList()));
-			ps = cli.run(new ComposePs());
+			cli.run(new ComposeDown(Duration.ofSeconds(10), Collections.emptyList(), Collections.emptyList()));
+			ps = cli.run(new ComposePs(Collections.emptyList()));
 			assertThat(ps).isEmpty();
 		}
 		finally {
@@ -109,12 +109,12 @@ class DockerCliIntegrationTests {
 		DockerCli cli = new DockerCli(null, DockerComposeFile.of(composeFiles), Collections.emptySet());
 		try {
 			// List the config and verify that both redis are there
-			DockerCliComposeConfigResponse config = cli.run(new ComposeConfig());
+			DockerCliComposeConfigResponse config = cli.run(new ComposeConfig(Collections.emptyList()));
 			assertThat(config.services()).containsOnlyKeys("redis1", "redis2");
 			// Run up
-			cli.run(new ComposeUp(LogLevel.INFO, Collections.emptyList()));
+			cli.run(new ComposeUp(LogLevel.INFO, Collections.emptyList(), Collections.emptyList()));
 			// Run ps and use id to run inspect on the id
-			List<DockerCliComposePsResponse> ps = cli.run(new ComposePs());
+			List<DockerCliComposePsResponse> ps = cli.run(new ComposePs(Collections.emptyList()));
 			assertThat(ps).hasSize(2);
 		}
 		finally {
@@ -125,7 +125,7 @@ class DockerCliIntegrationTests {
 
 	private static void quietComposeDown(DockerCli cli) {
 		try {
-			cli.run(new ComposeDown(Duration.ZERO, Collections.emptyList()));
+			cli.run(new ComposeDown(Duration.ZERO, Collections.emptyList(), Collections.emptyList()));
 		}
 		catch (RuntimeException ex) {
 			// Ignore

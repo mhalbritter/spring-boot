@@ -91,6 +91,8 @@ class DockerComposeLifecycleManagerTests {
 
 	private DockerComposeSkipCheck skipCheck;
 
+	private List<String> arguments;
+
 	@BeforeEach
 	void setup() throws IOException {
 		File file = new File(this.temp, "compose.yml");
@@ -359,6 +361,14 @@ class DockerComposeLifecycleManagerTests {
 	}
 
 	@Test
+	void startGetsDockerComposeWithArguments() {
+		this.properties.getArguments().add("--dry-run");
+		setUpRunningServices();
+		this.lifecycleManager.start();
+		assertThat(this.arguments).containsExactly("--dry-run");
+	}
+
+	@Test
 	void startPublishesEvent() {
 		EventCapturingListener listener = new EventCapturingListener();
 		this.eventListeners.add(listener);
@@ -519,8 +529,10 @@ class DockerComposeLifecycleManagerTests {
 		}
 
 		@Override
-		protected DockerCompose getDockerCompose(DockerComposeFile composeFile, Set<String> activeProfiles) {
+		protected DockerCompose getDockerCompose(DockerComposeFile composeFile, Set<String> activeProfiles,
+				List<String> arguments) {
 			DockerComposeLifecycleManagerTests.this.activeProfiles = activeProfiles;
+			DockerComposeLifecycleManagerTests.this.arguments = arguments;
 			return DockerComposeLifecycleManagerTests.this.dockerCompose;
 		}
 

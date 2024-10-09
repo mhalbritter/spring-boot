@@ -17,6 +17,7 @@
 package org.springframework.boot.docker.compose.core;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -125,8 +126,23 @@ public interface DockerCompose {
 	 * @return a {@link DockerCompose} instance
 	 */
 	static DockerCompose get(DockerComposeFile file, String hostname, Set<String> activeProfiles) {
+		return get(file, hostname, activeProfiles, Collections.emptyList());
+	}
+
+	/**
+	 * Factory method used to create a {@link DockerCompose} instance.
+	 * @param file the Docker Compose file
+	 * @param hostname the hostname used for services or {@code null} if the hostname
+	 * should be deduced
+	 * @param activeProfiles a set of the profiles that should be activated
+	 * @param arguments the arguments to pass to Docker Compose
+	 * @return a {@link DockerCompose} instance
+	 * @since 3.4.0
+	 */
+	static DockerCompose get(DockerComposeFile file, String hostname, Set<String> activeProfiles,
+			List<String> arguments) {
 		DockerCli cli = new DockerCli(null, file, activeProfiles);
-		return new DefaultDockerCompose(cli, hostname);
+		return new DefaultDockerCompose(cli, hostname, arguments);
 	}
 
 }

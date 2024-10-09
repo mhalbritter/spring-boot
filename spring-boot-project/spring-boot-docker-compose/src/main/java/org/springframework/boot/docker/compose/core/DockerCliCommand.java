@@ -18,6 +18,7 @@ package org.springframework.boot.docker.compose.core;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -108,7 +109,13 @@ abstract sealed class DockerCliCommand<R> {
 	protected static String[] join(Collection<String> command, Collection<String> args) {
 		List<String> result = new ArrayList<>(command);
 		result.addAll(args);
-		return result.toArray(new String[0]);
+		return result.toArray(String[]::new);
+	}
+
+	protected static String[] join(Collection<String> arguments, String... additionalArguments) {
+		List<String> result = new ArrayList<>(arguments);
+		result.addAll(Arrays.asList(additionalArguments));
+		return result.toArray(String[]::new);
 	}
 
 	/**
@@ -139,8 +146,9 @@ abstract sealed class DockerCliCommand<R> {
 	 */
 	static final class ComposeConfig extends DockerCliCommand<DockerCliComposeConfigResponse> {
 
-		ComposeConfig() {
-			super(Type.DOCKER_COMPOSE, DockerCliComposeConfigResponse.class, false, "config", "--format=json");
+		ComposeConfig(List<String> arguments) {
+			super(Type.DOCKER_COMPOSE, DockerCliComposeConfigResponse.class, false,
+					join(arguments, "config", "--format=json"));
 		}
 
 	}
@@ -150,8 +158,8 @@ abstract sealed class DockerCliCommand<R> {
 	 */
 	static final class ComposePs extends DockerCliCommand<List<DockerCliComposePsResponse>> {
 
-		ComposePs() {
-			super(Type.DOCKER_COMPOSE, DockerCliComposePsResponse.class, true, "ps", "--format=json");
+		ComposePs(List<String> arguments) {
+			super(Type.DOCKER_COMPOSE, DockerCliComposePsResponse.class, true, join(arguments, "ps", "--format=json"));
 		}
 
 	}
@@ -161,17 +169,23 @@ abstract sealed class DockerCliCommand<R> {
 	 */
 	static final class ComposeUp extends DockerCliCommand<Void> {
 
-		ComposeUp(LogLevel logLevel, List<String> arguments) {
-			super(Type.DOCKER_COMPOSE, logLevel, Void.class, false, getCommand(arguments));
+		/**
+		 * Creates a new {@link ComposeUp} instance.
+		 * @param logLevel the log level to use
+		 * @param arguments the arguments to pass to Docker Compose
+		 * @param commandArguments the arguments to pass to the up command
+		 */
+		ComposeUp(LogLevel logLevel, List<String> arguments, List<String> commandArguments) {
+			super(Type.DOCKER_COMPOSE, logLevel, Void.class, false, getCommand(arguments, commandArguments));
 		}
 
-		private static String[] getCommand(List<String> arguments) {
-			List<String> result = new ArrayList<>();
+		private static String[] getCommand(List<String> arguments, List<String> commandArguments) {
+			List<String> result = new ArrayList<>(arguments);
 			result.add("up");
 			result.add("--no-color");
 			result.add("--detach");
 			result.add("--wait");
-			result.addAll(arguments);
+			result.addAll(commandArguments);
 			return result.toArray(String[]::new);
 		}
 
@@ -182,16 +196,22 @@ abstract sealed class DockerCliCommand<R> {
 	 */
 	static final class ComposeDown extends DockerCliCommand<Void> {
 
-		ComposeDown(Duration timeout, List<String> arguments) {
-			super(Type.DOCKER_COMPOSE, Void.class, false, getCommand(timeout, arguments));
+		/**
+		 * Creates a new {@link ComposeDown} instance.
+		 * @param timeout the timeout to use
+		 * @param arguments the arguments to pass to Docker Compose
+		 * @param commandArguments the arguments to pass to the down command
+		 */
+		ComposeDown(Duration timeout, List<String> arguments, List<String> commandArguments) {
+			super(Type.DOCKER_COMPOSE, Void.class, false, getCommand(timeout, arguments, commandArguments));
 		}
 
-		private static String[] getCommand(Duration timeout, List<String> arguments) {
-			List<String> command = new ArrayList<>();
+		private static String[] getCommand(Duration timeout, List<String> arguments, List<String> commandArguments) {
+			List<String> command = new ArrayList<>(arguments);
 			command.add("down");
 			command.add("--timeout");
 			command.add(Long.toString(timeout.toSeconds()));
-			command.addAll(arguments);
+			command.addAll(commandArguments);
 			return command.toArray(String[]::new);
 		}
 
@@ -202,14 +222,20 @@ abstract sealed class DockerCliCommand<R> {
 	 */
 	static final class ComposeStart extends DockerCliCommand<Void> {
 
-		ComposeStart(LogLevel logLevel, List<String> arguments) {
-			super(Type.DOCKER_COMPOSE, logLevel, Void.class, false, getCommand(arguments));
+		/**
+		 * Creates a new {@link ComposeStart} instance.
+		 * @param logLevel the log level to use
+		 * @param arguments the arguments to pass to Docker Compose
+		 * @param commandArguments the arguments to pass to the start command
+		 */
+		ComposeStart(LogLevel logLevel, List<String> arguments, List<String> commandArguments) {
+			super(Type.DOCKER_COMPOSE, logLevel, Void.class, false, getCommand(arguments, commandArguments));
 		}
 
-		private static String[] getCommand(List<String> arguments) {
-			List<String> command = new ArrayList<>();
+		private static String[] getCommand(List<String> arguments, List<String> commandArguments) {
+			List<String> command = new ArrayList<>(arguments);
 			command.add("start");
-			command.addAll(arguments);
+			command.addAll(commandArguments);
 			return command.toArray(String[]::new);
 		}
 
@@ -220,16 +246,22 @@ abstract sealed class DockerCliCommand<R> {
 	 */
 	static final class ComposeStop extends DockerCliCommand<Void> {
 
-		ComposeStop(Duration timeout, List<String> arguments) {
-			super(Type.DOCKER_COMPOSE, Void.class, false, getCommand(timeout, arguments));
+		/**
+		 * Creates a new {@link ComposeStop} instance.
+		 * @param timeout the timeout to use
+		 * @param arguments the arguments to pass to Docker Compose
+		 * @param commandArguments the arguments to pass to the stop command
+		 */
+		ComposeStop(Duration timeout, List<String> arguments, List<String> commandArguments) {
+			super(Type.DOCKER_COMPOSE, Void.class, false, getCommand(timeout, arguments, commandArguments));
 		}
 
-		private static String[] getCommand(Duration timeout, List<String> arguments) {
-			List<String> command = new ArrayList<>();
+		private static String[] getCommand(Duration timeout, List<String> arguments, List<String> commandArguments) {
+			List<String> command = new ArrayList<>(arguments);
 			command.add("stop");
 			command.add("--timeout");
 			command.add(Long.toString(timeout.toSeconds()));
-			command.addAll(arguments);
+			command.addAll(commandArguments);
 			return command.toArray(String[]::new);
 		}
 
