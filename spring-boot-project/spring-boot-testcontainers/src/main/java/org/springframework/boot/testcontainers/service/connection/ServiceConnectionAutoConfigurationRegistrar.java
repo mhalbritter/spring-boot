@@ -102,7 +102,7 @@ class ServiceConnectionAutoConfigurationRegistrar implements ImportBeanDefinitio
 				? testcontainerBeanDefinition.getContainerImageName() : null;
 		return new ContainerConnectionSource<>(beanName, origin, containerType, containerImageName, serviceConnection,
 				() -> beanFactory.getBean(beanName, containerType),
-				SslBundleSource.get(beanFactory, beanName, annotations));
+				SslBundleSource.get(beanFactory, beanName, annotations), annotations);
 	}
 
 }

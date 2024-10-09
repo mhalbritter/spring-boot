@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -87,7 +87,7 @@ class ServiceConnectionContextCustomizerFactory implements ContextCustomizerFact
 		// possible without a Docker environment
 		String dockerImageName = isAotProcessingInProgress() ? null : container.getDockerImageName();
 		return new ContainerConnectionSource<>("test", origin, containerType, dockerImageName, serviceConnection,
-				() -> container, SslBundleSource.get(annotations));
+				() -> container, SslBundleSource.get(annotations), annotations);
 	}
 
 	private Object getFieldValue(Field field) {

@@ -16,6 +16,7 @@
 
 package org.springframework.boot.testcontainers.service.connection;
 
+import java.lang.annotation.Annotation;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
@@ -213,17 +214,13 @@ public abstract class ContainerConnectionDetailsFactory<C extends Container<?>, 
 			return sslBundle;
 		}
 
-		// TODO: Add something more generic, like getting the annotations of the field / @Bean method?
-
 		/**
-		 * Whether {@link SslBundle} extraction is enabled.
-		 * @return whether {@link SslBundle} extraction is enabled.
+		 * Whether the field or bean is annotated with the given annotation.
+		 * @param annotationType the annotation to check
+		 * @return whether the field or bean is annotated with the annotation
 		 */
-		protected boolean isSslBundleExtractionEnabled() {
-			if (this.source.getSslBundleSource() == null) {
-				return false;
-			}
-			return this.source.getSslBundleSource().hasSslAnnotation();
+		protected boolean hasAnnotation(Class<? extends Annotation> annotationType) {
+			return this.source.hasAnnotation(annotationType);
 		}
 
 		@Override

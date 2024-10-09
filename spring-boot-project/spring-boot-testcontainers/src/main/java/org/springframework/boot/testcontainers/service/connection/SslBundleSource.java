@@ -58,10 +58,6 @@ record SslBundleSource(Ssl ssl, PemKeyStore pemKeyStore, PemTrustStore pemTrustS
 		}
 	}
 
-	boolean hasSslAnnotation() {
-		return this.ssl != null;
-	}
-
 	SslBundle getSslBundle() {
 		SslStoreBundle stores = stores();
 		if (stores == null) {

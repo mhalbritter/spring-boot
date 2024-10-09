@@ -35,6 +35,7 @@ import org.springframework.boot.ssl.SslStoreBundle;
 import org.springframework.boot.testcontainers.service.connection.ContainerConnectionDetailsFactory;
 import org.springframework.boot.testcontainers.service.connection.ContainerConnectionSource;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.boot.testcontainers.service.connection.Ssl;
 
 /**
  * {@link ContainerConnectionDetailsFactory} to create
@@ -97,7 +98,7 @@ class ElasticsearchContainerConnectionDetailsFactory
 				this.sslBundle = sslBundle;
 				return sslBundle;
 			}
-			if (isSslBundleExtractionEnabled()) {
+			if (hasAnnotation(Ssl.class)) {
 				byte[] caCertificate = getContainer().caCertAsBytes().orElse(null);
 				if (caCertificate != null) {
 					KeyStore trustStore = createTrustStore(caCertificate);

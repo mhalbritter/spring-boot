@@ -69,7 +69,7 @@ class ContainerConnectionDetailsFactoryTests {
 		this.annotation = MergedAnnotation.of(ServiceConnection.class,
 				Map.of("name", "myname", "type", new Class<?>[0]));
 		this.source = new ContainerConnectionSource<>(this.beanNameSuffix, this.origin, PostgreSQLContainer.class,
-				this.container.getDockerImageName(), this.annotation, () -> this.container, null);
+				this.container.getDockerImageName(), this.annotation, () -> this.container, null, null);
 	}
 
 	@Test
@@ -113,7 +113,8 @@ class ContainerConnectionDetailsFactoryTests {
 	void getConnectionDetailsWhenContainerTypeDoesNotMatchReturnsNull() {
 		ElasticsearchContainer container = mock(ElasticsearchContainer.class);
 		ContainerConnectionSource<?> source = new ContainerConnectionSource<>(this.beanNameSuffix, this.origin,
-				ElasticsearchContainer.class, container.getDockerImageName(), this.annotation, () -> container, null);
+				ElasticsearchContainer.class, container.getDockerImageName(), this.annotation, () -> container, null,
+				null);
 		TestContainerConnectionDetailsFactory factory = new TestContainerConnectionDetailsFactory();
 		ConnectionDetails connectionDetails = getConnectionDetails(factory, source);
 		assertThat(connectionDetails).isNull();
