@@ -19,17 +19,22 @@ package org.springframework.boot.actuate.autoconfigure.ssl;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.TimeUnit;
 
 import io.micrometer.core.instrument.Gauge;
-import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.MultiGauge;
+import io.micrometer.core.instrument.MultiGauge.Row;
+import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.TimeGauge;
 import io.micrometer.core.instrument.binder.MeterBinder;
 
@@ -39,7 +44,6 @@ import org.springframework.boot.info.SslInfo.CertificateChainInfo;
 import org.springframework.boot.info.SslInfo.CertificateInfo;
 import org.springframework.boot.info.SslInfo.CertificateValidityInfo;
 import org.springframework.boot.info.SslInfo.CertificateValidityInfo.Status;
-import org.springframework.boot.ssl.SslBundle;
 import org.springframework.boot.ssl.SslBundles;
 
 /**
@@ -55,9 +59,7 @@ class SslMeterBinder implements MeterBinder {
 
 	private final SslInfo sslInfo;
 
-	private final Map<String, BundleMetrics> bundleMetrics = new ConcurrentHashMap<>();
-
-	private final List<MeterRegistry> meterRegistries = new CopyOnWriteArrayList<>();
+	private final Bundles bundles = new Bundles();
 
 	SslMeterBinder(SslInfo sslInfo, SslBundles sslBundles) {
 		this(sslInfo, sslBundles, Clock.systemDefaultZone());
@@ -66,44 +68,24 @@ class SslMeterBinder implements MeterBinder {
 	SslMeterBinder(SslInfo sslInfo, SslBundles sslBundles, Clock clock) {
 		this.clock = clock;
 		this.sslInfo = sslInfo;
-		sslBundles.addBundleRegisterHandler(this::onRegisterBundle);
+		sslBundles.addBundleRegisterHandler((bundleName, ignored) -> onBundleChange(bundleName));
 		for (String bundleName : sslBundles.getBundleNames()) {
-			sslBundles.addBundleUpdateHandler(bundleName, (ignored) -> onUpdateBundle(bundleName));
+			sslBundles.addBundleUpdateHandler(bundleName, (ignored) -> onBundleChange(bundleName));
 		}
 	}
 
-	private void onRegisterBundle(String bundleName, SslBundle sslBundle) {
+	private void onBundleChange(String bundleName) {
 		BundleInfo bundle = this.sslInfo.getBundle(bundleName);
-		for (MeterRegistry meterRegistry : this.meterRegistries) {
-			createBundleMetrics(meterRegistry, bundle);
-		}
-	}
-
-	private void onUpdateBundle(String bundleName) {
-		BundleMetrics bundleMetrics = this.bundleMetrics.remove(bundleName);
-		if (bundleMetrics == null) {
-			return;
-		}
-		removeOldMeters(bundleMetrics);
-		BundleInfo bundle = this.sslInfo.getBundle(bundleName);
-		for (MeterRegistry meterRegistry : this.meterRegistries) {
-			createBundleMetrics(meterRegistry, bundle);
-		}
-	}
-
-	private void removeOldMeters(BundleMetrics bundleMetrics) {
-		for (Meter meter : bundleMetrics.meters()) {
-			for (MeterRegistry meterRegistry : this.meterRegistries) {
-				meterRegistry.remove(meter);
-			}
+		this.bundles.updateBundle(bundle);
+		for (MeterRegistry meterRegistry : this.bundles.getMeterRegistries()) {
+			createOrUpdateBundleMetrics(meterRegistry, bundle);
 		}
 	}
 
 	@Override
 	public void bindTo(MeterRegistry meterRegistry) {
-		this.meterRegistries.add(meterRegistry);
 		for (BundleInfo bundle : this.sslInfo.getBundles()) {
-			createBundleMetrics(meterRegistry, bundle);
+			createOrUpdateBundleMetrics(meterRegistry, bundle);
 		}
 		Gauge.builder("ssl.chains", () -> countChainsByStatus(Status.VALID))
 			.tag("status", "valid")
@@ -119,20 +101,19 @@ class SslMeterBinder implements MeterBinder {
 			.register(meterRegistry);
 	}
 
-	private void createBundleMetrics(MeterRegistry meterRegistry, BundleInfo bundle) {
-		if (bundle.getCertificateChains().isEmpty()) {
-			return;
-		}
-		BundleMetrics bundleMetrics = this.bundleMetrics.computeIfAbsent(bundle.getName(),
-				(ignored) -> BundleMetrics.emptyMeters(bundle));
+	private void createOrUpdateBundleMetrics(MeterRegistry meterRegistry, BundleInfo bundle) {
+		MultiGauge multiGauge = this.bundles.getGauge(bundle, meterRegistry);
+		List<Row<CertificateInfo>> rows = new ArrayList<>();
 		for (CertificateChainInfo chain : bundle.getCertificateChains()) {
-			TimeGauge meter = registerChainExpiryGauge(meterRegistry, bundle, chain);
-			bundleMetrics.addMeter(meter);
+			Row<CertificateInfo> row = createRowForChain(bundle, chain);
+			if (row != null) {
+				rows.add(row);
+			}
 		}
+		multiGauge.register(rows, true);
 	}
 
-	private TimeGauge registerChainExpiryGauge(MeterRegistry meterRegistry, BundleInfo bundle,
-			CertificateChainInfo chain) {
+	private Row<CertificateInfo> createRowForChain(BundleInfo bundle, CertificateChainInfo chain) {
 		CertificateInfo leastValidCertificate = chain.getCertificates()
 			.stream()
 			.min(Comparator.comparing(CertificateInfo::getValidityEnds))
@@ -140,20 +121,15 @@ class SslMeterBinder implements MeterBinder {
 		if (leastValidCertificate == null) {
 			return null;
 		}
-		return TimeGauge
-			.builder("ssl.chain.expiry", () -> getChainExpiry(leastValidCertificate, TimeUnit.SECONDS),
-					TimeUnit.SECONDS)
-			.tag("chain", chain.getAlias())
-			.tag("bundle", bundle.getName())
-			.tag("certificate", leastValidCertificate.getSerialNumber())
-			.description("SSL chain expiry")
-			.register(meterRegistry);
+		Tags tags = Tags.of("chain", chain.getAlias(), "bundle", bundle.getName(), "certificate",
+				leastValidCertificate.getSerialNumber());
+		return Row.of(tags, leastValidCertificate, this::getChainExpiry);
 	}
 
 	private long countChainsByStatus(Status status) {
 		long count = 0;
-		for (BundleMetrics bundleMetrics : this.bundleMetrics.values()) {
-			for (CertificateChainInfo chain : bundleMetrics.info().getCertificateChains()) {
+		for (BundleInfo bundle : this.bundles.getBundles()) {
+			for (CertificateChainInfo chain : bundle.getCertificateChains()) {
 				if (getChainStatus(chain) == status) {
 					count++;
 				}
@@ -180,22 +156,113 @@ class SslMeterBinder implements MeterBinder {
 		return statuses.isEmpty() ? null : Status.VALID;
 	}
 
-	private long getChainExpiry(CertificateInfo certificate, TimeUnit unit) {
+	private long getChainExpiry(CertificateInfo certificate) {
 		Duration valid = Duration.between(Instant.now(this.clock), certificate.getValidityEnds());
-		return valid.get(unit.toChronoUnit());
+		return valid.get(ChronoUnit.SECONDS);
 	}
 
-	private record BundleMetrics(BundleInfo info, List<Meter> meters) {
+	/**
+	 * Manages bundles and their gauges.
+	 */
+	private static final class Bundles {
 
-		void addMeter(Meter meter) {
-			if (meter != null) {
-				this.meters.add(meter);
+		private final Map<String, Bundle> bundles = new ConcurrentHashMap<>();
+
+		/**
+		 * Gets (or creates) a {@link MultiGauge} for the given bundle and meter registry.
+		 * @param bundleInfo the bundle
+		 * @param meterRegistry the meter registry
+		 * @return the {@link MultiGauge}
+		 */
+		MultiGauge getGauge(BundleInfo bundleInfo, MeterRegistry meterRegistry) {
+			Bundle bundle = this.bundles.computeIfAbsent(bundleInfo.getName(),
+					(ignored) -> Bundle.emptyGauges(bundleInfo));
+			return bundle.getGauge(meterRegistry);
+		}
+
+		/**
+		 * Returns all bundles.
+		 * @return all bundles
+		 */
+		Collection<BundleInfo> getBundles() {
+			List<BundleInfo> result = new ArrayList<>();
+			for (Bundle metrics : this.bundles.values()) {
+				result.add(metrics.bundle());
+			}
+			return result;
+		}
+
+		/**
+		 * Returns all meter registries.
+		 * @return all meter registries
+		 */
+		Collection<MeterRegistry> getMeterRegistries() {
+			Set<MeterRegistry> result = new HashSet<>();
+			for (Bundle metrics : this.bundles.values()) {
+				result.addAll(metrics.getMeterRegistries());
+			}
+			return result;
+		}
+
+		/**
+		 * Updates the given bundle.
+		 * @param bundle the updated bundle
+		 */
+		void updateBundle(BundleInfo bundle) {
+			this.bundles.computeIfPresent(bundle.getName(), (key, oldValue) -> oldValue.withBundle(bundle));
+		}
+
+		/**
+		 * Manages a bundle and associated {@link MultiGauge MultiGauges}.
+		 *
+		 * @param bundle the bundle
+		 * @param multiGauges mapping from meter registry to {@link MultiGauge}
+		 */
+		private record Bundle(BundleInfo bundle, Map<MeterRegistry, MultiGauge> multiGauges) {
+
+			/**
+			 * Gets (or creates) the {@link MultiGauge} for the given meter registry.
+			 * @param meterRegistry the meter registry
+			 * @return the {@link MultiGauge}
+			 */
+			MultiGauge getGauge(MeterRegistry meterRegistry) {
+				return this.multiGauges.computeIfAbsent(meterRegistry, (ignored) -> createGauge(meterRegistry));
+			}
+
+			/**
+			 * Returns a copy of this bundle with an updated {@link BundleInfo}.
+			 * @param bundle the updated {@link BundleInfo}
+			 * @return the copy of this bundle with an updated {@link BundleInfo}
+			 */
+			Bundle withBundle(BundleInfo bundle) {
+				return new Bundle(bundle, this.multiGauges);
+			}
+
+			/**
+			 * Returns all meter registries.
+			 * @return all meter registries
+			 */
+			Set<MeterRegistry> getMeterRegistries() {
+				return this.multiGauges.keySet();
+			}
+
+			private MultiGauge createGauge(MeterRegistry meterRegistry) {
+				return MultiGauge.builder("ssl.chain.expiry")
+					.baseUnit("seconds")
+					.description("SSL chain expiry")
+					.register(meterRegistry);
+			}
+
+			/**
+			 * Creates an instance with an empty gauge mapping.
+			 * @param bundle the {@link BundleInfo} associated with the new instance
+			 * @return the new instance
+			 */
+			static Bundle emptyGauges(BundleInfo bundle) {
+				return new Bundle(bundle, new ConcurrentHashMap<>());
 			}
 		}
 
-		static BundleMetrics emptyMeters(BundleInfo bundle) {
-			return new BundleMetrics(bundle, new CopyOnWriteArrayList<>());
-		}
 	}
 
 }

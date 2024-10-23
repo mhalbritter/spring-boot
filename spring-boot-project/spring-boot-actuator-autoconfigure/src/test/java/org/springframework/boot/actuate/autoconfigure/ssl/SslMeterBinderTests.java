@@ -20,7 +20,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.concurrent.TimeUnit;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -78,8 +77,8 @@ class SslMeterBinderTests {
 			.tag("bundle", "test-0")
 			.tag("chain", chain)
 			.tag("certificate", certificateSerialNumber)
-			.timeGauge()
-			.value(TimeUnit.SECONDS);
+			.gauge()
+			.value();
 	}
 
 	private SimpleMeterRegistry bindToRegistry() {
