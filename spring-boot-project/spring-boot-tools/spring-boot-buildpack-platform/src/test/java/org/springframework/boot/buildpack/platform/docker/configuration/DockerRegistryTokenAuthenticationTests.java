@@ -27,6 +27,8 @@ import org.skyscreamer.jsonassert.JSONAssert;
 import org.springframework.boot.buildpack.platform.json.AbstractJsonTests;
 import org.springframework.util.StreamUtils;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 /**
  * Tests for {@link DockerRegistryTokenAuthentication}.
  *
@@ -39,7 +41,9 @@ class DockerRegistryTokenAuthenticationTests extends AbstractJsonTests {
 		DockerRegistryTokenAuthentication auth = new DockerRegistryTokenAuthentication("tokenvalue");
 		String header = auth.getAuthHeader();
 		String expectedJson = StreamUtils.copyToString(getContent("auth-token.json"), StandardCharsets.UTF_8);
-		JSONAssert.assertEquals(expectedJson, new String(Base64.getUrlDecoder().decode(header)), false);
+		String decoded = new String(Base64.getUrlDecoder().decode(header));
+		JSONAssert.assertEquals(expectedJson, decoded, false);
+		assertThat(decoded).doesNotContain("authHeader");
 	}
 
 }
