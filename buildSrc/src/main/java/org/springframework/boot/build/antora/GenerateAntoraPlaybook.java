@@ -93,8 +93,7 @@ public abstract class GenerateAntoraPlaybook extends DefaultTask {
 		}
 	}
 
-	@Input
-	final Map<String, Object> getData() throws IOException {
+	private Map<String, Object> getData() throws IOException {
 		Map<String, Object> data = loadPlaybookTemplate();
 		addExtensions(data);
 		addSources(data);
@@ -163,7 +162,7 @@ public abstract class GenerateAntoraPlaybook extends DefaultTask {
 	}
 
 	private void addAntoraContentStartPaths(Set<String> startPaths) {
-		Configuration configuration = getProject().getConfigurations().findByName("antoraContent");
+		Configuration configuration = getProject().getConfigurations().findByName(getContentSourceConfiguration().get());
 		if (configuration != null) {
 			for (ProjectDependency dependency : configuration.getAllDependencies().withType(ProjectDependency.class)) {
 				Path path = dependency.getDependencyProject().getProjectDir().toPath();
