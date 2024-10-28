@@ -94,6 +94,8 @@ public class ApplicationResourceLoader extends DefaultResourceLoader {
 			}
 			return new FileSystemContextResource(new File(this.workingDirectory.toFile(), file.getPath()).getPath());
 		}
+		// TODO: Catch the FileNotFOundException from .getFile here
+		// TODO: Create issue on framework for working directory on DefaultResourceLoader
 		catch (IOException ex) {
 			throw new UncheckedIOException(ex);
 		}
