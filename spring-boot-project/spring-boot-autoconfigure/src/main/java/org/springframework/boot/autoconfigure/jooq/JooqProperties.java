@@ -24,7 +24,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.core.io.Resource;
 
 /**
- * Configuration properties for the JOOQ database library.
+ * Configuration properties for the jOOQ database library.
  *
  * @author Andreas Ahlenstorf
  * @author Michael Simons
@@ -39,7 +39,7 @@ public class JooqProperties {
 	private SQLDialect sqlDialect;
 
 	/**
-	 * Location of the JOOQ config file.
+	 * Location of the jOOQ config file.
 	 */
 	private Resource config;
 

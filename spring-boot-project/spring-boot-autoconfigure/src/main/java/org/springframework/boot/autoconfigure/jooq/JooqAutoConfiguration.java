@@ -47,6 +47,7 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.transaction.TransactionAutoConfiguration;
@@ -60,7 +61,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.util.Assert;
 
 /**
- * {@link EnableAutoConfiguration Auto-configuration} for JOOQ.
+ * {@link EnableAutoConfiguration Auto-configuration} for jOOQ.
  *
  * @author Andreas Ahlenstorf
  * @author Michael Simons
@@ -125,11 +126,11 @@ public class JooqAutoConfiguration {
 
 	@Configuration(proxyBeanMethods = false)
 	@ConditionalOnProperty(prefix = "spring.jooq", name = "config")
-	@ConditionalOnClass(JAXBContext.class)
+	@ConditionalOnMissingBean(Settings.class)
 	static class SettingsConfiguration {
 
 		@Bean
-		@ConditionalOnMissingBean
+		@ConditionalOnClass(JAXBContext.class)
 		Settings settings(JooqProperties properties) throws IOException {
 			Resource resource = properties.getConfig();
 			Assert.state(resource.exists(),
@@ -139,27 +140,33 @@ public class JooqAutoConfiguration {
 			}
 		}
 
-	}
+		@Bean
+		@ConditionalOnMissingClass("jakarta.xml.bind.JAXBContext")
+		Settings settingsIfJaxbIsNotPresent() {
+			throw new JaxbNotAvailableException();
+		}
 
-	private static final class JaxbSettingsLoader {
+		private static final class JaxbSettingsLoader {
 
-		Settings load(InputStream inputStream) {
-			try {
-				// See
-				// https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html#jaxb-unmarshaller
-				SAXParserFactory spf = SAXParserFactory.newInstance();
-				spf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-				spf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-				spf.setNamespaceAware(true);
-				spf.setXIncludeAware(false);
-				Source xmlSource = new SAXSource(spf.newSAXParser().getXMLReader(), new InputSource(inputStream));
-				JAXBContext jc = JAXBContext.newInstance(Settings.class);
-				Unmarshaller um = jc.createUnmarshaller();
-				return um.unmarshal(xmlSource, Settings.class).getValue();
+			private Settings load(InputStream inputStream) {
+				try {
+					// See
+					// https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html#jaxb-unmarshaller
+					SAXParserFactory spf = SAXParserFactory.newInstance();
+					spf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+					spf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+					spf.setNamespaceAware(true);
+					spf.setXIncludeAware(false);
+					Source xmlSource = new SAXSource(spf.newSAXParser().getXMLReader(), new InputSource(inputStream));
+					JAXBContext jc = JAXBContext.newInstance(Settings.class);
+					Unmarshaller um = jc.createUnmarshaller();
+					return um.unmarshal(xmlSource, Settings.class).getValue();
+				}
+				catch (ParserConfigurationException | JAXBException | SAXException ex) {
+					throw new IllegalStateException("Failed to unmarshal settings", ex);
+				}
 			}
-			catch (ParserConfigurationException | JAXBException | SAXException ex) {
-				throw new IllegalStateException("Failed to unmarshal settings", ex);
-			}
+
 		}
 
 	}

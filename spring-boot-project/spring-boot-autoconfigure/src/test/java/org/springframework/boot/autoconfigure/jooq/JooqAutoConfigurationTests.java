@@ -240,7 +240,9 @@ class JooqAutoConfigurationTests {
 		this.contextRunner.withUserConfiguration(JooqDataSourceConfiguration.class)
 			.withClassLoader(new FilteredClassLoader("jakarta.xml.bind"))
 			.withPropertyValues("spring.jooq.config=classpath:org/springframework/boot/autoconfigure/jooq/settings.xml")
-			.run((context) -> assertThat(context).doesNotHaveBean(Settings.class));
+			.run((context) -> assertThat(context).hasFailed()
+				.getFailure()
+				.hasRootCauseInstanceOf(JaxbNotAvailableException.class));
 	}
 
 	@Test
