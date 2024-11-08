@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,11 @@
  */
 
 package org.springframework.boot.ssl;
+
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -116,6 +121,61 @@ public interface SslManagerBundle {
 	 */
 	static SslManagerBundle from(SslStoreBundle storeBundle, SslBundleKey key) {
 		return new DefaultSslManagerBundle(storeBundle, key);
+	}
+
+	/**
+	 * Factory method to create a new {@link SslManagerBundle} using the given
+	 * {@link TrustManagerFactory} and the default {@link KeyManagerFactory}.
+	 * @param trustManagerFactory the trust manager factory
+	 * @return a new {@link SslManagerBundle} instance
+	 * @since 3.5.0
+	 */
+	static SslManagerBundle from(TrustManagerFactory trustManagerFactory) {
+		Assert.notNull(trustManagerFactory, "TrustManagerFactory must not be null");
+		KeyManagerFactory defaultKeyManagerFactory = createDefaultKeyManagerFactory();
+		return of(defaultKeyManagerFactory, trustManagerFactory);
+	}
+
+	/**
+	 * Factory method to create a new {@link SslManagerBundle} using the given
+	 * {@link TrustManager TrustManagers} and the default {@link KeyManagerFactory}.
+	 * @param trustManagers the trust managers to use
+	 * @return a new {@link SslManagerBundle} instance
+	 * @since 3.5.0
+	 */
+	static SslManagerBundle from(TrustManager... trustManagers) {
+		Assert.notNull(trustManagers, "TrustManagers must not be null");
+		KeyManagerFactory defaultKeyManagerFactory = createDefaultKeyManagerFactory();
+		TrustManagerFactory defaultTrustManagerFactory = createDefaultTrustManagerFactory();
+		return of(defaultKeyManagerFactory, FixedTrustManagerFactory.of(defaultTrustManagerFactory, trustManagers));
+	}
+
+	private static TrustManagerFactory createDefaultTrustManagerFactory() {
+		String defaultAlgorithm = TrustManagerFactory.getDefaultAlgorithm();
+		TrustManagerFactory trustManagerFactory;
+		try {
+			trustManagerFactory = TrustManagerFactory.getInstance(defaultAlgorithm);
+			trustManagerFactory.init((KeyStore) null);
+		}
+		catch (NoSuchAlgorithmException | KeyStoreException ex) {
+			throw new IllegalStateException(
+					"Unable to create TrustManagerFactory for default '%s' algorithm".formatted(defaultAlgorithm), ex);
+		}
+		return trustManagerFactory;
+	}
+
+	private static KeyManagerFactory createDefaultKeyManagerFactory() {
+		String defaultAlgorithm = KeyManagerFactory.getDefaultAlgorithm();
+		KeyManagerFactory keyManagerFactory;
+		try {
+			keyManagerFactory = KeyManagerFactory.getInstance(defaultAlgorithm);
+			keyManagerFactory.init(null, null);
+		}
+		catch (NoSuchAlgorithmException | KeyStoreException | UnrecoverableKeyException ex) {
+			throw new IllegalStateException(
+					"Unable to create KeyManagerFactory for default '%s' algorithm".formatted(defaultAlgorithm), ex);
+		}
+		return keyManagerFactory;
 	}
 
 }
