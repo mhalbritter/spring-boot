@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,7 +53,8 @@ class ReactiveOAuth2ClientConfigurations {
 	static class ReactiveClientRegistrationRepositoryConfiguration {
 
 		@Bean
-		InMemoryReactiveClientRegistrationRepository clientRegistrationRepository(OAuth2ClientProperties properties) {
+		InMemoryReactiveClientRegistrationRepository reactiveClientRegistrationRepository(
+				OAuth2ClientProperties properties) {
 			List<ClientRegistration> registrations = new ArrayList<>(
 					new OAuth2ClientPropertiesMapper(properties).asClientRegistrations().values());
 			return new InMemoryReactiveClientRegistrationRepository(registrations);
@@ -67,14 +68,15 @@ class ReactiveOAuth2ClientConfigurations {
 
 		@Bean
 		@ConditionalOnMissingBean
-		ReactiveOAuth2AuthorizedClientService authorizedClientService(
+		ReactiveOAuth2AuthorizedClientService reactiveAuthorizedClientService(
 				ReactiveClientRegistrationRepository clientRegistrationRepository) {
 			return new InMemoryReactiveOAuth2AuthorizedClientService(clientRegistrationRepository);
 		}
 
 		@Bean
 		@ConditionalOnMissingBean
-		ServerOAuth2AuthorizedClientRepository authorizedClientRepository(
+		@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
+		ServerOAuth2AuthorizedClientRepository reactiveAuthorizedClientRepository(
 				ReactiveOAuth2AuthorizedClientService authorizedClientService) {
 			return new AuthenticatedPrincipalServerOAuth2AuthorizedClientRepository(authorizedClientService);
 		}
@@ -85,7 +87,7 @@ class ReactiveOAuth2ClientConfigurations {
 
 			@Bean
 			@ConditionalOnMissingBean
-			SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+			SecurityWebFilterChain reactiveSecurityFilterChain(ServerHttpSecurity http) {
 				http.authorizeExchange((exchange) -> exchange.anyExchange().authenticated());
 				http.oauth2Login(withDefaults());
 				http.oauth2Client(withDefaults());
