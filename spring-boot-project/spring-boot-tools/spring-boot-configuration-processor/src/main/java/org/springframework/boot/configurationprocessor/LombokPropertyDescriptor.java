@@ -65,8 +65,8 @@ class LombokPropertyDescriptor extends PropertyDescriptor {
 	}
 
 	@Override
-	protected boolean isMarkedAsNested(MetadataGenerationEnvironment environment) {
-		return environment.getNestedConfigurationPropertyAnnotation(getField()) != null;
+	protected AnnotationMirror getNestedAnnotation(MetadataGenerationEnvironment environment) {
+		return environment.getNestedConfigurationPropertyAnnotation(getField());
 	}
 
 	@Override

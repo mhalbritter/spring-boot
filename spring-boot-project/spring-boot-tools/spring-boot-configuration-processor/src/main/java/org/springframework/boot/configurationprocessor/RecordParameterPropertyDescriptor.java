@@ -16,9 +16,10 @@
 
 package org.springframework.boot.configurationprocessor;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.RecordComponentElement;
@@ -45,12 +46,12 @@ class RecordParameterPropertyDescriptor extends ParameterPropertyDescriptor {
 
 	@Override
 	protected List<Element> getDeprecatableElements() {
-		return Arrays.asList(getGetter());
+		return Collections.singletonList(getGetter());
 	}
 
 	@Override
-	protected boolean isMarkedAsNested(MetadataGenerationEnvironment environment) {
-		return environment.getNestedConfigurationPropertyAnnotation(this.recordComponent) != null;
+	protected AnnotationMirror getNestedAnnotation(MetadataGenerationEnvironment environment) {
+		return environment.getNestedConfigurationPropertyAnnotation(this.recordComponent);
 	}
 
 	@Override

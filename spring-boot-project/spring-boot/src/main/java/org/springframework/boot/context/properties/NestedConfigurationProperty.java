@@ -75,6 +75,7 @@ import org.springframework.boot.context.properties.bind.Nested;
  * @author Stephane Nicoll
  * @author Phillip Webb
  * @author Jared Bates
+ * @author Moritz Halbritter
  * @since 1.2.0
  */
 @Target({ ElementType.FIELD, ElementType.RECORD_COMPONENT, ElementType.METHOD })
@@ -82,5 +83,12 @@ import org.springframework.boot.context.properties.bind.Nested;
 @Documented
 @Nested
 public @interface NestedConfigurationProperty {
+
+	/**
+	 * The description for the configuration properties group.
+	 * @return the description for the configuration properties group
+	 * @since 3.5.0
+	 */
+	String groupDescription() default "";
 
 }

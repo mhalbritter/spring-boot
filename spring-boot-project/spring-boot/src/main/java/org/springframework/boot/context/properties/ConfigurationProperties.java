@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ import org.springframework.stereotype.Indexed;
  * values are externalized.
  *
  * @author Dave Syer
+ * @author Moritz Halbritter
  * @since 1.0.0
  * @see ConfigurationPropertiesScan
  * @see ConstructorBinding
@@ -83,5 +84,12 @@ public @interface ConfigurationProperties {
 	 * @return the flag value (default true)
 	 */
 	boolean ignoreUnknownFields() default true;
+
+	/**
+	 * The description for the configuration properties group.
+	 * @return the description for the configuration properties group
+	 * @since 3.5.0
+	 */
+	String groupDescription() default "";
 
 }

@@ -18,6 +18,7 @@ package org.springframework.boot.configurationprocessor;
 
 import java.util.List;
 
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -33,6 +34,7 @@ import org.springframework.boot.configurationprocessor.metadata.ItemMetadata;
  *
  * @author Stephane Nicoll
  * @author Phillip Webb
+ * @author Moritz Halbritter
  */
 abstract class PropertyDescriptor {
 
@@ -126,12 +128,15 @@ abstract class PropertyDescriptor {
 	}
 
 	/**
-	 * Return if this property has been explicitly marked as nested (for example using an
-	 * annotation}.
+	 * Return the nested annotation if any.
 	 * @param environment the metadata generation environment
-	 * @return if the property has been marked as nested
+	 * @return the nested annotation or {@code null}.
 	 */
-	protected abstract boolean isMarkedAsNested(MetadataGenerationEnvironment environment);
+	protected abstract AnnotationMirror getNestedAnnotation(MetadataGenerationEnvironment environment);
+
+	private boolean isMarkedAsNested(MetadataGenerationEnvironment environment) {
+		return getNestedAnnotation(environment) != null;
+	}
 
 	private boolean isCyclePresent(Element returnType, Element element) {
 		if (!(element.getEnclosingElement() instanceof TypeElement)) {
@@ -172,7 +177,20 @@ abstract class PropertyDescriptor {
 		String dataType = environment.getTypeUtils().getQualifiedName(propertyElement);
 		String ownerType = environment.getTypeUtils().getQualifiedName(getDeclaringElement());
 		String sourceMethod = (getGetter() != null) ? getGetter().toString() : null;
-		return ItemMetadata.newGroup(nestedPrefix, dataType, ownerType, sourceMethod);
+		String description = getGroupDescription(environment);
+		return ItemMetadata.newGroup(nestedPrefix, dataType, ownerType, sourceMethod, description);
+	}
+
+	private String getGroupDescription(MetadataGenerationEnvironment environment) {
+		AnnotationMirror annotation = getNestedAnnotation(environment);
+		if (annotation == null) {
+			return null;
+		}
+		String groupDescription = environment.getAnnotationElementStringValue(annotation, "groupDescription");
+		if (groupDescription == null || groupDescription.isEmpty()) {
+			return null;
+		}
+		return groupDescription;
 	}
 
 	private ItemMetadata resolveItemMetadataProperty(String prefix, MetadataGenerationEnvironment environment) {

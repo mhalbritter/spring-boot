@@ -19,6 +19,7 @@ package org.springframework.boot.configurationprocessor;
 import java.util.Arrays;
 import java.util.List;
 
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
@@ -50,8 +51,8 @@ class ConstructorParameterPropertyDescriptor extends ParameterPropertyDescriptor
 	}
 
 	@Override
-	protected boolean isMarkedAsNested(MetadataGenerationEnvironment environment) {
-		return environment.getNestedConfigurationPropertyAnnotation(this.field) != null;
+	protected AnnotationMirror getNestedAnnotation(MetadataGenerationEnvironment environment) {
+		return environment.getNestedConfigurationPropertyAnnotation(this.field);
 	}
 
 	@Override

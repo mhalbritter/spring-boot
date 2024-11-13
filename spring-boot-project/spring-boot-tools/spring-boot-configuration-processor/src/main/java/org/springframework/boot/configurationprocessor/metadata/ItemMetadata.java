@@ -213,6 +213,11 @@ public final class ItemMetadata implements Comparable<ItemMetadata> {
 		return new ItemMetadata(ItemType.GROUP, name, null, type, sourceType, sourceMethod, null, null, null);
 	}
 
+	public static ItemMetadata newGroup(String name, String type, String sourceType, String sourceMethod,
+			String description) {
+		return new ItemMetadata(ItemType.GROUP, name, null, type, sourceType, sourceMethod, description, null, null);
+	}
+
 	public static ItemMetadata newProperty(String prefix, String name, String type, String sourceType,
 			String sourceMethod, String description, Object defaultValue, ItemDeprecation deprecation) {
 		return new ItemMetadata(ItemType.PROPERTY, prefix, name, type, sourceType, sourceMethod, description,

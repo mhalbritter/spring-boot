@@ -222,11 +222,12 @@ public class ConfigurationMetadataAnnotationProcessor extends AbstractProcessor 
 			AnnotationMirror annotation = this.metadataEnv.getConfigurationPropertiesAnnotation(element);
 			if (annotation != null) {
 				String prefix = getPrefix(annotation);
+				String groupDescription = getGroupDescription(annotation);
 				if (element instanceof TypeElement typeElement) {
-					processAnnotatedTypeElement(prefix, typeElement, new ArrayDeque<>());
+					processAnnotatedTypeElement(prefix, typeElement, groupDescription, new ArrayDeque<>());
 				}
 				else if (element instanceof ExecutableElement executableElement) {
-					processExecutableElement(prefix, executableElement, new ArrayDeque<>());
+					processExecutableElement(prefix, executableElement, groupDescription, new ArrayDeque<>());
 				}
 			}
 		}
@@ -235,13 +236,15 @@ public class ConfigurationMetadataAnnotationProcessor extends AbstractProcessor 
 		}
 	}
 
-	private void processAnnotatedTypeElement(String prefix, TypeElement element, Deque<TypeElement> seen) {
+	private void processAnnotatedTypeElement(String prefix, TypeElement element, String groupDescription,
+			Deque<TypeElement> seen) {
 		String type = this.metadataEnv.getTypeUtils().getQualifiedName(element);
-		this.metadataCollector.add(ItemMetadata.newGroup(prefix, type, type, null));
+		this.metadataCollector.add(ItemMetadata.newGroup(prefix, type, type, null, groupDescription));
 		processTypeElement(prefix, element, null, seen);
 	}
 
-	private void processExecutableElement(String prefix, ExecutableElement element, Deque<TypeElement> seen) {
+	private void processExecutableElement(String prefix, ExecutableElement element, String groupDescription,
+			Deque<TypeElement> seen) {
 		if ((!element.getModifiers().contains(Modifier.PRIVATE))
 				&& (TypeKind.VOID != element.getReturnType().getKind())) {
 			Element returns = this.processingEnv.getTypeUtils().asElement(element.getReturnType());
@@ -249,7 +252,7 @@ public class ConfigurationMetadataAnnotationProcessor extends AbstractProcessor 
 				ItemMetadata group = ItemMetadata.newGroup(prefix,
 						this.metadataEnv.getTypeUtils().getQualifiedName(returns),
 						this.metadataEnv.getTypeUtils().getQualifiedName(element.getEnclosingElement()),
-						element.toString());
+						element.toString(), groupDescription);
 				if (this.metadataCollector.hasSimilarGroup(group)) {
 					this.processingEnv.getMessager()
 						.printMessage(Kind.ERROR,
@@ -305,7 +308,8 @@ public class ConfigurationMetadataAnnotationProcessor extends AbstractProcessor 
 				: (elementValues.getOrDefault("defaultAccess", "unrestricted").toString()).toLowerCase(Locale.ENGLISH);
 		boolean enabledByDefault = !"none".equals(defaultAccess) && enabledByDefaultAttribute;
 		String type = this.metadataEnv.getTypeUtils().getQualifiedName(element);
-		this.metadataCollector.addIfAbsent(ItemMetadata.newGroup(endpointKey, type, type, null));
+		this.metadataCollector.addIfAbsent(ItemMetadata.newGroup(endpointKey, type, type, null,
+				"Configuration properties for the '%s' endpoint.".formatted(endpointId)));
 		ItemMetadata accessProperty = ItemMetadata.newProperty(endpointKey, "access", endpointAccessEnum(), type, null,
 				"Permitted level of access for the %s endpoint.".formatted(endpointId), defaultAccess, null);
 		this.metadataCollector.add(
@@ -367,6 +371,14 @@ public class ConfigurationMetadataAnnotationProcessor extends AbstractProcessor 
 			return prefix;
 		}
 		return this.metadataEnv.getAnnotationElementStringValue(annotation, "value");
+	}
+
+	private String getGroupDescription(AnnotationMirror annotation) {
+		String groupDescription = this.metadataEnv.getAnnotationElementStringValue(annotation, "groupDescription");
+		if (groupDescription == null || groupDescription.isEmpty()) {
+			return null;
+		}
+		return groupDescription;
 	}
 
 	protected ConfigurationMetadata writeMetadata() throws Exception {
