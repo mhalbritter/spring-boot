@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.springframework.boot.docker.compose.core.DockerCliComposeConfigResponse.Service;
 import org.springframework.boot.logging.LogLevel;
 import org.springframework.util.Assert;
 
@@ -68,12 +69,16 @@ class DefaultDockerCompose implements DockerCompose {
 
 	@Override
 	public boolean hasDefinedServices() {
-		return !this.cli.run(new DockerCliCommand.ComposeConfig()).services().isEmpty();
+		return !runComposeConfig().services().isEmpty();
 	}
 
 	@Override
 	public List<RunningService> getRunningServices() {
-		List<DockerCliComposePsResponse> runningPsResponses = runComposePs().stream().filter(this::isRunning).toList();
+		Map<String, Service> definedServices = runComposeConfig().services();
+		List<DockerCliComposePsResponse> runningPsResponses = runComposePs().stream()
+			.filter(this::isRunning)
+			.filter((ps) -> definedServices.containsKey(ps.service()))
+			.toList();
 		if (runningPsResponses.isEmpty()) {
 			return Collections.emptyList();
 		}
@@ -110,6 +115,10 @@ class DefaultDockerCompose implements DockerCompose {
 
 	private List<DockerCliComposePsResponse> runComposePs() {
 		return this.cli.run(new DockerCliCommand.ComposePs());
+	}
+
+	private DockerCliComposeConfigResponse runComposeConfig() {
+		return this.cli.run(new DockerCliCommand.ComposeConfig());
 	}
 
 	private boolean isRunning(DockerCliComposePsResponse psResponse) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
+import org.springframework.boot.docker.compose.core.DockerCliCommand.ComposeConfig;
+import org.springframework.boot.docker.compose.core.DockerCliComposeConfigResponse.Service;
 import org.springframework.boot.docker.compose.core.DockerCliInspectResponse.Config;
 import org.springframework.boot.docker.compose.core.DockerCliInspectResponse.ExposedPort;
 import org.springframework.boot.docker.compose.core.DockerCliInspectResponse.HostConfig;
@@ -99,15 +101,19 @@ class DefaultDockerComposeTests {
 	@Test
 	void getRunningServicesReturnsServices() {
 		String id = "123";
-		DockerCliComposePsResponse psResponse = new DockerCliComposePsResponse(id, "name", "redis", "running");
+		DockerCliComposePsResponse psResponse = new DockerCliComposePsResponse(id, "name", "redis", "running",
+				"service1");
 		Map<String, ExposedPort> exposedPorts = Collections.emptyMap();
 		Config config = new Config("redis", Map.of("spring", "boot"), exposedPorts, List.of("a=b"));
 		NetworkSettings networkSettings = null;
 		HostConfig hostConfig = null;
 		DockerCliInspectResponse inspectResponse = new DockerCliInspectResponse(id, config, networkSettings,
 				hostConfig);
+		DockerCliComposeConfigResponse configResponse = new DockerCliComposeConfigResponse("project-1",
+				Map.of("service1", new Service("redis")));
 		willReturn(List.of(psResponse)).given(this.cli).run(new DockerCliCommand.ComposePs());
 		willReturn(List.of(inspectResponse)).given(this.cli).run(new DockerCliCommand.Inspect(List.of(id)));
+		willReturn(configResponse).given(this.cli).run(new ComposeConfig());
 		DefaultDockerCompose compose = new DefaultDockerCompose(this.cli, HOST);
 		List<RunningService> runningServices = compose.getRunningServices();
 		assertThat(runningServices).hasSize(1);
@@ -123,17 +129,21 @@ class DefaultDockerComposeTests {
 	@Test
 	void getRunningServicesWhenNoHostUsesHostFromContext() {
 		String id = "123";
-		DockerCliComposePsResponse psResponse = new DockerCliComposePsResponse(id, "name", "redis", "running");
+		DockerCliComposePsResponse psResponse = new DockerCliComposePsResponse(id, "name", "redis", "running",
+				"service1");
 		Map<String, ExposedPort> exposedPorts = Collections.emptyMap();
 		Config config = new Config("redis", Map.of("spring", "boot"), exposedPorts, List.of("a=b"));
 		NetworkSettings networkSettings = null;
 		HostConfig hostConfig = null;
 		DockerCliInspectResponse inspectResponse = new DockerCliInspectResponse(id, config, networkSettings,
 				hostConfig);
+		DockerCliComposeConfigResponse configResponse = new DockerCliComposeConfigResponse("project-1",
+				Map.of("service1", new Service("redis")));
 		willReturn(List.of(new DockerCliContextResponse("test", true, "https://192.168.1.1"))).given(this.cli)
 			.run(new DockerCliCommand.Context());
 		willReturn(List.of(psResponse)).given(this.cli).run(new DockerCliCommand.ComposePs());
 		willReturn(List.of(inspectResponse)).given(this.cli).run(new DockerCliCommand.Inspect(List.of(id)));
+		willReturn(configResponse).given(this.cli).run(new ComposeConfig());
 		DefaultDockerCompose compose = new DefaultDockerCompose(this.cli, null);
 		List<RunningService> runningServices = compose.getRunningServices();
 		assertThat(runningServices).hasSize(1);
@@ -145,13 +155,17 @@ class DefaultDockerComposeTests {
 	void worksWithTruncatedIds() {
 		String shortId = "123";
 		String longId = "123456";
-		DockerCliComposePsResponse psResponse = new DockerCliComposePsResponse(shortId, "name", "redis", "running");
+		DockerCliComposePsResponse psResponse = new DockerCliComposePsResponse(shortId, "name", "redis", "running",
+				"service1");
 		Config config = new Config("redis", Collections.emptyMap(), Collections.emptyMap(), Collections.emptyList());
 		DockerCliInspectResponse inspectResponse = new DockerCliInspectResponse(longId, config, null, null);
+		DockerCliComposeConfigResponse configResponse = new DockerCliComposeConfigResponse("project-1",
+				Map.of("service1", new Service("redis")));
 		willReturn(List.of(new DockerCliContextResponse("test", true, "https://192.168.1.1"))).given(this.cli)
 			.run(new DockerCliCommand.Context());
 		willReturn(List.of(psResponse)).given(this.cli).run(new DockerCliCommand.ComposePs());
 		willReturn(List.of(inspectResponse)).given(this.cli).run(new DockerCliCommand.Inspect(List.of(shortId)));
+		willReturn(configResponse).given(this.cli).run(new ComposeConfig());
 		DefaultDockerCompose compose = new DefaultDockerCompose(this.cli, null);
 		List<RunningService> runningServices = compose.getRunningServices();
 		assertThat(runningServices).hasSize(1);

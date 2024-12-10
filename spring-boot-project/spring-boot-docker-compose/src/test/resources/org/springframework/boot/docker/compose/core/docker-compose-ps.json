@@ -12,5 +12,6 @@
 	"RunningFor": "2 days ago",
 	"Size": "0B",
 	"State": "running",
-	"Status": "Up 3 seconds"
+	"Status": "Up 3 seconds",
+  "Service": "redis"
 }

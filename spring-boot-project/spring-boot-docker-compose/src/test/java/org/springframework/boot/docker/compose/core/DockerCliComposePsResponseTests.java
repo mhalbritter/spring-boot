@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ class DockerCliComposePsResponseTests {
 			.getContentAsString(StandardCharsets.UTF_8);
 		DockerCliComposePsResponse response = DockerJson.deserialize(json, DockerCliComposePsResponse.class);
 		DockerCliComposePsResponse expected = new DockerCliComposePsResponse("f5af31dae7f6", "redis-docker-redis-1",
-				"redis:7.0", "running");
+				"redis:7.0", "running", "redis");
 		assertThat(response).isEqualTo(expected);
 	}
 

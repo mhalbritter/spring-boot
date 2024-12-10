@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,14 @@ package org.springframework.boot.docker.compose.core;
  * Response from {@link DockerCliCommand.ComposePs docker compose ps}.
  *
  * @param id the container ID
- * @param name the name of the service
+ * @param name the name of the container
  * @param image the image reference
  * @param state the state of the container
+ * @param service the service, which this container belongs to
  * @author Moritz Halbritter
  * @author Andy Wilkinson
  * @author Phillip Webb
  */
-record DockerCliComposePsResponse(String id, String name, String image, String state) {
+record DockerCliComposePsResponse(String id, String name, String image, String state, String service) {
 
 }

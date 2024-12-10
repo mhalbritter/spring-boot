@@ -121,7 +121,7 @@ class DefaultRunningServiceTests {
 		String image = "redis";
 		String state = "running";
 		DockerCliComposePsResponse psResponse = new DockerCliComposePsResponse(id, name,
-				(!psResponseHasImage) ? null : image, state);
+				(!psResponseHasImage) ? null : image, state, name);
 		Map<String, String> labels = Map.of("spring", "boot");
 		Map<String, ExposedPort> exposedPorts = Map.of("8080/tcp", new ExposedPort());
 		List<String> env = List.of("a=b");
