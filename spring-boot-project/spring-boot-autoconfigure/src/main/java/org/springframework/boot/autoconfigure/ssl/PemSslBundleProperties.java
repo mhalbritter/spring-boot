@@ -16,6 +16,9 @@
 
 package org.springframework.boot.autoconfigure.ssl;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.boot.ssl.pem.PemSslStoreBundle;
 
 /**
@@ -61,6 +64,11 @@ public class PemSslBundleProperties extends SslBundleProperties {
 		 * Location or content of the certificate or certificate chain in PEM format.
 		 */
 		private String certificate;
+
+		/**
+		 * Location or content of the certificates or certificate chains in PEM format.
+		 */
+		private final List<String> certificates = new ArrayList<>();
 
 		/**
 		 * Location or content of the private key in PEM format.
@@ -115,6 +123,10 @@ public class PemSslBundleProperties extends SslBundleProperties {
 
 		public void setVerifyKeys(boolean verifyKeys) {
 			this.verifyKeys = verifyKeys;
+		}
+
+		public List<String> getCertificates() {
+			return this.certificates;
 		}
 
 	}

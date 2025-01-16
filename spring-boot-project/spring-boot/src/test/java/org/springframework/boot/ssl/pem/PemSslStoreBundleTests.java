@@ -16,7 +16,9 @@
 
 package org.springframework.boot.ssl.pem;
 
+import java.math.BigInteger;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.List;
@@ -219,6 +221,19 @@ class PemSslStoreBundleTests {
 		then(pemSslStore).should(times(2)).certificates();
 	}
 
+	@Test
+	void shouldLoadMultipleCertificates() throws KeyStoreException {
+		PemSslStoreBundle bundle = new PemSslStoreBundle(null,
+				PemSslStoreDetails.forMultipleCertificates("classpath:test-cert.pem", "classpath:test-cert-chain.pem"));
+		KeyStore trustStore = bundle.getTrustStore();
+		X509Certificate certificate1 = (X509Certificate) trustStore.getCertificate("ssl-0");
+		X509Certificate certificate2 = (X509Certificate) trustStore.getCertificate("ssl-1");
+		X509Certificate certificate3 = (X509Certificate) trustStore.getCertificate("ssl-2");
+		assertThat(certificate1.getSerialNumber()).isEqualTo(new BigInteger("1498180966204745485"));
+		assertThat(certificate2.getSerialNumber()).isEqualTo(new BigInteger("10335260942736376896"));
+		assertThat(certificate3.getSerialNumber()).isEqualTo(new BigInteger("1"));
+	}
+
 	private Consumer<KeyStore> storeContainingCert(String keyAlias) {
 		return storeContainingCert(KeyStore.getDefaultType(), keyAlias);
 	}
@@ -227,7 +242,7 @@ class PemSslStoreBundleTests {
 		return ThrowingConsumer.of((keyStore) -> {
 			assertThat(keyStore).isNotNull();
 			assertThat(keyStore.getType()).isEqualTo(keyStoreType);
-			assertThat(keyStore.containsAlias(keyAlias)).isTrue();
+			assertThat(keyStore.containsAlias(keyAlias)).as("Contains alias '%s'", keyAlias).isTrue();
 			assertThat(keyStore.getCertificate(keyAlias)).isNotNull();
 			assertThat(keyStore.getKey(keyAlias, EMPTY_KEY_PASSWORD)).isNull();
 		});

@@ -16,6 +16,9 @@
 
 package org.springframework.boot.autoconfigure.ssl;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.boot.autoconfigure.ssl.SslBundleProperties.Key;
 import org.springframework.boot.io.ApplicationResourceLoader;
 import org.springframework.boot.ssl.SslBundle;
@@ -31,6 +34,7 @@ import org.springframework.boot.ssl.pem.PemSslStoreDetails;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.style.ToStringCreator;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 /**
  * {@link SslBundle} backed by {@link JksSslBundleProperties} or
@@ -133,7 +137,12 @@ public final class PropertiesSslBundle implements SslBundle {
 	}
 
 	private static PemSslStoreDetails asPemSslStoreDetails(PemSslBundleProperties.Store properties) {
-		return new PemSslStoreDetails(properties.getType(), properties.getCertificate(), properties.getPrivateKey(),
+		List<String> certificates = new ArrayList<>();
+		if (StringUtils.hasText(properties.getCertificate())) {
+			certificates.add(properties.getCertificate());
+		}
+		certificates.addAll(properties.getCertificates());
+		return new PemSslStoreDetails(properties.getType(), null, null, certificates, properties.getPrivateKey(),
 				properties.getPrivateKeyPassword());
 	}
 

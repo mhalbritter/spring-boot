@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -64,13 +65,17 @@ final class LoadedPemSslStore implements PemSslStore {
 
 	private static List<X509Certificate> loadCertificates(PemSslStoreDetails details, ResourceLoader resourceLoader)
 			throws IOException {
-		PemContent pemContent = PemContent.load(details.certificates(), resourceLoader);
-		if (pemContent == null) {
-			return null;
+		List<X509Certificate> result = new ArrayList<>();
+		for (String certificate : details.multipleCertificates()) {
+			PemContent pemContent = PemContent.load(certificate, resourceLoader);
+			if (pemContent == null) {
+				continue;
+			}
+			List<X509Certificate> certificates = pemContent.getCertificates();
+			Assert.state(!CollectionUtils.isEmpty(certificates), "Loaded certificates are empty");
+			result.addAll(certificates);
 		}
-		List<X509Certificate> certificates = pemContent.getCertificates();
-		Assert.state(!CollectionUtils.isEmpty(certificates), "Loaded certificates are empty");
-		return certificates;
+		return result;
 	}
 
 	private static PrivateKey loadPrivateKey(PemSslStoreDetails details, ResourceLoader resourceLoader)
