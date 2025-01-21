@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import org.springframework.boot.configurationsample.simple.DescriptionProperties
 import org.springframework.boot.configurationsample.simple.HierarchicalProperties;
 import org.springframework.boot.configurationsample.simple.HierarchicalPropertiesGrandparent;
 import org.springframework.boot.configurationsample.simple.HierarchicalPropertiesParent;
+import org.springframework.boot.configurationsample.simple.IgnoredProperties;
 import org.springframework.boot.configurationsample.simple.InnerClassWithPrivateConstructor;
 import org.springframework.boot.configurationsample.simple.NotAnnotated;
 import org.springframework.boot.configurationsample.simple.SimpleArrayProperties;
@@ -67,6 +68,8 @@ import org.springframework.boot.configurationsample.specific.InvalidDoubleRegist
 import org.springframework.boot.configurationsample.specific.SimplePojo;
 import org.springframework.boot.configurationsample.specific.StaticAccessor;
 import org.springframework.core.test.tools.CompilationException;
+import org.springframework.core.test.tools.ResourceFile;
+import org.springframework.core.test.tools.TestCompiler;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -84,6 +87,8 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * @author Moritz Halbritter
  */
 class ConfigurationMetadataAnnotationProcessorTests extends AbstractMetadataGenerationTests {
+
+	private static final String IGNORED_PROPERTIES_PATH = "META-INF/ignored-spring-configuration-properties.json";
 
 	@Test
 	void supportedAnnotations() {
@@ -568,6 +573,23 @@ class ConfigurationMetadataAnnotationProcessorTests extends AbstractMetadataGene
 			.withDescription("description without space after asterisk"));
 		assertThat(metadata).has(Metadata.withProperty("record.descriptions.some-byte", Byte.class)
 			.withDescription("last description in Javadoc"));
+	}
+
+	@Test
+	void shouldIgnoreProperties() {
+		TestCompiler testCompiler = TestCompiler.forSystem()
+			.withSources(sourceFilesOf(IgnoredProperties.class))
+			.withResources(ResourceFile.of(IGNORED_PROPERTIES_PATH, """
+					{
+						"properties": [
+							{ "name": "ignored.prop3" }
+						]
+					}
+					"""));
+		ConfigurationMetadata metadata = compile(testCompiler);
+		assertThat(metadata).has(Metadata.withProperty("ignored.prop1", String.class));
+		assertThat(metadata).has(Metadata.withProperty("ignored.prop2", String.class));
+		assertThat(metadata).doesNotHave(Metadata.withProperty("ignored.prop3", String.class));
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ public abstract class AbstractMetadataGenerationTests {
 		return compile(compiler);
 	}
 
-	private ConfigurationMetadata compile(TestCompiler compiler) {
+	protected ConfigurationMetadata compile(TestCompiler compiler) {
 		TestConfigurationMetadataAnnotationProcessor processor = new TestConfigurationMetadataAnnotationProcessor();
 		compiler = compiler.withProcessors(processor);
 		AtomicReference<ConfigurationMetadata> configurationMetadata = new AtomicReference<>();
@@ -63,7 +63,7 @@ public abstract class AbstractMetadataGenerationTests {
 		return configurationMetadata.get();
 	}
 
-	private List<SourceFile> sourceFilesOf(Class<?>... types) {
+	protected List<SourceFile> sourceFilesOf(Class<?>... types) {
 		return Arrays.stream(types).map(SourceFile::forTestClass).toList();
 	}
 

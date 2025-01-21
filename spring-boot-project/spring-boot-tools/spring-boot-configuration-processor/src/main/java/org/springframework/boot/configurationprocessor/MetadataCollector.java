@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,9 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 
 import org.springframework.boot.configurationprocessor.metadata.ConfigurationMetadata;
+import org.springframework.boot.configurationprocessor.metadata.IgnoredProperties;
 import org.springframework.boot.configurationprocessor.metadata.ItemMetadata;
+import org.springframework.boot.configurationprocessor.metadata.ItemMetadata.ItemType;
 
 /**
  * Used by {@link ConfigurationMetadataAnnotationProcessor} to collect
@@ -51,15 +53,20 @@ public class MetadataCollector {
 
 	private final Set<String> processedSourceTypes = new HashSet<>();
 
+	private final IgnoredProperties ignoredProperties;
+
 	/**
 	 * Creates a new {@code MetadataProcessor} instance.
 	 * @param processingEnvironment the processing environment of the build
 	 * @param previousMetadata any previous metadata or {@code null}
+	 * @param ignoredProperties the properties to ignore
 	 */
-	public MetadataCollector(ProcessingEnvironment processingEnvironment, ConfigurationMetadata previousMetadata) {
+	public MetadataCollector(ProcessingEnvironment processingEnvironment, ConfigurationMetadata previousMetadata,
+			IgnoredProperties ignoredProperties) {
 		this.processingEnvironment = processingEnvironment;
 		this.previousMetadata = previousMetadata;
 		this.typeUtils = new TypeUtils(processingEnvironment);
+		this.ignoredProperties = ignoredProperties;
 	}
 
 	public void processing(RoundEnvironment roundEnv) {
@@ -75,7 +82,17 @@ public class MetadataCollector {
 	}
 
 	public void add(ItemMetadata metadata) {
+		if (isIgnored(metadata)) {
+			return;
+		}
 		this.metadataItems.add(metadata);
+	}
+
+	private boolean isIgnored(ItemMetadata metadata) {
+		if (metadata.isOfItemType(ItemType.GROUP)) {
+			return false;
+		}
+		return this.ignoredProperties.isIgnored(metadata.getName());
 	}
 
 	public void add(ItemMetadata metadata, Consumer<ItemMetadata> onConflict) {
