@@ -55,7 +55,7 @@ public abstract class AbstractMetadataGenerationTests {
 		return compile(compiler);
 	}
 
-	protected ConfigurationMetadata compile(TestCompiler compiler) {
+	private ConfigurationMetadata compile(TestCompiler compiler) {
 		TestConfigurationMetadataAnnotationProcessor processor = new TestConfigurationMetadataAnnotationProcessor();
 		compiler = compiler.withProcessors(processor);
 		AtomicReference<ConfigurationMetadata> configurationMetadata = new AtomicReference<>();
@@ -63,7 +63,7 @@ public abstract class AbstractMetadataGenerationTests {
 		return configurationMetadata.get();
 	}
 
-	protected List<SourceFile> sourceFilesOf(Class<?>... types) {
+	private List<SourceFile> sourceFilesOf(Class<?>... types) {
 		return Arrays.stream(types).map(SourceFile::forTestClass).toList();
 	}
 

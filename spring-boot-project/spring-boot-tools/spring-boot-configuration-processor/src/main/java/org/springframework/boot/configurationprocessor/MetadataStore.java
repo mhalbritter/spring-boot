@@ -29,7 +29,6 @@ import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 
 import org.springframework.boot.configurationprocessor.metadata.ConfigurationMetadata;
-import org.springframework.boot.configurationprocessor.metadata.IgnoredProperties;
 import org.springframework.boot.configurationprocessor.metadata.InvalidConfigurationMetadataException;
 import org.springframework.boot.configurationprocessor.metadata.JsonMarshaller;
 
@@ -38,7 +37,6 @@ import org.springframework.boot.configurationprocessor.metadata.JsonMarshaller;
  *
  * @author Andy Wilkinson
  * @author Scott Frederick
- * @author Moritz Halbritter
  * @since 1.2.2
  */
 public class MetadataStore {
@@ -46,8 +44,6 @@ public class MetadataStore {
 	static final String METADATA_PATH = "META-INF/spring-configuration-metadata.json";
 
 	private static final String ADDITIONAL_METADATA_PATH = "META-INF/additional-spring-configuration-metadata.json";
-
-	private static final String IGNORED_PROPERTIES_PATH = "META-INF/ignored-spring-configuration-properties.json";
 
 	private static final String RESOURCES_DIRECTORY = "resources";
 
@@ -80,29 +76,6 @@ public class MetadataStore {
 		return readMetadata(getAdditionalMetadataStream());
 	}
 
-	public IgnoredProperties readIgnoredProperties() {
-		try (InputStream inputStream = getIgnoredPropertiesStream()) {
-			if (inputStream == null) {
-				return IgnoredProperties.empty();
-			}
-			try {
-				return IgnoredProperties.loadFromJson(inputStream);
-			}
-			catch (IOException ex) {
-				return IgnoredProperties.empty();
-			}
-			catch (Exception ex) {
-				throw new InvalidConfigurationMetadataException(
-						"Invalid additional meta-data in '" + IGNORED_PROPERTIES_PATH + "': " + ex.getMessage(),
-						Diagnostic.Kind.ERROR);
-			}
-		}
-		catch (IOException ex) {
-			return IgnoredProperties.empty();
-		}
-
-	}
-
 	private ConfigurationMetadata readMetadata(InputStream in) {
 		try (in) {
 			return new JsonMarshaller().read(in);
@@ -123,22 +96,6 @@ public class MetadataStore {
 
 	private FileObject createMetadataResource() throws IOException {
 		return this.environment.getFiler().createResource(StandardLocation.CLASS_OUTPUT, "", METADATA_PATH);
-	}
-
-	private InputStream getIgnoredPropertiesStream() throws IOException {
-		FileObject fileObject = this.environment.getFiler()
-			.getResource(StandardLocation.CLASS_OUTPUT, "", IGNORED_PROPERTIES_PATH);
-		InputStream inputStream = getMetadataStream(fileObject);
-		if (inputStream != null) {
-			return inputStream;
-		}
-		try {
-			File file = locateIgnoredPropertiesFile(new File(fileObject.toUri()));
-			return (file.exists() ? new FileInputStream(file) : fileObject.toUri().toURL().openStream());
-		}
-		catch (Exception ex) {
-			throw new FileNotFoundException();
-		}
 	}
 
 	private InputStream getAdditionalMetadataStream() throws IOException {
@@ -182,13 +139,6 @@ public class MetadataStore {
 			}
 		}
 		return new File(locateGradleResourcesDirectory(standardLocation), ADDITIONAL_METADATA_PATH);
-	}
-
-	File locateIgnoredPropertiesFile(File standardLocation) throws IOException {
-		if (standardLocation.exists()) {
-			return standardLocation;
-		}
-		return new File(locateGradleResourcesDirectory(standardLocation), IGNORED_PROPERTIES_PATH);
 	}
 
 	private File locateGradleResourcesDirectory(File standardAdditionalMetadataLocation) throws FileNotFoundException {

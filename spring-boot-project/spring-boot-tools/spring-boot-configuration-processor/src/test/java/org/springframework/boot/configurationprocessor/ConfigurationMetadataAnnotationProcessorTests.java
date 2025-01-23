@@ -22,6 +22,7 @@ import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.boot.configurationprocessor.metadata.ConfigurationMetadata;
+import org.springframework.boot.configurationprocessor.metadata.ItemIgnore;
 import org.springframework.boot.configurationprocessor.metadata.ItemMetadata;
 import org.springframework.boot.configurationprocessor.metadata.Metadata;
 import org.springframework.boot.configurationsample.deprecation.Dbcp2Configuration;
@@ -68,8 +69,6 @@ import org.springframework.boot.configurationsample.specific.InvalidDoubleRegist
 import org.springframework.boot.configurationsample.specific.SimplePojo;
 import org.springframework.boot.configurationsample.specific.StaticAccessor;
 import org.springframework.core.test.tools.CompilationException;
-import org.springframework.core.test.tools.ResourceFile;
-import org.springframework.core.test.tools.TestCompiler;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -87,8 +86,6 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * @author Moritz Halbritter
  */
 class ConfigurationMetadataAnnotationProcessorTests extends AbstractMetadataGenerationTests {
-
-	private static final String IGNORED_PROPERTIES_PATH = "META-INF/ignored-spring-configuration-properties.json";
 
 	@Test
 	void supportedAnnotations() {
@@ -577,19 +574,22 @@ class ConfigurationMetadataAnnotationProcessorTests extends AbstractMetadataGene
 
 	@Test
 	void shouldIgnoreProperties() {
-		TestCompiler testCompiler = TestCompiler.forSystem()
-			.withSources(sourceFilesOf(IgnoredProperties.class))
-			.withResources(ResourceFile.of(IGNORED_PROPERTIES_PATH, """
-					{
+		String additionalMetadata = """
+				{
+					"ignored": {
 						"properties": [
-							{ "name": "ignored.prop3" }
+							{
+								"name": "ignored.prop3"
+							}
 						]
 					}
-					"""));
-		ConfigurationMetadata metadata = compile(testCompiler);
+				}
+				""";
+		ConfigurationMetadata metadata = compile(additionalMetadata, IgnoredProperties.class);
 		assertThat(metadata).has(Metadata.withProperty("ignored.prop1", String.class));
 		assertThat(metadata).has(Metadata.withProperty("ignored.prop2", String.class));
 		assertThat(metadata).doesNotHave(Metadata.withProperty("ignored.prop3", String.class));
+		assertThat(metadata.getIgnored()).containsExactly(ItemIgnore.forProperty("ignored.prop3"));
 	}
 
 }

@@ -48,6 +48,7 @@ import javax.tools.Diagnostic.Kind;
 import org.springframework.boot.configurationprocessor.metadata.ConfigurationMetadata;
 import org.springframework.boot.configurationprocessor.metadata.InvalidConfigurationMetadataException;
 import org.springframework.boot.configurationprocessor.metadata.ItemDeprecation;
+import org.springframework.boot.configurationprocessor.metadata.ItemIgnore;
 import org.springframework.boot.configurationprocessor.metadata.ItemMetadata;
 
 /**
@@ -172,8 +173,7 @@ public class ConfigurationMetadataAnnotationProcessor extends AbstractProcessor 
 	public synchronized void init(ProcessingEnvironment env) {
 		super.init(env);
 		this.metadataStore = new MetadataStore(env);
-		this.metadataCollector = new MetadataCollector(env, this.metadataStore.readMetadata(),
-				this.metadataStore.readIgnoredProperties());
+		this.metadataCollector = new MetadataCollector(env, this.metadataStore.readMetadata());
 		this.metadataEnv = new MetadataGenerationEnvironment(env, configurationPropertiesAnnotation(),
 				nestedConfigurationPropertyAnnotation(), deprecatedConfigurationPropertyAnnotation(),
 				constructorBindingAnnotation(), autowiredAnnotation(), defaultValueAnnotation(), endpointAnnotations(),
@@ -373,11 +373,18 @@ public class ConfigurationMetadataAnnotationProcessor extends AbstractProcessor 
 	protected ConfigurationMetadata writeMetadata() throws Exception {
 		ConfigurationMetadata metadata = this.metadataCollector.getMetadata();
 		metadata = mergeAdditionalMetadata(metadata);
+		removeIgnored(metadata);
 		if (!metadata.getItems().isEmpty()) {
 			this.metadataStore.writeMetadata(metadata);
 			return metadata;
 		}
 		return null;
+	}
+
+	private void removeIgnored(ConfigurationMetadata metadata) {
+		for (ItemIgnore itemIgnore : metadata.getIgnored()) {
+			metadata.removeMetadata(itemIgnore.getType(), itemIgnore.getName());
+		}
 	}
 
 	private ConfigurationMetadata mergeAdditionalMetadata(ConfigurationMetadata metadata) {
