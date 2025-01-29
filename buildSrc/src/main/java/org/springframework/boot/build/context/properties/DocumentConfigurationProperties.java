@@ -143,8 +143,6 @@ public abstract class DocumentConfigurationProperties extends DefaultTask {
 				"Commons DBCP2 specific settings bound to an instance of DBCP2's BasicDataSource");
 		config.accept("spring.datasource.tomcat",
 				"Tomcat datasource specific settings bound to an instance of Tomcat JDBC's DataSource");
-		config.accept("spring.datasource.hikari",
-				"Hikari specific settings bound to an instance of Hikari's HikariDataSource");
 
 	}
 

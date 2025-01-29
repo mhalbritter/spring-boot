@@ -1168,6 +1168,78 @@
         "replacement": "spring.sql.init.username"
       }
     }, {
+      "name": "spring.datasource.hikari.allow-pool-suspension",
+      "description": "Whether or not pool suspension is allowed."
+    }, {
+      "name": "spring.datasource.hikari.auto-commit",
+      "description": "The default auto-commit behavior of connections in the pool."
+    }, {
+      "name": "spring.datasource.hikari.catalog",
+      "description": "TOOD MH"
+    }, {
+      "name": "spring.datasource.hikari.connection-init-sql",
+      "description": "TOOD MH"
+    }, {
+      "name": "spring.datasource.hikari.connection-test-query",
+      "description": "TOOD MH"
+    }, {
+      "name": "spring.datasource.hikari.connection-timeout",
+      "description": "TOOD MH"
+    }, {
+      "name": "spring.datasource.hikari.data-source-class-name",
+      "description": "TOOD MH"
+    }, {
+      "name": "spring.datasource.hikari.data-source-j-n-d-i",
+      "description": "TOOD MH"
+    }, {
+      "name": "spring.datasource.hikari.exception-override-class-name",
+      "description": "TOOD MH"
+    }, {
+      "name": "spring.datasource.hikari.idle-timeout",
+      "description": "TOOD MH"
+    }, {
+      "name": "spring.datasource.hikari.initialization-fail-timeout",
+      "description": "TOOD MH"
+    }, {
+      "name": "spring.datasource.hikari.isolate-internal-queries",
+      "description": "TOOD MH"
+    }, {
+      "name": "spring.datasource.hikari.keepalive-time",
+      "description": "TOOD MH"
+    }, {
+      "name": "spring.datasource.hikari.leak-detection-threshold",
+      "description": "TOOD MH"
+    }, {
+      "name": "spring.datasource.hikari.login-timeout",
+      "description": "TOOD MH"
+    }, {
+      "name": "spring.datasource.hikari.max-lifetime",
+      "description": "TOOD MH"
+    }, {
+      "name": "spring.datasource.hikari.maximum-pool-size",
+      "description": "TOOD MH"
+    }, {
+      "name": "spring.datasource.hikari.minimum-idle",
+      "description": "TOOD MH"
+    }, {
+      "name": "spring.datasource.hikari.pool-name",
+      "description": "TOOD MH"
+    }, {
+      "name": "spring.datasource.hikari.read-only",
+      "description": "TOOD MH"
+    }, {
+      "name": "spring.datasource.hikari.register-mbeans",
+      "description": "TOOD MH"
+    }, {
+      "name": "spring.datasource.hikari.schema",
+      "description": "TOOD MH"
+    }, {
+      "name": "spring.datasource.hikari.transaction-isolation",
+      "description": "TOOD MH"
+    }, {
+      "name": "spring.datasource.hikari.validation-timeout",
+      "description": "TOOD MH"
+    }, {
       "name" : "spring.datasource.initialization-mode",
       "type" : "org.springframework.boot.jdbc.DataSourceInitializationMode",
       "deprecation" : {
@@ -3402,5 +3474,39 @@
         }
       ]
     }
-  ]
+  ],
+  "ignored": {
+    "properties": [
+      {
+        "name": "spring.datasource.hikari.credentials"
+      },
+      {
+        "name": "spring.datasource.hikari.data-source-properties"
+      },
+      {
+        "name": "spring.datasource.hikari.driver-class-name"
+      },
+      {
+        "name": "spring.datasource.hikari.exception-override"
+      },
+      {
+        "name": "spring.datasource.hikari.health-check-properties"
+      },
+      {
+        "name": "spring.datasource.hikari.jdbc-url"
+      },
+      {
+        "name": "spring.datasource.hikari.metrics-tracker-factory"
+      },
+      {
+        "name": "spring.datasource.hikari.password"
+      },
+      {
+        "name": "spring.datasource.hikari.scheduled-executor"
+      },
+      {
+        "name": "spring.datasource.hikari.username"
+      }
+    ]
+  }
 }
