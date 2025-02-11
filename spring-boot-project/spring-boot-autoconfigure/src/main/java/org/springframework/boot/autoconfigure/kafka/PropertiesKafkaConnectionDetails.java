@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,12 @@ package org.springframework.boot.autoconfigure.kafka;
 
 import java.util.List;
 
+import org.springframework.boot.autoconfigure.kafka.KafkaProperties.Ssl;
+import org.springframework.boot.ssl.SslBundle;
+import org.springframework.boot.ssl.SslBundles;
+import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
+
 /**
  * Adapts {@link KafkaProperties} to {@link KafkaConnectionDetails}.
  *
@@ -29,8 +35,11 @@ class PropertiesKafkaConnectionDetails implements KafkaConnectionDetails {
 
 	private final KafkaProperties properties;
 
-	PropertiesKafkaConnectionDetails(KafkaProperties properties) {
+	private final SslBundles sslBundles;
+
+	PropertiesKafkaConnectionDetails(KafkaProperties properties, SslBundles sslBundles) {
 		this.properties = properties;
+		this.sslBundles = sslBundles;
 	}
 
 	@Override
@@ -40,21 +49,86 @@ class PropertiesKafkaConnectionDetails implements KafkaConnectionDetails {
 
 	@Override
 	public List<String> getConsumerBootstrapServers() {
-		return getServers(this.properties.getConsumer().getBootstrapServers());
+		List<String> servers = this.properties.getConsumer().getBootstrapServers();
+		return (servers != null) ? servers : getBootstrapServers();
 	}
 
 	@Override
 	public List<String> getProducerBootstrapServers() {
-		return getServers(this.properties.getProducer().getBootstrapServers());
+		List<String> servers = this.properties.getProducer().getBootstrapServers();
+		return (servers != null) ? servers : getBootstrapServers();
 	}
 
 	@Override
 	public List<String> getStreamsBootstrapServers() {
-		return getServers(this.properties.getStreams().getBootstrapServers());
+		List<String> servers = this.properties.getStreams().getBootstrapServers();
+		return (servers != null) ? servers : getBootstrapServers();
 	}
 
-	private List<String> getServers(List<String> servers) {
-		return (servers != null) ? servers : getBootstrapServers();
+	@Override
+	public SslBundle getSslBundle() {
+		return getBundle(this.properties.getSsl());
+	}
+
+	@Override
+	public SslBundle getConsumerSslBundle() {
+		SslBundle sslBundle = getBundle(this.properties.getConsumer().getSsl());
+		return (sslBundle != null) ? sslBundle : getSslBundle();
+	}
+
+	@Override
+	public SslBundle getProducerSslBundle() {
+		SslBundle sslBundle = getBundle(this.properties.getProducer().getSsl());
+		return (sslBundle != null) ? sslBundle : getSslBundle();
+	}
+
+	@Override
+	public SslBundle getAdminSslBundle() {
+		SslBundle sslBundle = getBundle(this.properties.getAdmin().getSsl());
+		return (sslBundle != null) ? sslBundle : getSslBundle();
+	}
+
+	@Override
+	public SslBundle getStreamsSslBundle() {
+		SslBundle sslBundle = getBundle(this.properties.getStreams().getSsl());
+		return (sslBundle != null) ? sslBundle : getSslBundle();
+	}
+
+	@Override
+	public String getSecurityProtocol() {
+		return this.properties.getSecurity().getProtocol();
+	}
+
+	@Override
+	public String getConsumerSecurityProtocol() {
+		String protocol = this.properties.getConsumer().getSecurity().getProtocol();
+		return (StringUtils.hasLength(protocol)) ? protocol : getSecurityProtocol();
+	}
+
+	@Override
+	public String getProducerSecurityProtocol() {
+		String protocol = this.properties.getProducer().getSecurity().getProtocol();
+		return (StringUtils.hasLength(protocol)) ? protocol : getSecurityProtocol();
+	}
+
+	@Override
+	public String getAdminSecurityProtocol() {
+		String protocol = this.properties.getAdmin().getSecurity().getProtocol();
+		return (StringUtils.hasLength(protocol)) ? protocol : getSecurityProtocol();
+	}
+
+	@Override
+	public String getStreamsSecurityProtocol() {
+		String protocol = this.properties.getStreams().getSecurity().getProtocol();
+		return (StringUtils.hasLength(protocol)) ? protocol : getSecurityProtocol();
+	}
+
+	private SslBundle getBundle(Ssl ssl) {
+		if (StringUtils.hasLength(ssl.getBundle())) {
+			Assert.notNull(this.sslBundles, "SSL bundle name has been set but no SSL bundles found in context");
+			return this.sslBundles.getBundle(ssl.getBundle());
+		}
+		return null;
 	}
 
 }
