@@ -7,6 +7,8 @@ plugins {
 	id "org.springframework.boot.optional-dependencies"
 }
 
+apply plugin: 'net.ltgt.errorprone'
+
 description = "Spring Boot"
 
 def tomcatConfigProperties = layout.buildDirectory.dir("tomcat-config-properties")
@@ -16,6 +18,10 @@ configurations {
 }
 
 dependencies {
+	errorprone('com.uber.nullaway:nullaway:0.12.4')
+	errorprone('com.google.errorprone:error_prone_core:2.36.0')
+	api("org.jspecify:jspecify:1.0.0")
+
 	annotationProcessor("org.apache.logging.log4j:log4j-core")
 
 	api("org.springframework:spring-core")
@@ -176,6 +182,19 @@ plugins.withType(EclipsePlugin) {
 	eclipse {
 		synchronizationTasks syncJavaTemplates
 	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	options.errorprone {
+		disableAllChecks = true
+		option("NullAway:OnlyNullMarked", "true")
+		option("NullAway:CustomContractAnnotations", "org.springframework.lang.Contract")
+		// option("NullAway:JSpecifyMode", "true") // TODO MH
+	}
+}
+tasks.compileJava {
+	// The check defaults to a warning, bump it up to an error for the main sources
+	options.errorprone.error("NullAway")
 }
 
 sourceSets {

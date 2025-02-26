@@ -1,6 +1,7 @@
 plugins {
 	id "base"
 	id "org.jetbrains.kotlin.jvm" apply false // https://youtrack.jetbrains.com/issue/KT-30276
+	id "net.ltgt.errorprone" version "4.1.0" apply false
 }
 
 description = "Spring Boot Build"
