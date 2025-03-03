@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
@@ -118,6 +119,7 @@ public class ConfigurationWarningsApplicationContextInitializer
 		 * @param registry the {@link BeanDefinitionRegistry}
 		 * @return a warning message or {@code null}
 		 */
+		@Nullable
 		String getWarning(BeanDefinitionRegistry registry);
 
 	}
@@ -137,7 +139,7 @@ public class ConfigurationWarningsApplicationContextInitializer
 		}
 
 		@Override
-		public String getWarning(BeanDefinitionRegistry registry) {
+		public @Nullable String getWarning(BeanDefinitionRegistry registry) {
 			Set<String> scannedPackages = getComponentScanningPackages(registry);
 			List<String> problematicPackages = getProblematicPackages(scannedPackages);
 			if (problematicPackages.isEmpty()) {

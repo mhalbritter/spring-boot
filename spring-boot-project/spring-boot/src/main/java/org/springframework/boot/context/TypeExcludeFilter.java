@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2019 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ package org.springframework.boot.context;
 
 import java.io.IOException;
 import java.util.Collection;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
@@ -49,9 +51,10 @@ import org.springframework.core.type.filter.TypeFilter;
  */
 public class TypeExcludeFilter implements TypeFilter, BeanFactoryAware {
 
+	@SuppressWarnings("NullAway.Init")
 	private BeanFactory beanFactory;
 
-	private Collection<TypeExcludeFilter> delegates;
+	private @Nullable Collection<TypeExcludeFilter> delegates;
 
 	@Override
 	public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
