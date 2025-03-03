@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.context.properties.bind.BindResult;
 import org.springframework.boot.context.properties.bind.Bindable;
@@ -139,7 +141,7 @@ public class Profiles implements Iterable<String> {
 		return asUniqueItemList(expandedProfiles);
 	}
 
-	private List<String> asReversedList(List<String> list) {
+	private List<String> asReversedList(@Nullable List<String> list) {
 		if (CollectionUtils.isEmpty(list)) {
 			return Collections.emptyList();
 		}
@@ -152,7 +154,7 @@ public class Profiles implements Iterable<String> {
 		return asUniqueItemList(profiles, null);
 	}
 
-	private List<String> asUniqueItemList(Collection<String> profiles, Collection<String> additional) {
+	private List<String> asUniqueItemList(Collection<String> profiles, @Nullable Collection<String> additional) {
 		LinkedHashSet<String> uniqueItems = new LinkedHashSet<>();
 		if (!CollectionUtils.isEmpty(additional)) {
 			uniqueItems.addAll(additional);

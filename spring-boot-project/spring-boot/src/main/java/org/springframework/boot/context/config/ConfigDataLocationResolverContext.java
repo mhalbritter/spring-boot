@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2020 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 
 package org.springframework.boot.context.config;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.ConfigurableBootstrapContext;
 import org.springframework.boot.context.properties.bind.Binder;
@@ -41,6 +43,7 @@ public interface ConfigDataLocationResolverContext {
 	 * or {@code null} if there is no available parent.
 	 * @return the parent location
 	 */
+	@Nullable
 	ConfigDataResource getParent();
 
 	/**

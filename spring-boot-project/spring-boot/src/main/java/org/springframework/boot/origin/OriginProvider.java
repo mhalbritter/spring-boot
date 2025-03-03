@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2019 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 
 package org.springframework.boot.origin;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Interface to provide access to the origin of an item.
  *
@@ -30,6 +32,7 @@ public interface OriginProvider {
 	 * Return the source origin or {@code null} if the origin is not known.
 	 * @return the origin or {@code null}
 	 */
+	@Nullable
 	Origin getOrigin();
 
 }

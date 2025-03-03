@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.boot.context.properties.source.ConfigurationProperty;
 import org.springframework.boot.context.properties.source.ConfigurationPropertyName;
 import org.springframework.boot.context.properties.source.ConfigurationPropertySource;
@@ -37,6 +39,7 @@ import org.springframework.core.env.AbstractEnvironment;
 public class InvalidConfigDataPropertyException extends ConfigDataException {
 
 	private static final Map<ConfigurationPropertyName, ConfigurationPropertyName> ERRORS;
+
 	static {
 		Map<ConfigurationPropertyName, ConfigurationPropertyName> errors = new LinkedHashMap<>();
 		errors.put(ConfigurationPropertyName.of("spring.profiles"),
@@ -47,6 +50,7 @@ public class InvalidConfigDataPropertyException extends ConfigDataException {
 	}
 
 	private static final Set<ConfigurationPropertyName> PROFILE_SPECIFIC_ERRORS;
+
 	static {
 		Set<ConfigurationPropertyName> errors = new LinkedHashSet<>();
 		errors.add(Profiles.INCLUDE_PROFILES);
@@ -60,12 +64,12 @@ public class InvalidConfigDataPropertyException extends ConfigDataException {
 
 	private final ConfigurationProperty property;
 
-	private final ConfigurationPropertyName replacement;
+	private final @Nullable ConfigurationPropertyName replacement;
 
-	private final ConfigDataResource location;
+	private final @Nullable ConfigDataResource location;
 
 	InvalidConfigDataPropertyException(ConfigurationProperty property, boolean profileSpecific,
-			ConfigurationPropertyName replacement, ConfigDataResource location) {
+			@Nullable ConfigurationPropertyName replacement, @Nullable ConfigDataResource location) {
 		super(getMessage(property, profileSpecific, replacement, location), null);
 		this.property = property;
 		this.replacement = replacement;
@@ -85,7 +89,7 @@ public class InvalidConfigDataPropertyException extends ConfigDataException {
 	 * the source was not loaded from {@link ConfigData}.
 	 * @return the config data location or {@code null}
 	 */
-	public ConfigDataResource getLocation() {
+	public @Nullable ConfigDataResource getLocation() {
 		return this.location;
 	}
 
@@ -94,7 +98,7 @@ public class InvalidConfigDataPropertyException extends ConfigDataException {
 	 * replacement is available.
 	 * @return the replacement property name
 	 */
-	public ConfigurationPropertyName getReplacement() {
+	public @Nullable ConfigurationPropertyName getReplacement() {
 		return this.replacement;
 	}
 
@@ -126,7 +130,7 @@ public class InvalidConfigDataPropertyException extends ConfigDataException {
 	}
 
 	private static String getMessage(ConfigurationProperty property, boolean profileSpecific,
-			ConfigurationPropertyName replacement, ConfigDataResource location) {
+			@Nullable ConfigurationPropertyName replacement, @Nullable ConfigDataResource location) {
 		StringBuilder message = new StringBuilder("Property '");
 		message.append(property.getName());
 		if (location != null) {

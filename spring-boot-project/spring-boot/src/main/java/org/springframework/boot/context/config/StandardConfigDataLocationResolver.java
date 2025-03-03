@@ -30,6 +30,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.context.config.LocationResourceLoader.ResourceType;
 import org.springframework.boot.context.properties.bind.Binder;
@@ -67,7 +68,7 @@ public class StandardConfigDataLocationResolver
 
 	private static final Pattern URL_PREFIX = Pattern.compile("^([a-zA-Z][a-zA-Z0-9*]*?:)(.*$)");
 
-	private static final String NO_PROFILE = null;
+	private static final @Nullable String NO_PROFILE = null;
 
 	private final Log logger;
 
@@ -208,7 +209,7 @@ public class StandardConfigDataLocationResolver
 	}
 
 	private Set<StandardConfigDataReference> getReferencesForDirectory(ConfigDataLocation configDataLocation,
-			String directory, String profile) {
+			String directory, @Nullable String profile) {
 		Set<StandardConfigDataReference> references = new LinkedHashSet<>();
 		for (String name : this.configNames) {
 			Deque<StandardConfigDataReference> referencesForName = getReferencesForConfigName(name, configDataLocation,
@@ -219,7 +220,7 @@ public class StandardConfigDataLocationResolver
 	}
 
 	private Deque<StandardConfigDataReference> getReferencesForConfigName(String name,
-			ConfigDataLocation configDataLocation, String directory, String profile) {
+			ConfigDataLocation configDataLocation, String directory, @Nullable String profile) {
 		Deque<StandardConfigDataReference> references = new ArrayDeque<>();
 		for (PropertySourceLoader propertySourceLoader : this.propertySourceLoaders) {
 			for (String extension : propertySourceLoader.getFileExtensions()) {
@@ -234,7 +235,7 @@ public class StandardConfigDataLocationResolver
 	}
 
 	private Set<StandardConfigDataReference> getReferencesForFile(ConfigDataLocation configDataLocation, String file,
-			String profile) {
+			@Nullable String profile) {
 		FileExtensionHint fileExtensionHint = FileExtensionHint.from(file);
 		if (fileExtensionHint.isPresent()) {
 			file = FileExtensionHint.removeFrom(file) + fileExtensionHint;
@@ -264,7 +265,7 @@ public class StandardConfigDataLocationResolver
 						+ "check the location prefix if a different resolver is expected");
 	}
 
-	private String getLoadableFileExtension(PropertySourceLoader loader, String file) {
+	private @Nullable String getLoadableFileExtension(PropertySourceLoader loader, String file) {
 		for (String fileExtension : loader.getFileExtensions()) {
 			if (StringUtils.endsWithIgnoreCase(file, fileExtension)) {
 				return fileExtension;
@@ -307,12 +308,18 @@ public class StandardConfigDataLocationResolver
 	}
 
 	private Set<StandardConfigDataResource> resolveNonPatternEmptyDirectories(StandardConfigDataReference reference) {
+		if (reference.getDirectory() == null) { // TODO MH
+			return Collections.emptySet();
+		}
 		Resource resource = this.resourceLoader.getResource(reference.getDirectory());
 		return (resource instanceof ClassPathResource || !resource.exists()) ? Collections.emptySet()
 				: Collections.singleton(new StandardConfigDataResource(reference, resource, true));
 	}
 
 	private Set<StandardConfigDataResource> resolvePatternEmptyDirectories(StandardConfigDataReference reference) {
+		if (reference.getDirectory() == null) { // TODO MH
+			return Collections.emptySet();
+		}
 		Resource[] subdirectories = this.resourceLoader.getResources(reference.getDirectory(), ResourceType.DIRECTORY);
 		ConfigDataLocation location = reference.getConfigDataLocation();
 		if (!location.isOptional() && ObjectUtils.isEmpty(subdirectories)) {

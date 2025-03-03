@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2021 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,14 @@
 
 package org.springframework.boot.context.config;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.boot.context.properties.source.ConfigurationProperty;
 import org.springframework.boot.context.properties.source.ConfigurationPropertyName;
 import org.springframework.boot.context.properties.source.ConfigurationPropertySource;
 import org.springframework.boot.origin.Origin;
 import org.springframework.core.env.PropertySource;
+import org.springframework.util.Assert;
 
 /**
  * Exception thrown when an attempt is made to resolve a property against an inactive
@@ -35,11 +38,11 @@ public class InactiveConfigDataAccessException extends ConfigDataException {
 
 	private final PropertySource<?> propertySource;
 
-	private final ConfigDataResource location;
+	private final @Nullable ConfigDataResource location;
 
 	private final String propertyName;
 
-	private final Origin origin;
+	private final @Nullable Origin origin;
 
 	/**
 	 * Create a new {@link InactiveConfigDataAccessException} instance.
@@ -49,8 +52,8 @@ public class InactiveConfigDataAccessException extends ConfigDataException {
 	 * @param propertyName the name of the property
 	 * @param origin the origin or the property or {@code null}
 	 */
-	InactiveConfigDataAccessException(PropertySource<?> propertySource, ConfigDataResource location,
-			String propertyName, Origin origin) {
+	InactiveConfigDataAccessException(PropertySource<?> propertySource, @Nullable ConfigDataResource location,
+			String propertyName, @Nullable Origin origin) {
 		super(getMessage(propertySource, location, propertyName, origin), null);
 		this.propertySource = propertySource;
 		this.location = location;
@@ -58,8 +61,8 @@ public class InactiveConfigDataAccessException extends ConfigDataException {
 		this.origin = origin;
 	}
 
-	private static String getMessage(PropertySource<?> propertySource, ConfigDataResource location, String propertyName,
-			Origin origin) {
+	private static String getMessage(PropertySource<?> propertySource, @Nullable ConfigDataResource location,
+			String propertyName, @Nullable Origin origin) {
 		StringBuilder message = new StringBuilder("Inactive property source '");
 		message.append(propertySource.getName());
 		if (location != null) {
@@ -90,7 +93,7 @@ public class InactiveConfigDataAccessException extends ConfigDataException {
 	 * source was not loaded from {@link ConfigData}.
 	 * @return the config data location or {@code null}
 	 */
-	public ConfigDataResource getLocation() {
+	public @Nullable ConfigDataResource getLocation() {
 		return this.location;
 	}
 
@@ -106,7 +109,7 @@ public class InactiveConfigDataAccessException extends ConfigDataException {
 	 * Return the origin or the property or {@code null}.
 	 * @return the property origin
 	 */
-	public Origin getOrigin() {
+	public @Nullable Origin getOrigin() {
 		return this.origin;
 	}
 
@@ -121,6 +124,7 @@ public class InactiveConfigDataAccessException extends ConfigDataException {
 		ConfigurationProperty property = (source != null) ? source.getConfigurationProperty(name) : null;
 		if (property != null) {
 			PropertySource<?> propertySource = contributor.getPropertySource();
+			Assert.notNull(propertySource, "'propertySource' must not be null");
 			ConfigDataResource location = contributor.getResource();
 			throw new InactiveConfigDataAccessException(propertySource, location, name.toString(),
 					property.getOrigin());

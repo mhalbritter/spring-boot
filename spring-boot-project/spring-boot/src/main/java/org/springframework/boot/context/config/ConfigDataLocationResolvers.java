@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.function.Supplier;
 
 import org.apache.commons.logging.Log;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.BootstrapContext;
 import org.springframework.boot.BootstrapRegistry;
@@ -85,7 +86,7 @@ class ConfigDataLocationResolvers {
 	}
 
 	List<ConfigDataResolutionResult> resolve(ConfigDataLocationResolverContext context, ConfigDataLocation location,
-			Profiles profiles) {
+			@Nullable Profiles profiles) {
 		if (location == null) {
 			return Collections.emptyList();
 		}
@@ -98,7 +99,7 @@ class ConfigDataLocationResolvers {
 	}
 
 	private List<ConfigDataResolutionResult> resolve(ConfigDataLocationResolver<?> resolver,
-			ConfigDataLocationResolverContext context, ConfigDataLocation location, Profiles profiles) {
+			ConfigDataLocationResolverContext context, ConfigDataLocation location, @Nullable Profiles profiles) {
 		List<ConfigDataResolutionResult> resolved = resolve(location, false, () -> resolver.resolve(context, location));
 		if (profiles == null) {
 			return resolved;

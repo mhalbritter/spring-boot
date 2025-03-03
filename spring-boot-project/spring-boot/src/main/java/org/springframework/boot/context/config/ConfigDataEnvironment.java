@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.BootstrapRegistry.InstanceSupplier;
 import org.springframework.boot.BootstrapRegistry.Scope;
@@ -86,6 +87,7 @@ class ConfigDataEnvironment {
 	 * Default search locations used if not {@link #LOCATION_PROPERTY} is found.
 	 */
 	static final ConfigDataLocation[] DEFAULT_SEARCH_LOCATIONS;
+
 	static {
 		List<ConfigDataLocation> locations = new ArrayList<>();
 		locations.add(ConfigDataLocation.of("optional:classpath:/;optional:classpath:/config/"));
@@ -137,7 +139,7 @@ class ConfigDataEnvironment {
 	 */
 	ConfigDataEnvironment(DeferredLogFactory logFactory, ConfigurableBootstrapContext bootstrapContext,
 			ConfigurableEnvironment environment, ResourceLoader resourceLoader, Collection<String> additionalProfiles,
-			ConfigDataEnvironmentUpdateListener environmentUpdateListener) {
+			@Nullable ConfigDataEnvironmentUpdateListener environmentUpdateListener) {
 		Binder binder = Binder.get(environment);
 		this.logFactory = logFactory;
 		this.logger = logFactory.getLog(getClass());
@@ -319,7 +321,7 @@ class ConfigDataEnvironment {
 	}
 
 	private void registerBootstrapBinder(ConfigDataEnvironmentContributors contributors,
-			ConfigDataActivationContext activationContext, BinderOption... binderOptions) {
+			@Nullable ConfigDataActivationContext activationContext, BinderOption... binderOptions) {
 		this.bootstrapContext.register(Binder.class,
 				InstanceSupplier.from(() -> contributors.getBinder(activationContext, binderOptions))
 					.withScope(Scope.PROTOTYPE));
@@ -334,11 +336,13 @@ class ConfigDataEnvironment {
 		applyContributor(contributors, activationContext, propertySources);
 		DefaultPropertiesPropertySource.moveToEnd(propertySources);
 		Profiles profiles = activationContext.getProfiles();
-		this.logger.trace(LogMessage.format("Setting default profiles: %s", profiles.getDefault()));
-		this.environment.setDefaultProfiles(StringUtils.toStringArray(profiles.getDefault()));
-		this.logger.trace(LogMessage.format("Setting active profiles: %s", profiles.getActive()));
-		this.environment.setActiveProfiles(StringUtils.toStringArray(profiles.getActive()));
-		this.environmentUpdateListener.onSetProfiles(profiles);
+		if (profiles != null) { // TODO MH
+			this.logger.trace(LogMessage.format("Setting default profiles: %s", profiles.getDefault()));
+			this.environment.setDefaultProfiles(StringUtils.toStringArray(profiles.getDefault()));
+			this.logger.trace(LogMessage.format("Setting active profiles: %s", profiles.getActive()));
+			this.environment.setActiveProfiles(StringUtils.toStringArray(profiles.getActive()));
+			this.environmentUpdateListener.onSetProfiles(profiles);
+		}
 	}
 
 	private void applyContributor(ConfigDataEnvironmentContributors contributors,

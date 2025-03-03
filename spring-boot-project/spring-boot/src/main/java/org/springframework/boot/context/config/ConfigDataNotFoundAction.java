@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2020 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,6 @@ public enum ConfigDataNotFoundAction {
 	 * Throw the exception to fail startup.
 	 */
 	FAIL {
-
 		@Override
 		void handle(Log logger, ConfigDataNotFoundException ex) {
 			throw ex;
@@ -44,7 +43,6 @@ public enum ConfigDataNotFoundAction {
 	 * Ignore the exception and continue processing the remaining locations.
 	 */
 	IGNORE {
-
 		@Override
 		void handle(Log logger, ConfigDataNotFoundException ex) {
 			logger.trace(LogMessage.format("Ignoring missing config data %s", ex.getReferenceDescription()));

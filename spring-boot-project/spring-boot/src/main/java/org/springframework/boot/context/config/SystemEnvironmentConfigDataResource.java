@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.boot.env.PropertySourceLoader;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.ByteArrayResource;
@@ -56,6 +58,7 @@ class SystemEnvironmentConfigDataResource extends ConfigDataResource {
 		return this.loader;
 	}
 
+	@Nullable
 	List<PropertySource<?>> load() throws IOException {
 		String content = this.environment.apply(this.variableName);
 		return (content != null) ? this.loader.load(StringUtils.capitalize(toString()), asResource(content)) : null;

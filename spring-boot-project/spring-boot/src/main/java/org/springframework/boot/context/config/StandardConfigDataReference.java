@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2021 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 
 package org.springframework.boot.context.config;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.boot.env.PropertySourceLoader;
 import org.springframework.util.StringUtils;
 
@@ -31,9 +33,9 @@ class StandardConfigDataReference {
 
 	private final String resourceLocation;
 
-	private final String directory;
+	private final @Nullable String directory;
 
-	private final String profile;
+	private final @Nullable String profile;
 
 	private final PropertySourceLoader propertySourceLoader;
 
@@ -48,8 +50,8 @@ class StandardConfigDataReference {
 	 * @param propertySourceLoader the property source loader that should be used for this
 	 * reference
 	 */
-	StandardConfigDataReference(ConfigDataLocation configDataLocation, String directory, String root, String profile,
-			String extension, PropertySourceLoader propertySourceLoader) {
+	StandardConfigDataReference(ConfigDataLocation configDataLocation, @Nullable String directory, String root,
+			@Nullable String profile, @Nullable String extension, PropertySourceLoader propertySourceLoader) {
 		this.configDataLocation = configDataLocation;
 		String profileSuffix = (StringUtils.hasText(profile)) ? "-" + profile : "";
 		this.resourceLocation = root + profileSuffix + ((extension != null) ? "." + extension : "");
@@ -70,10 +72,12 @@ class StandardConfigDataReference {
 		return !this.configDataLocation.isOptional() && this.directory != null;
 	}
 
+	@Nullable
 	String getDirectory() {
 		return this.directory;
 	}
 
+	@Nullable
 	String getProfile() {
 		return this.profile;
 	}

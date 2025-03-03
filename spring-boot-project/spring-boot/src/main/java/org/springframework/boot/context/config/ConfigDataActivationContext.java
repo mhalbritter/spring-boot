@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2020 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 
 package org.springframework.boot.context.config;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.boot.cloud.CloudPlatform;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.core.env.Environment;
@@ -29,9 +31,9 @@ import org.springframework.core.style.ToStringCreator;
  */
 class ConfigDataActivationContext {
 
-	private final CloudPlatform cloudPlatform;
+	private final @Nullable CloudPlatform cloudPlatform;
 
-	private final Profiles profiles;
+	private final @Nullable Profiles profiles;
 
 	/**
 	 * Create a new {@link ConfigDataActivationContext} instance before any profiles have
@@ -50,12 +52,12 @@ class ConfigDataActivationContext {
 	 * @param cloudPlatform the cloud platform
 	 * @param profiles the profiles
 	 */
-	ConfigDataActivationContext(CloudPlatform cloudPlatform, Profiles profiles) {
+	ConfigDataActivationContext(@Nullable CloudPlatform cloudPlatform, Profiles profiles) {
 		this.cloudPlatform = cloudPlatform;
 		this.profiles = profiles;
 	}
 
-	private CloudPlatform deduceCloudPlatform(Environment environment, Binder binder) {
+	private @Nullable CloudPlatform deduceCloudPlatform(Environment environment, Binder binder) {
 		for (CloudPlatform candidate : CloudPlatform.values()) {
 			if (candidate.isEnforced(binder)) {
 				return candidate;
@@ -77,6 +79,7 @@ class ConfigDataActivationContext {
 	 * Return the active {@link CloudPlatform} or {@code null}.
 	 * @return the active cloud platform
 	 */
+	@Nullable
 	CloudPlatform getCloudPlatform() {
 		return this.cloudPlatform;
 	}
@@ -85,6 +88,7 @@ class ConfigDataActivationContext {
 	 * Return profile information if it is available.
 	 * @return profile information or {@code null}
 	 */
+	@Nullable
 	Profiles getProfiles() {
 		return this.profiles;
 	}

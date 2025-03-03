@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2021 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 
 package org.springframework.boot.context.config;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.origin.Origin;
 import org.springframework.boot.origin.OriginProvider;
@@ -44,9 +46,9 @@ public final class ConfigDataLocation implements OriginProvider {
 
 	private final String value;
 
-	private final Origin origin;
+	private final @Nullable Origin origin;
 
-	private ConfigDataLocation(boolean optional, String value, Origin origin) {
+	private ConfigDataLocation(boolean optional, String value, @Nullable Origin origin) {
 		this.value = value;
 		this.optional = optional;
 		this.origin = origin;
@@ -93,7 +95,7 @@ public final class ConfigDataLocation implements OriginProvider {
 	}
 
 	@Override
-	public Origin getOrigin() {
+	public @Nullable Origin getOrigin() {
 		return this.origin;
 	}
 
@@ -118,7 +120,8 @@ public final class ConfigDataLocation implements OriginProvider {
 		String[] values = StringUtils.delimitedListToStringArray(toString(), delimiter);
 		ConfigDataLocation[] result = new ConfigDataLocation[values.length];
 		for (int i = 0; i < values.length; i++) {
-			result[i] = of(values[i]).withOrigin(getOrigin());
+			ConfigDataLocation location = of(values[i]);
+			result[i] = (location != null) ? location.withOrigin(getOrigin()) : null;
 		}
 		return result;
 	}
@@ -150,7 +153,7 @@ public final class ConfigDataLocation implements OriginProvider {
 	 * @param origin the origin to set
 	 * @return a new {@link ConfigDataLocation} instance.
 	 */
-	ConfigDataLocation withOrigin(Origin origin) {
+	ConfigDataLocation withOrigin(@Nullable Origin origin) {
 		return new ConfigDataLocation(this.optional, this.value, origin);
 	}
 
@@ -160,7 +163,7 @@ public final class ConfigDataLocation implements OriginProvider {
 	 * @return a {@link ConfigDataLocation} instance or {@code null} if no location was
 	 * provided
 	 */
-	public static ConfigDataLocation of(String location) {
+	public static @Nullable ConfigDataLocation of(String location) {
 		boolean optional = location != null && location.startsWith(OPTIONAL_PREFIX);
 		String value = (!optional) ? location : location.substring(OPTIONAL_PREFIX.length());
 		if (!StringUtils.hasText(value)) {
