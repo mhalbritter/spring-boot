@@ -96,7 +96,7 @@ class ConfigurationPropertiesBinder {
 		return getBinder().bind(annotation.prefix(), target, bindHandler);
 	}
 
-	Object bindOrCreate(ConfigurationPropertiesBean propertiesBean) {
+	@Nullable Object bindOrCreate(ConfigurationPropertiesBean propertiesBean) {
 		Bindable<?> target = propertiesBean.asBindTarget();
 		ConfigurationProperties annotation = propertiesBean.getAnnotation();
 		BindHandler bindHandler = getBindHandler(target, annotation);
@@ -181,11 +181,13 @@ class ConfigurationPropertiesBinder {
 	}
 
 	private Binder getBinder() {
-		if (this.binder == null) {
-			this.binder = new Binder(getConfigurationPropertySources(), getPropertySourcesPlaceholdersResolver(),
+		Binder binder = this.binder;
+		if (binder == null) {
+			binder = new Binder(getConfigurationPropertySources(), getPropertySourcesPlaceholdersResolver(),
 					getConversionServices(), getPropertyEditorInitializer(), null, null);
+			this.binder = binder;
 		}
-		return this.binder;
+		return binder;
 	}
 
 	private Iterable<ConfigurationPropertySource> getConfigurationPropertySources() {

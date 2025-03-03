@@ -65,7 +65,7 @@ public abstract class AbstractBindHandler implements BindHandler {
 	}
 
 	@Override
-	public void onFinish(ConfigurationPropertyName name, Bindable<?> target, BindContext context, Object result)
+	public void onFinish(ConfigurationPropertyName name, Bindable<?> target, BindContext context, @Nullable Object result)
 			throws Exception {
 		this.parent.onFinish(name, target, context, result);
 	}

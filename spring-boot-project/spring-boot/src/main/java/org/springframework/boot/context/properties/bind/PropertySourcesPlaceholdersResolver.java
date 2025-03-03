@@ -16,6 +16,8 @@
 
 package org.springframework.boot.context.properties.bind;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.PropertySource;
@@ -45,7 +47,7 @@ public class PropertySourcesPlaceholdersResolver implements PlaceholdersResolver
 		this(sources, null);
 	}
 
-	public PropertySourcesPlaceholdersResolver(Iterable<PropertySource<?>> sources, PropertyPlaceholderHelper helper) {
+	public PropertySourcesPlaceholdersResolver(Iterable<PropertySource<?>> sources, @Nullable PropertyPlaceholderHelper helper) {
 		this.sources = sources;
 		this.helper = (helper != null) ? helper
 				: new PropertyPlaceholderHelper(SystemPropertyUtils.PLACEHOLDER_PREFIX,
@@ -61,7 +63,7 @@ public class PropertySourcesPlaceholdersResolver implements PlaceholdersResolver
 		return value;
 	}
 
-	protected String resolvePlaceholder(String placeholder) {
+	protected @Nullable String resolvePlaceholder(String placeholder) {
 		if (this.sources != null) {
 			for (PropertySource<?> source : this.sources) {
 				Object value = source.getProperty(placeholder);

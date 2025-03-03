@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.PropertyEditorRegistry;
@@ -54,12 +56,12 @@ import org.springframework.util.CollectionUtils;
  */
 final class BindConverter {
 
-	private static BindConverter sharedInstance;
+	private static @Nullable BindConverter sharedInstance;
 
 	private final List<ConversionService> delegates;
 
-	private BindConverter(List<ConversionService> conversionServices,
-			Consumer<PropertyEditorRegistry> propertyEditorInitializer) {
+	private BindConverter(@Nullable List<ConversionService> conversionServices,
+			@Nullable Consumer<PropertyEditorRegistry> propertyEditorInitializer) {
 		List<ConversionService> delegates = new ArrayList<>();
 		delegates.add(new TypeConverterConversionService(propertyEditorInitializer));
 		boolean hasApplication = false;
@@ -89,12 +91,12 @@ final class BindConverter {
 		return false;
 	}
 
-	<T> T convert(Object source, Bindable<T> target) {
+	<T> @Nullable T convert(@Nullable Object source, Bindable<T> target) {
 		return convert(source, target.getType(), target.getAnnotations());
 	}
 
 	@SuppressWarnings("unchecked")
-	<T> T convert(Object source, ResolvableType targetType, Annotation... targetAnnotations) {
+	<T> @Nullable T convert(@Nullable Object source, ResolvableType targetType, Annotation... targetAnnotations) {
 		if (source == null) {
 			return null;
 		}
@@ -102,7 +104,7 @@ final class BindConverter {
 				new ResolvableTypeDescriptor(targetType, targetAnnotations));
 	}
 
-	private Object convert(Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
+	private @Nullable Object convert(Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
 		ConversionException failure = null;
 		for (ConversionService delegate : this.delegates) {
 			try {
@@ -119,8 +121,8 @@ final class BindConverter {
 		throw (failure != null) ? failure : new ConverterNotFoundException(sourceType, targetType);
 	}
 
-	static BindConverter get(List<ConversionService> conversionServices,
-			Consumer<PropertyEditorRegistry> propertyEditorInitializer) {
+	static BindConverter get(@Nullable List<ConversionService> conversionServices,
+			@Nullable Consumer<PropertyEditorRegistry> propertyEditorInitializer) {
 		boolean sharedApplicationConversionService = (conversionServices == null) || (conversionServices.size() == 1
 				&& conversionServices.get(0) == ApplicationConversionService.getSharedInstance());
 		if (propertyEditorInitializer == null && sharedApplicationConversionService) {
@@ -154,7 +156,7 @@ final class BindConverter {
 	 */
 	private static class TypeConverterConversionService extends GenericConversionService {
 
-		TypeConverterConversionService(Consumer<PropertyEditorRegistry> initializer) {
+		TypeConverterConversionService(@Nullable Consumer<PropertyEditorRegistry> initializer) {
 			ApplicationConversionService.addDelimitedStringConverters(this);
 			addConverter(new TypeConverterConverter(initializer));
 		}
@@ -184,13 +186,13 @@ final class BindConverter {
 			EXCLUDED_EDITORS = Collections.unmodifiableSet(excluded);
 		}
 
-		private final Consumer<PropertyEditorRegistry> initializer;
+		private final @Nullable Consumer<PropertyEditorRegistry> initializer;
 
 		// SimpleTypeConverter is not thread-safe to use for conversion but we can use it
 		// in a thread-safe way to check if conversion is possible.
 		private final SimpleTypeConverter matchesOnlyTypeConverter;
 
-		TypeConverterConverter(Consumer<PropertyEditorRegistry> initializer) {
+		TypeConverterConverter(@Nullable Consumer<PropertyEditorRegistry> initializer) {
 			this.initializer = initializer;
 			this.matchesOnlyTypeConverter = createTypeConverter();
 		}

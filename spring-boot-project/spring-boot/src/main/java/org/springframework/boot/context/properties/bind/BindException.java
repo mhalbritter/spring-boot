@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2019 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 
 package org.springframework.boot.context.properties.bind;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.context.properties.source.ConfigurationProperty;
 import org.springframework.boot.context.properties.source.ConfigurationPropertyName;
@@ -32,11 +34,11 @@ public class BindException extends RuntimeException implements OriginProvider {
 
 	private final Bindable<?> target;
 
-	private final ConfigurationProperty property;
+	private final @Nullable ConfigurationProperty property;
 
 	private final ConfigurationPropertyName name;
 
-	BindException(ConfigurationPropertyName name, Bindable<?> target, ConfigurationProperty property, Throwable cause) {
+	BindException(ConfigurationPropertyName name, Bindable<?> target, @Nullable ConfigurationProperty property, Throwable cause) {
 		super(buildMessage(name, target), cause);
 		this.name = name;
 		this.target = target;
@@ -63,7 +65,7 @@ public class BindException extends RuntimeException implements OriginProvider {
 	 * Return the configuration property name of the item that was being bound.
 	 * @return the configuration property name
 	 */
-	public ConfigurationProperty getProperty() {
+	public @Nullable ConfigurationProperty getProperty() {
 		return this.property;
 	}
 

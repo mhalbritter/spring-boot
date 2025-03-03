@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2019 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 
 package org.springframework.boot.context.properties.bind;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.context.properties.source.ConfigurationPropertyName;
 import org.springframework.boot.context.properties.source.ConfigurationPropertySource;
@@ -47,6 +49,6 @@ interface AggregateElementBinder {
 	 * @param source the source of the elements or {@code null} to use all sources
 	 * @return a bound object or {@code null}
 	 */
-	Object bind(ConfigurationPropertyName name, Bindable<?> target, ConfigurationPropertySource source);
+	Object bind(ConfigurationPropertyName name, Bindable<?> target, @Nullable ConfigurationPropertySource source);
 
 }

@@ -109,7 +109,9 @@ public final class ConfigurationPropertiesBean {
 	 * @return the configuration properties annotation
 	 */
 	public ConfigurationProperties getAnnotation() {
-		return this.bindTarget.getAnnotation(ConfigurationProperties.class);
+		ConfigurationProperties annotation = this.bindTarget.getAnnotation(ConfigurationProperties.class);
+		Assert.notNull(annotation, "'annotation' must not be null");
+		return annotation;
 	}
 
 	/**

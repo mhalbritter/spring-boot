@@ -195,7 +195,7 @@ public enum CloudPlatform {
 		return isEnforced(binder.bind(PROPERTY_NAME, String.class).orElse(null));
 	}
 
-	private boolean isEnforced(String platform) {
+	private boolean isEnforced(@Nullable String platform) {
 		return name().equalsIgnoreCase(platform);
 	}
 

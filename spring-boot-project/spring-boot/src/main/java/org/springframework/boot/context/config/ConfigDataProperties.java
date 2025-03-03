@@ -88,7 +88,7 @@ class ConfigDataProperties {
 	 * @param binder the binder used to bind the properties
 	 * @return a {@link ConfigDataProperties} instance or {@code null}
 	 */
-	static ConfigDataProperties get(Binder binder) {
+	static @Nullable ConfigDataProperties get(Binder binder) {
 		return binder.bind(NAME, BINDABLE_PROPERTIES, new ConfigDataLocationBindHandler()).orElse(null);
 	}
 
