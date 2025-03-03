@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2019 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 
 package org.springframework.boot.context.properties.bind.validation;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.origin.Origin;
 import org.springframework.boot.origin.OriginProvider;
@@ -50,7 +52,7 @@ final class OriginTrackedFieldError extends FieldError implements OriginProvider
 		return super.toString() + "; origin " + this.origin;
 	}
 
-	static FieldError of(FieldError fieldError, Origin origin) {
+	static FieldError of(FieldError fieldError, @Nullable Origin origin) {
 		if (fieldError == null || origin == null) {
 			return fieldError;
 		}

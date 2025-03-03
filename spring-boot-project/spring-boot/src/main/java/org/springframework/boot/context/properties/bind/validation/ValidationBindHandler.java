@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.NotReadablePropertyException;
 import org.springframework.boot.context.properties.bind.AbstractBindHandler;
@@ -54,7 +56,7 @@ public class ValidationBindHandler extends AbstractBindHandler {
 
 	private final Set<ConfigurationProperty> boundProperties = new LinkedHashSet<>();
 
-	private BindValidationException exception;
+	private @Nullable BindValidationException exception;
 
 	public ValidationBindHandler(Validator... validators) {
 		this.validators = validators;
@@ -119,7 +121,7 @@ public class ValidationBindHandler extends AbstractBindHandler {
 		}
 	}
 
-	private Object getValidationTarget(Bindable<?> target, BindContext context, Object result) {
+	private @Nullable Object getValidationTarget(Bindable<?> target, BindContext context, Object result) {
 		if (result != null) {
 			return result;
 		}
@@ -160,7 +162,7 @@ public class ValidationBindHandler extends AbstractBindHandler {
 		}
 
 		@Override
-		public Class<?> getFieldType(String field) {
+		public @Nullable Class<?> getFieldType(String field) {
 			ResolvableType type = getBoundField(ValidationBindHandler.this.boundTypes, field);
 			Class<?> resolved = (type != null) ? type.resolve() : null;
 			if (resolved != null) {
@@ -170,7 +172,7 @@ public class ValidationBindHandler extends AbstractBindHandler {
 		}
 
 		@Override
-		protected Object getActualFieldValue(String field) {
+		protected @Nullable Object getActualFieldValue(String field) {
 			Object boundField = getBoundField(ValidationBindHandler.this.boundResults, field);
 			if (boundField != null) {
 				return boundField;
@@ -196,7 +198,7 @@ public class ValidationBindHandler extends AbstractBindHandler {
 			return false;
 		}
 
-		private <T> T getBoundField(Map<ConfigurationPropertyName, T> boundFields, String field) {
+		private <T> @Nullable T getBoundField(Map<ConfigurationPropertyName, T> boundFields, String field) {
 			try {
 				ConfigurationPropertyName name = getName(field);
 				T bound = boundFields.get(name);

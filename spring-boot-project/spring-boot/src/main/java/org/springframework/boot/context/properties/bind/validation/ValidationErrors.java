@@ -22,6 +22,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.boot.context.properties.source.ConfigurationProperty;
 import org.springframework.boot.context.properties.source.ConfigurationPropertyName;
 import org.springframework.boot.context.properties.source.ConfigurationPropertyName.Form;
@@ -82,8 +84,8 @@ public class ValidationErrors implements Iterable<ObjectError> {
 		return OriginTrackedFieldError.of(error, findFieldErrorOrigin(name, boundProperties, error));
 	}
 
-	private Origin findFieldErrorOrigin(ConfigurationPropertyName name, Set<ConfigurationProperty> boundProperties,
-			FieldError error) {
+	private @Nullable Origin findFieldErrorOrigin(ConfigurationPropertyName name,
+			Set<ConfigurationProperty> boundProperties, FieldError error) {
 		for (ConfigurationProperty boundProperty : boundProperties) {
 			if (isForError(name, boundProperty.getName(), error)) {
 				return Origin.from(boundProperty);
