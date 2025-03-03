@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Function;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.context.properties.bind.AbstractBindHandler;
 import org.springframework.boot.context.properties.bind.BindContext;
@@ -143,7 +145,7 @@ public class NoUnboundElementsBindHandler extends AbstractBindHandler {
 		return this.attemptedNames.contains(ConfigurationPropertyName.of(nestedZeroethProperty));
 	}
 
-	private Indexed getIndexed(ConfigurationPropertyName candidate) {
+	private @Nullable Indexed getIndexed(ConfigurationPropertyName candidate) {
 		for (int i = 0; i < candidate.getNumberOfElements(); i++) {
 			if (candidate.isNumericIndex(i)) {
 				return new Indexed(candidate.chop(i).toString(),

@@ -16,6 +16,8 @@
 
 package org.springframework.boot.context.properties.bind;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.boot.context.properties.source.ConfigurationPropertyName;
 import org.springframework.util.Assert;
 
@@ -57,8 +59,8 @@ public abstract class AbstractBindHandler implements BindHandler {
 	}
 
 	@Override
-	public Object onFailure(ConfigurationPropertyName name, Bindable<?> target, BindContext context, Exception error)
-			throws Exception {
+	public @Nullable Object onFailure(ConfigurationPropertyName name, Bindable<?> target, BindContext context,
+			Exception error) throws Exception {
 		return this.parent.onFailure(name, target, context, error);
 	}
 
