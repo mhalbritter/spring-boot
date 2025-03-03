@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 
 package org.springframework.boot.availability;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.context.ApplicationContext;
 
@@ -67,7 +69,7 @@ public interface ApplicationAvailability {
 	 * published yet
 	 * @see #getState(Class, AvailabilityState)
 	 */
-	<S extends AvailabilityState> S getState(Class<S> stateType);
+	<S extends AvailabilityState> @Nullable S getState(Class<S> stateType);
 
 	/**
 	 * Return the last {@link AvailabilityChangeEvent} received for a given state type.
@@ -76,6 +78,6 @@ public interface ApplicationAvailability {
 	 * @return the readiness state or {@code null} if no event of the given type has been
 	 * published yet
 	 */
-	<S extends AvailabilityState> AvailabilityChangeEvent<S> getLastChangeEvent(Class<S> stateType);
+	<S extends AvailabilityState> @Nullable AvailabilityChangeEvent<S> getLastChangeEvent(Class<S> stateType);
 
 }
