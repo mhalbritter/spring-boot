@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@ package org.springframework.boot.context.properties;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.BeansException;
 import org.springframework.beans.PropertyEditorRegistry;
@@ -72,13 +74,13 @@ class ConfigurationPropertiesBinder {
 
 	private final PropertySources propertySources;
 
-	private final Validator configurationPropertiesValidator;
+	private final @Nullable Validator configurationPropertiesValidator;
 
 	private final boolean jsr303Present;
 
-	private volatile List<ConfigurationPropertiesBindHandlerAdvisor> bindHandlerAdvisors;
+	private volatile @Nullable List<ConfigurationPropertiesBindHandlerAdvisor> bindHandlerAdvisors;
 
-	private volatile Binder binder;
+	private volatile @Nullable Binder binder;
 
 	ConfigurationPropertiesBinder(ApplicationContext applicationContext) {
 		this.applicationContext = applicationContext;
@@ -101,7 +103,7 @@ class ConfigurationPropertiesBinder {
 		return getBinder().bindOrCreate(annotation.prefix(), target, bindHandler);
 	}
 
-	private Validator getConfigurationPropertiesValidator(ApplicationContext applicationContext) {
+	private @Nullable Validator getConfigurationPropertiesValidator(ApplicationContext applicationContext) {
 		if (applicationContext.containsBean(VALIDATOR_BEAN_NAME)) {
 			return applicationContext.getBean(VALIDATOR_BEAN_NAME, Validator.class);
 		}
@@ -162,7 +164,7 @@ class ConfigurationPropertiesBinder {
 		return validators;
 	}
 
-	private Validator getSelfValidator(Bindable<?> target) {
+	private @Nullable Validator getSelfValidator(Bindable<?> target) {
 		if (target.getValue() != null) {
 			Object value = target.getValue().get();
 			return (value instanceof Validator validator) ? validator : null;
@@ -194,11 +196,11 @@ class ConfigurationPropertiesBinder {
 		return new PropertySourcesPlaceholdersResolver(this.propertySources);
 	}
 
-	private List<ConversionService> getConversionServices() {
+	private @Nullable List<ConversionService> getConversionServices() {
 		return new ConversionServiceDeducer(this.applicationContext).getConversionServices();
 	}
 
-	private Consumer<PropertyEditorRegistry> getPropertyEditorInitializer() {
+	private @Nullable Consumer<PropertyEditorRegistry> getPropertyEditorInitializer() {
 		if (this.applicationContext instanceof ConfigurableApplicationContext configurableContext) {
 			return configurableContext.getBeanFactory()::copyRegisteredEditorsTo;
 		}
@@ -247,6 +249,7 @@ class ConfigurationPropertiesBinder {
 	static class ConfigurationPropertiesBinderFactory
 			implements FactoryBean<ConfigurationPropertiesBinder>, ApplicationContextAware {
 
+		@SuppressWarnings("NullAway.Init")
 		private ConfigurationPropertiesBinder binder;
 
 		@Override

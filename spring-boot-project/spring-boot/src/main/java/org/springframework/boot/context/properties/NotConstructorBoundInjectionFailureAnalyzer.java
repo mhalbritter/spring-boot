@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
 package org.springframework.boot.context.properties;
 
 import java.lang.reflect.Constructor;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.factory.InjectionPoint;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -45,9 +47,10 @@ class NotConstructorBoundInjectionFailureAnalyzer
 	}
 
 	@Override
-	protected FailureAnalysis analyze(Throwable rootFailure, NoSuchBeanDefinitionException cause, String description) {
+	protected @Nullable FailureAnalysis analyze(Throwable rootFailure, NoSuchBeanDefinitionException cause,
+			String description) {
 		InjectionPoint injectionPoint = findInjectionPoint(rootFailure);
-		if (isConstructorBindingConfigurationProperties(injectionPoint)) {
+		if (injectionPoint != null && isConstructorBindingConfigurationProperties(injectionPoint)) {
 			String simpleName = injectionPoint.getMember().getDeclaringClass().getSimpleName();
 			String action = "Update your configuration so that " + simpleName + " is defined via @"
 					+ ConfigurationPropertiesScan.class.getSimpleName() + " or @"
@@ -61,7 +64,7 @@ class NotConstructorBoundInjectionFailureAnalyzer
 	}
 
 	private boolean isConstructorBindingConfigurationProperties(InjectionPoint injectionPoint) {
-		return injectionPoint != null && injectionPoint.getMember() instanceof Constructor<?> constructor
+		return injectionPoint.getMember() instanceof Constructor<?> constructor
 				&& isConstructorBindingConfigurationProperties(constructor);
 	}
 
@@ -72,7 +75,7 @@ class NotConstructorBoundInjectionFailureAnalyzer
 			.isPresent(ConfigurationProperties.class) && bindMethod == BindMethod.VALUE_OBJECT;
 	}
 
-	private InjectionPoint findInjectionPoint(Throwable failure) {
+	private @Nullable InjectionPoint findInjectionPoint(Throwable failure) {
 		UnsatisfiedDependencyException unsatisfiedDependencyException = findCause(failure,
 				UnsatisfiedDependencyException.class);
 		if (unsatisfiedDependencyException == null) {
