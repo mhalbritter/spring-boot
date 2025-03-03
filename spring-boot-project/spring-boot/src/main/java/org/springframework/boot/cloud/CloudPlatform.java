@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ package org.springframework.boot.cloud;
 
 import java.util.Arrays;
 import java.util.List;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.core.env.ConfigurableEnvironment;
@@ -41,7 +43,6 @@ public enum CloudPlatform {
 	 * No Cloud platform. Useful when false-positives are detected.
 	 */
 	NONE {
-
 		@Override
 		public boolean isDetected(Environment environment) {
 			return false;
@@ -53,7 +54,6 @@ public enum CloudPlatform {
 	 * Cloud Foundry platform.
 	 */
 	CLOUD_FOUNDRY {
-
 		@Override
 		public boolean isDetected(Environment environment) {
 			return environment.containsProperty("VCAP_APPLICATION") || environment.containsProperty("VCAP_SERVICES");
@@ -65,7 +65,6 @@ public enum CloudPlatform {
 	 * Heroku platform.
 	 */
 	HEROKU {
-
 		@Override
 		public boolean isDetected(Environment environment) {
 			return environment.containsProperty("DYNO");
@@ -77,7 +76,6 @@ public enum CloudPlatform {
 	 * SAP Cloud platform.
 	 */
 	SAP {
-
 		@Override
 		public boolean isDetected(Environment environment) {
 			return environment.containsProperty("HC_LANDSCAPE");
@@ -90,7 +88,6 @@ public enum CloudPlatform {
 	 * @since 3.1.0
 	 */
 	NOMAD {
-
 		@Override
 		public boolean isDetected(Environment environment) {
 			return environment.containsProperty("NOMAD_ALLOC_ID");
@@ -225,7 +222,7 @@ public enum CloudPlatform {
 	 * @param environment the environment
 	 * @return the {@link CloudPlatform} or {@code null}
 	 */
-	public static CloudPlatform getActive(Environment environment) {
+	public static @Nullable CloudPlatform getActive(Environment environment) {
 		if (environment != null) {
 			for (CloudPlatform cloudPlatform : values()) {
 				if (cloudPlatform.isActive(environment)) {

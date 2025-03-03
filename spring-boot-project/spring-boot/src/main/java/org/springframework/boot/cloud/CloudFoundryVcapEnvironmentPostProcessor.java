@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Properties;
 
 import org.apache.commons.logging.Log;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
@@ -194,7 +195,7 @@ public class CloudFoundryVcapEnvironmentPostProcessor implements EnvironmentPost
 	}
 
 	@SuppressWarnings("unchecked")
-	private void flatten(Properties properties, Map<String, Object> input, String path) {
+	private void flatten(Properties properties, Map<String, Object> input, @Nullable String path) {
 		input.forEach((key, value) -> {
 			String name = getPropertyName(path, key);
 			if (value instanceof Map) {
@@ -222,7 +223,7 @@ public class CloudFoundryVcapEnvironmentPostProcessor implements EnvironmentPost
 		});
 	}
 
-	private String getPropertyName(String path, String key) {
+	private String getPropertyName(@Nullable String path, String key) {
 		if (!StringUtils.hasText(path)) {
 			return key;
 		}
