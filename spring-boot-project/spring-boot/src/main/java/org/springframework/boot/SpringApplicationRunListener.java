@@ -94,7 +94,7 @@ public interface SpringApplicationRunListener {
 	 * unknown
 	 * @since 2.6.0
 	 */
-	default void ready(ConfigurableApplicationContext context, @Nullable Duration timeTaken) {
+	default void ready(ConfigurableApplicationContext context, Duration timeTaken) {
 	}
 
 	/**
