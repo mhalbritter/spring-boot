@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.IntFunction;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.core.env.PropertyResolver;
 import org.springframework.core.env.PropertySource;
@@ -73,7 +75,7 @@ public class AnsiPropertySource extends PropertySource<AnsiElement> {
 	}
 
 	@Override
-	public Object getProperty(String name) {
+	public @Nullable Object getProperty(String name) {
 		if (StringUtils.hasLength(name)) {
 			for (Mapping mapping : MAPPINGS) {
 				String prefix = mapping.getPrefix();
@@ -104,7 +106,7 @@ public class AnsiPropertySource extends PropertySource<AnsiElement> {
 			return this.prefix;
 		}
 
-		abstract AnsiElement getElement(String postfix);
+		abstract @Nullable AnsiElement getElement(String postfix);
 
 	}
 
@@ -121,6 +123,7 @@ public class AnsiPropertySource extends PropertySource<AnsiElement> {
 		}
 
 		@Override
+		@Nullable
 		AnsiElement getElement(String postfix) {
 			for (Enum<?> candidate : this.enums) {
 				if (candidate.name().equals(postfix)) {
@@ -145,6 +148,7 @@ public class AnsiPropertySource extends PropertySource<AnsiElement> {
 		}
 
 		@Override
+		@Nullable
 		AnsiElement getElement(String postfix) {
 			if (containsOnlyDigits(postfix)) {
 				try {

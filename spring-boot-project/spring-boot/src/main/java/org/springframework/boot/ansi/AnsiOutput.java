@@ -20,6 +20,8 @@ import java.io.Console;
 import java.lang.reflect.Method;
 import java.util.Locale;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 
@@ -37,9 +39,9 @@ public abstract class AnsiOutput {
 
 	private static Enabled enabled = Enabled.DETECT;
 
-	private static Boolean consoleAvailable;
+	private static @Nullable Boolean consoleAvailable;
 
-	private static Boolean ansiCapable;
+	private static @Nullable Boolean ansiCapable;
 
 	private static final String OPERATING_SYSTEM_NAME = System.getProperty("os.name").toLowerCase(Locale.ENGLISH);
 
