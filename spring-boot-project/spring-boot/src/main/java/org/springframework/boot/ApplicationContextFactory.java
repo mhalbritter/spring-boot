@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
 package org.springframework.boot;
 
 import java.util.function.Supplier;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -50,7 +52,8 @@ public interface ApplicationContextFactory {
 	 * @return the expected application context type or {@code null} to use the default
 	 * @since 2.6.14
 	 */
-	default Class<? extends ConfigurableEnvironment> getEnvironmentType(WebApplicationType webApplicationType) {
+	default @Nullable Class<? extends ConfigurableEnvironment> getEnvironmentType(
+			@Nullable WebApplicationType webApplicationType) {
 		return null;
 	}
 
@@ -63,7 +66,7 @@ public interface ApplicationContextFactory {
 	 * @return an environment instance or {@code null} to use the default
 	 * @since 2.6.14
 	 */
-	default ConfigurableEnvironment createEnvironment(WebApplicationType webApplicationType) {
+	default @Nullable ConfigurableEnvironment createEnvironment(@Nullable WebApplicationType webApplicationType) {
 		return null;
 	}
 
@@ -73,7 +76,7 @@ public interface ApplicationContextFactory {
 	 * @param webApplicationType the web application type
 	 * @return the newly created application context
 	 */
-	ConfigurableApplicationContext create(WebApplicationType webApplicationType);
+	ConfigurableApplicationContext create(@Nullable WebApplicationType webApplicationType);
 
 	/**
 	 * Creates an {@code ApplicationContextFactory} that will create contexts by

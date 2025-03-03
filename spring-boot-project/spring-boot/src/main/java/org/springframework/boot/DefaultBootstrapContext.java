@@ -20,6 +20,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -72,7 +74,7 @@ public class DefaultBootstrapContext implements ConfigurableBootstrapContext {
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public <T> InstanceSupplier<T> getRegisteredInstanceSupplier(Class<T> type) {
+	public <T> @Nullable InstanceSupplier<T> getRegisteredInstanceSupplier(Class<T> type) {
 		synchronized (this.instanceSuppliers) {
 			return (InstanceSupplier<T>) this.instanceSuppliers.get(type);
 		}
@@ -117,6 +119,7 @@ public class DefaultBootstrapContext implements ConfigurableBootstrapContext {
 		T instance = (T) this.instances.get(type);
 		if (instance == null) {
 			instance = (T) instanceSupplier.get(this);
+			Assert.notNull(instance, "'instance' must not be null"); // TODO MH
 			if (instanceSupplier.getScope() == Scope.SINGLETON) {
 				this.instances.put(type, instance);
 			}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2019 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ package org.springframework.boot;
 
 import java.util.List;
 import java.util.Set;
+
+import org.jspecify.annotations.Nullable;
 
 /**
  * Provides access to the arguments that were used to run a {@link SpringApplication}.
@@ -63,6 +65,7 @@ public interface ApplicationArguments {
 	 * @param name the name of the option
 	 * @return a list of option values for the given name
 	 */
+	@Nullable
 	List<String> getOptionValues(String name);
 
 	/**

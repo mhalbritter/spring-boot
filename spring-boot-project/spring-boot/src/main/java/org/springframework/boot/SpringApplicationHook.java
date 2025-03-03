@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 
 package org.springframework.boot;
+
+import org.jspecify.annotations.Nullable;
 
 /**
  * Low-level hook that can be used to attach a {@link SpringApplicationRunListener} to a
@@ -36,6 +38,7 @@ public interface SpringApplicationHook {
 	 * @param springApplication the source {@link SpringApplication} instance
 	 * @return the {@link SpringApplicationRunListener} to attach
 	 */
+	@Nullable
 	SpringApplicationRunListener getRunListener(SpringApplication springApplication);
 
 }

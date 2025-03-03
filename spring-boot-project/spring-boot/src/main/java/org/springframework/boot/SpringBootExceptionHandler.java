@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import org.jspecify.annotations.Nullable;
 
 /**
  * {@link UncaughtExceptionHandler} to suppress handling already logged exceptions and
@@ -85,9 +87,12 @@ class SpringBootExceptionHandler implements UncaughtExceptionHandler {
 	 * @param ex the source exception
 	 * @return {@code true} if the exception contains a log configuration message
 	 */
-	private boolean isLogConfigurationMessage(Throwable ex) {
+	private boolean isLogConfigurationMessage(@Nullable Throwable ex) {
 		if (ex instanceof InvocationTargetException) {
 			return isLogConfigurationMessage(ex.getCause());
+		}
+		if (ex == null) {
+			return false;
 		}
 		String message = ex.getMessage();
 		if (message != null) {
@@ -100,7 +105,7 @@ class SpringBootExceptionHandler implements UncaughtExceptionHandler {
 		return false;
 	}
 
-	private boolean isRegistered(Throwable ex) {
+	private boolean isRegistered(@Nullable Throwable ex) {
 		if (this.loggedExceptions.contains(ex)) {
 			return true;
 		}

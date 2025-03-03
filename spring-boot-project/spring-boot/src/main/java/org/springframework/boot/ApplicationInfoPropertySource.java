@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@ package org.springframework.boot;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.boot.system.ApplicationPid;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
@@ -36,7 +38,7 @@ class ApplicationInfoPropertySource extends MapPropertySource {
 
 	static final String NAME = "applicationInfo";
 
-	ApplicationInfoPropertySource(Class<?> mainClass) {
+	ApplicationInfoPropertySource(@Nullable Class<?> mainClass) {
 		super(NAME, getProperties(readVersion(mainClass)));
 	}
 
@@ -44,7 +46,7 @@ class ApplicationInfoPropertySource extends MapPropertySource {
 		super(NAME, getProperties(applicationVersion));
 	}
 
-	private static Map<String, Object> getProperties(String applicationVersion) {
+	private static Map<String, Object> getProperties(@Nullable String applicationVersion) {
 		Map<String, Object> result = new HashMap<>();
 		if (StringUtils.hasText(applicationVersion)) {
 			result.put("spring.application.version", applicationVersion);
@@ -56,7 +58,7 @@ class ApplicationInfoPropertySource extends MapPropertySource {
 		return result;
 	}
 
-	private static String readVersion(Class<?> applicationClass) {
+	private static @Nullable String readVersion(@Nullable Class<?> applicationClass) {
 		Package sourcePackage = (applicationClass != null) ? applicationClass.getPackage() : null;
 		return (sourcePackage != null) ? sourcePackage.getImplementationVersion() : null;
 	}

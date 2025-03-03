@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,15 @@ package org.springframework.boot;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.aot.AotDetector;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.io.support.SpringFactoriesLoader;
+import org.springframework.lang.Contract;
 
 /**
  * Default {@link ApplicationContextFactory} implementation that will create an
@@ -35,17 +38,18 @@ import org.springframework.core.io.support.SpringFactoriesLoader;
 class DefaultApplicationContextFactory implements ApplicationContextFactory {
 
 	@Override
-	public Class<? extends ConfigurableEnvironment> getEnvironmentType(WebApplicationType webApplicationType) {
+	public @Nullable Class<? extends ConfigurableEnvironment> getEnvironmentType(
+			@Nullable WebApplicationType webApplicationType) {
 		return getFromSpringFactories(webApplicationType, ApplicationContextFactory::getEnvironmentType, null);
 	}
 
 	@Override
-	public ConfigurableEnvironment createEnvironment(WebApplicationType webApplicationType) {
+	public @Nullable ConfigurableEnvironment createEnvironment(@Nullable WebApplicationType webApplicationType) {
 		return getFromSpringFactories(webApplicationType, ApplicationContextFactory::createEnvironment, null);
 	}
 
 	@Override
-	public ConfigurableApplicationContext create(WebApplicationType webApplicationType) {
+	public ConfigurableApplicationContext create(@Nullable WebApplicationType webApplicationType) {
 		try {
 			return getFromSpringFactories(webApplicationType, ApplicationContextFactory::create,
 					this::createDefaultApplicationContext);
@@ -63,8 +67,10 @@ class DefaultApplicationContextFactory implements ApplicationContextFactory {
 		return new GenericApplicationContext();
 	}
 
-	private <T> T getFromSpringFactories(WebApplicationType webApplicationType,
-			BiFunction<ApplicationContextFactory, WebApplicationType, T> action, Supplier<T> defaultResult) {
+	@Contract("_, _, !null -> !null")
+	private <T> @Nullable T getFromSpringFactories(@Nullable WebApplicationType webApplicationType,
+			BiFunction<@Nullable ApplicationContextFactory, @Nullable WebApplicationType, T> action,
+			@Nullable Supplier<T> defaultResult) {
 		for (ApplicationContextFactory candidate : SpringFactoriesLoader.loadFactories(ApplicationContextFactory.class,
 				getClass().getClassLoader())) {
 			T result = action.apply(candidate, webApplicationType);

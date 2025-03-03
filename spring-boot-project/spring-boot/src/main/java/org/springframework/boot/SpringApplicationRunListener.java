@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
 package org.springframework.boot;
 
 import java.time.Duration;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -92,7 +94,7 @@ public interface SpringApplicationRunListener {
 	 * unknown
 	 * @since 2.6.0
 	 */
-	default void ready(ConfigurableApplicationContext context, Duration timeTaken) {
+	default void ready(ConfigurableApplicationContext context, @Nullable Duration timeTaken) {
 	}
 
 	/**
@@ -102,7 +104,7 @@ public interface SpringApplicationRunListener {
 	 * @param exception the failure
 	 * @since 2.0.0
 	 */
-	default void failed(ConfigurableApplicationContext context, Throwable exception) {
+	default void failed(@Nullable ConfigurableApplicationContext context, Throwable exception) {
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import org.apache.commons.logging.Log;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.ConfigurableEnvironment;
@@ -50,7 +51,7 @@ class SpringApplicationRunListeners {
 		this.applicationStartup = applicationStartup;
 	}
 
-	void starting(ConfigurableBootstrapContext bootstrapContext, Class<?> mainApplicationClass) {
+	void starting(ConfigurableBootstrapContext bootstrapContext, @Nullable Class<?> mainApplicationClass) {
 		doWithListeners("spring.boot.application.starting", (listener) -> listener.starting(bootstrapContext),
 				(step) -> {
 					if (mainApplicationClass != null) {
@@ -80,7 +81,7 @@ class SpringApplicationRunListeners {
 		doWithListeners("spring.boot.application.ready", (listener) -> listener.ready(context, timeTaken));
 	}
 
-	void failed(ConfigurableApplicationContext context, Throwable exception) {
+	void failed(@Nullable ConfigurableApplicationContext context, Throwable exception) {
 		doWithListeners("spring.boot.application.failed",
 				(listener) -> callFailedListener(listener, context, exception), (step) -> {
 					step.tag("exception", exception.getClass().toString());
@@ -88,8 +89,8 @@ class SpringApplicationRunListeners {
 				});
 	}
 
-	private void callFailedListener(SpringApplicationRunListener listener, ConfigurableApplicationContext context,
-			Throwable exception) {
+	private void callFailedListener(SpringApplicationRunListener listener,
+			@Nullable ConfigurableApplicationContext context, Throwable exception) {
 		try {
 			listener.failed(context, exception);
 		}
@@ -113,7 +114,7 @@ class SpringApplicationRunListeners {
 	}
 
 	private void doWithListeners(String stepName, Consumer<SpringApplicationRunListener> listenerAction,
-			Consumer<StartupStep> stepAction) {
+			@Nullable Consumer<StartupStep> stepAction) {
 		StartupStep step = this.applicationStartup.start(stepName);
 		this.listeners.forEach(listenerAction);
 		if (stepAction != null) {

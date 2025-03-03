@@ -18,6 +18,8 @@ package org.springframework.boot;
 
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
 import org.springframework.core.env.Environment;
@@ -78,7 +80,7 @@ public interface BootstrapRegistry {
 	 * @param type the instance type
 	 * @return the registered {@link InstanceSupplier} or {@code null}
 	 */
-	<T> InstanceSupplier<T> getRegisteredInstanceSupplier(Class<T> type);
+	<T> @Nullable InstanceSupplier<T> getRegisteredInstanceSupplier(Class<T> type);
 
 	/**
 	 * Add an {@link ApplicationListener} that will be called with a
@@ -103,6 +105,7 @@ public interface BootstrapRegistry {
 		 * bootstrap instances.
 		 * @return the instance
 		 */
+		@Nullable
 		T get(BootstrapContext context);
 
 		/**
@@ -126,7 +129,7 @@ public interface BootstrapRegistry {
 			return new InstanceSupplier<>() {
 
 				@Override
-				public T get(BootstrapContext context) {
+				public @Nullable T get(BootstrapContext context) {
 					return parent.get(context);
 				}
 
@@ -156,7 +159,7 @@ public interface BootstrapRegistry {
 		 * @param supplier the supplier that will provide the instance
 		 * @return a new {@link InstanceSupplier}
 		 */
-		static <T> InstanceSupplier<T> from(Supplier<T> supplier) {
+		static <T> InstanceSupplier<T> from(@Nullable Supplier<T> supplier) {
 			return (registry) -> (supplier != null) ? supplier.get() : null;
 		}
 

@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import groovy.lang.Closure;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.BeanDefinitionStoreException;
@@ -68,11 +69,11 @@ class BeanDefinitionLoader {
 
 	private final AbstractBeanDefinitionReader xmlReader;
 
-	private final BeanDefinitionReader groovyReader;
+	private final @Nullable BeanDefinitionReader groovyReader;
 
 	private final ClassPathBeanDefinitionScanner scanner;
 
-	private ResourceLoader resourceLoader;
+	private @Nullable ResourceLoader resourceLoader;
 
 	/**
 	 * Create a new {@link BeanDefinitionLoader} that will load beans into the specified
@@ -152,7 +153,8 @@ class BeanDefinitionLoader {
 	}
 
 	private void load(Class<?> source) {
-		if (isGroovyPresent() && GroovyBeanDefinitionSource.class.isAssignableFrom(source)) {
+		if (isGroovyPresent() && GroovyBeanDefinitionSource.class.isAssignableFrom(source)
+				&& this.groovyReader != null) {
 			// Any GroovyLoaders added in beans{} DSL can contribute beans here
 			GroovyBeanDefinitionSource loader = BeanUtils.instantiateClass(source, GroovyBeanDefinitionSource.class);
 			((GroovyBeanDefinitionReader) this.groovyReader).beans(loader.getBeans());

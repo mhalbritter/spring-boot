@@ -20,6 +20,8 @@ import java.lang.reflect.Method;
 import java.nio.file.Paths;
 import java.util.Arrays;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.boot.SpringApplication.AbandonedRunException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -111,13 +113,17 @@ public class SpringApplicationAotProcessor extends ContextAotProcessor {
 			catch (AbandonedRunException ex) {
 				ApplicationContext context = ex.getApplicationContext();
 				Assert.state(context instanceof GenericApplicationContext,
-						() -> "AOT processing requires a GenericApplicationContext but got a "
-								+ context.getClass().getName());
+						() -> "AOT processing requires a GenericApplicationContext but got "
+								+ getContextClassName(context));
 				return (GenericApplicationContext) context;
 			}
 			throw new IllegalStateException(
 					"No application context available after calling main method of '%s'. Does it run a SpringApplication?"
 						.formatted(this.application.getName()));
+		}
+
+		private String getContextClassName(@Nullable ApplicationContext context) {
+			return (context != null) ? "a " + context.getClass().getName() : "null";
 		}
 
 	}
