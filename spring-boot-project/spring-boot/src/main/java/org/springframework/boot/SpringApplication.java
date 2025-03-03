@@ -1129,7 +1129,7 @@ public class SpringApplication {
 	 * context.
 	 * @param environment the environment
 	 */
-	public void setEnvironment(ConfigurableEnvironment environment) {
+	public void setEnvironment(@Nullable ConfigurableEnvironment environment) {
 		this.isCustomEnvironment = true;
 		this.environment = environment;
 	}
