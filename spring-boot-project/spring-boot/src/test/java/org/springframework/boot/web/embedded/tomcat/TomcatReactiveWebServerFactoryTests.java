@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,8 @@ import org.apache.coyote.http11.AbstractHttp11Protocol;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 import org.mockito.InOrder;
 
 import org.springframework.boot.web.reactive.server.AbstractReactiveWebServerFactory;
@@ -93,6 +95,7 @@ class TomcatReactiveWebServerFactoryTests extends AbstractReactiveWebServerFacto
 	}
 
 	@Test
+	@EnabledForJreRange(max = JRE.JAVA_23)
 	void defaultTomcatListeners() {
 		TomcatReactiveWebServerFactory factory = getFactory();
 		if (AprLifecycleListener.isAprAvailable()) {
@@ -101,6 +104,13 @@ class TomcatReactiveWebServerFactoryTests extends AbstractReactiveWebServerFacto
 		else {
 			assertThat(factory.getContextLifecycleListeners()).isEmpty();
 		}
+	}
+
+	@Test
+	@EnabledForJreRange(min = JRE.JAVA_24)
+	void aprShouldBeOptInOnJava24AndLater() {
+		TomcatReactiveWebServerFactory factory = getFactory();
+		assertThat(factory.getContextLifecycleListeners()).isEmpty();
 	}
 
 	@Test

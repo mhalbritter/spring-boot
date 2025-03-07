@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -513,6 +513,11 @@ public class ServerProperties {
 		 */
 		private DataSize maxHttpResponseHeaderSize = DataSize.ofKilobytes(8);
 
+		/**
+		 * Whether APR should be enabled.
+		 */
+		private AprAvailability apr = AprAvailability.AUTO_DETECT;
+
 		public DataSize getMaxHttpFormPostSize() {
 			return this.maxHttpFormPostSize;
 		}
@@ -667,6 +672,14 @@ public class ServerProperties {
 
 		public void setMaxHttpResponseHeaderSize(DataSize maxHttpResponseHeaderSize) {
 			this.maxHttpResponseHeaderSize = maxHttpResponseHeaderSize;
+		}
+
+		public AprAvailability getApr() {
+			return this.apr;
+		}
+
+		public void setApr(AprAvailability apr) {
+			this.apr = apr;
 		}
 
 		/**
@@ -1915,6 +1928,27 @@ public class ServerProperties {
 		 * Ignore X-Forwarded-* headers.
 		 */
 		NONE
+
+	}
+
+	/**
+	 * APR availability.
+	 */
+	public enum AprAvailability {
+
+		/**
+		 * APR is available.
+		 */
+		AVAILABLE,
+		/**
+		 * APR is not available.
+		 */
+		NOT_AVAILABLE,
+		/**
+		 * Auto-detect APR availability. On Java 24 and later auto-detection is disabled
+		 * and is equivalent to {@link #NOT_AVAILABLE}.
+		 */
+		AUTO_DETECT
 
 	}
 

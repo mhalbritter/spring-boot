@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2020 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package org.springframework.boot.autoconfigure.web.servlet;
 
 import org.springframework.boot.autoconfigure.web.ServerProperties;
+import org.springframework.boot.web.embedded.tomcat.AprAvailability;
 import org.springframework.boot.web.embedded.tomcat.ConfigurableTomcatWebServerFactory;
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
@@ -56,6 +57,7 @@ public class TomcatServletWebServerFactoryCustomizer
 		}
 		customizeUseRelativeRedirects(factory, tomcatProperties.isUseRelativeRedirects());
 		factory.setDisableMBeanRegistry(!tomcatProperties.getMbeanregistry().isEnabled());
+		factory.setAprAvailability(mapApr(this.serverProperties.getTomcat().getApr()));
 	}
 
 	private void customizeRedirectContextRoot(ConfigurableTomcatWebServerFactory factory, boolean redirectContextRoot) {
@@ -65,6 +67,14 @@ public class TomcatServletWebServerFactoryCustomizer
 	private void customizeUseRelativeRedirects(ConfigurableTomcatWebServerFactory factory,
 			boolean useRelativeRedirects) {
 		factory.addContextCustomizers((context) -> context.setUseRelativeRedirects(useRelativeRedirects));
+	}
+
+	private AprAvailability mapApr(ServerProperties.AprAvailability apr) {
+		return switch (apr) {
+			case AVAILABLE -> AprAvailability.AVAILABLE;
+			case NOT_AVAILABLE -> AprAvailability.NOT_AVAILABLE;
+			case AUTO_DETECT -> AprAvailability.AUTO_DETECT;
+		};
 	}
 
 }

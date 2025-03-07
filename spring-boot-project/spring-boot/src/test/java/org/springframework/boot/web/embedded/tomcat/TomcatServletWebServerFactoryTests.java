@@ -79,6 +79,8 @@ import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 import org.mockito.InOrder;
 
 import org.springframework.boot.ssl.DefaultSslBundleRegistry;
@@ -148,6 +150,7 @@ class TomcatServletWebServerFactoryTests extends AbstractServletWebServerFactory
 	}
 
 	@Test
+	@EnabledForJreRange(max = JRE.JAVA_23)
 	void defaultTomcatListeners() {
 		TomcatServletWebServerFactory factory = getFactory();
 		if (AprLifecycleListener.isAprAvailable()) {
@@ -156,6 +159,13 @@ class TomcatServletWebServerFactoryTests extends AbstractServletWebServerFactory
 		else {
 			assertThat(factory.getContextLifecycleListeners()).isEmpty();
 		}
+	}
+
+	@Test
+	@EnabledForJreRange(min = JRE.JAVA_24)
+	void aprShouldBeOptInOnJava24AndLater() {
+		TomcatServletWebServerFactory factory = getFactory();
+		assertThat(factory.getContextLifecycleListeners()).isEmpty();
 	}
 
 	@Test
