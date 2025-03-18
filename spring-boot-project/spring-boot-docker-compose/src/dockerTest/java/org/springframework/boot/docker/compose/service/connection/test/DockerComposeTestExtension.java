@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package org.springframework.boot.docker.compose.service.connection.test;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
@@ -39,6 +40,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
+import org.springframework.util.FileSystemUtils;
 
 import static org.assertj.core.api.Assertions.fail;
 
@@ -46,22 +48,23 @@ import static org.assertj.core.api.Assertions.fail;
  * {@link Extension} for {@link DockerComposeTest @DockerComposeTest}.
  *
  * @author Andy Wilkinson
+ * @author Moritz Halbritter
  */
 class DockerComposeTestExtension implements BeforeTestExecutionCallback, AfterTestExecutionCallback, ParameterResolver {
 
 	private static final Namespace NAMESPACE = Namespace.create(DockerComposeTestExtension.class);
 
-	private static final String STORE_KEY_COMPOSE_FILE = "compose-file";
+	private static final String STORE_KEY_COMPOSE_FOLDER = "compose-folder";
 
 	private static final String STORE_KEY_APPLICATION_CONTEXT = "application-context";
 
 	@Override
-	public void beforeTestExecution(ExtensionContext context) throws Exception {
-		Path transformedComposeFile = prepareComposeFile(context);
+	public void beforeTestExecution(ExtensionContext context) {
+		Path composeFile = prepareComposeFile(context);
 		Store store = context.getStore(NAMESPACE);
-		store.put(STORE_KEY_COMPOSE_FILE, transformedComposeFile);
+		store.put(STORE_KEY_COMPOSE_FOLDER, composeFile.getParent());
 		try {
-			SpringApplication application = prepareApplication(transformedComposeFile);
+			SpringApplication application = prepareApplication(composeFile);
 			store.put(STORE_KEY_APPLICATION_CONTEXT, application.run());
 		}
 		catch (Exception ex) {
@@ -75,16 +78,17 @@ class DockerComposeTestExtension implements BeforeTestExecutionCallback, AfterTe
 		TestImage image = dockerComposeTest.image();
 		Resource composeResource = new ClassPathResource(dockerComposeTest.composeFile(),
 				context.getRequiredTestClass());
-		return transformedComposeFile(composeResource, image);
+		return createComposeFile(composeResource, image);
 	}
 
-	private Path transformedComposeFile(Resource composeFileResource, TestImage image) {
+	private Path createComposeFile(Resource composeFileResource, TestImage image) {
 		try {
-			Path composeFile = composeFileResource.getFile().toPath();
-			Path transformedComposeFile = Files.createTempFile("", "-" + composeFile.getFileName().toString());
-			String transformedContent = Files.readString(composeFile).replace("{imageName}", image.toString());
-			Files.writeString(transformedComposeFile, transformedContent);
-			return transformedComposeFile;
+			String template = composeFileResource.getContentAsString(StandardCharsets.UTF_8);
+			String content = template.replace("{imageName}", image.toString());
+			Path tempDirectory = Files.createTempDirectory("DockerComposeTestExtension-");
+			Path composeFile = tempDirectory.resolve("compose.yaml");
+			Files.writeString(composeFile, content);
+			return composeFile;
 		}
 		catch (IOException ex) {
 			fail("Error transforming Docker compose file '" + composeFileResource + "': " + ex.getMessage());
@@ -103,14 +107,14 @@ class DockerComposeTestExtension implements BeforeTestExecutionCallback, AfterTe
 	}
 
 	@Override
-	public void afterTestExecution(ExtensionContext context) throws Exception {
+	public void afterTestExecution(ExtensionContext context) {
 		cleanUp(context);
 	}
 
-	private void cleanUp(ExtensionContext context) throws Exception {
+	private void cleanUp(ExtensionContext context) {
 		Store store = context.getStore(NAMESPACE);
 		runShutdownHandlers();
-		deleteComposeFile(store);
+		deleteComposeFolder(store);
 	}
 
 	private void runShutdownHandlers() {
@@ -118,10 +122,15 @@ class DockerComposeTestExtension implements BeforeTestExecutionCallback, AfterTe
 		((Runnable) shutdownHandlers).run();
 	}
 
-	private void deleteComposeFile(Store store) throws IOException {
-		Path composeFile = store.get(STORE_KEY_COMPOSE_FILE, Path.class);
-		if (composeFile != null) {
-			Files.delete(composeFile);
+	private void deleteComposeFolder(Store store) {
+		Path folder = store.get(STORE_KEY_COMPOSE_FOLDER, Path.class);
+		if (folder != null) {
+			try {
+				FileSystemUtils.deleteRecursively(folder);
+			}
+			catch (IOException ex) {
+				// Ignore
+			}
 		}
 	}
 
