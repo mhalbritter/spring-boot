@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,16 +22,15 @@ import org.gradle.api.Action;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
-import org.gradle.api.plugins.JavaPlugin;
-import org.gradle.api.plugins.JavaPluginExtension;
+import org.gradle.api.file.FileCollection;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.Copy;
-import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskProvider;
 import org.gradle.api.tasks.bundling.Jar;
 
 import org.springframework.boot.gradle.tasks.bundling.BootJar;
 import org.springframework.boot.gradle.tasks.bundling.BootWar;
+import org.springframework.boot.gradle.tasks.run.BootRun;
 
 /**
  * {@link Action} that is executed in response to the {@link CycloneDxPlugin} being
@@ -40,6 +39,8 @@ import org.springframework.boot.gradle.tasks.bundling.BootWar;
  * @author Moritz Halbritter
  */
 final class CycloneDxPluginAction implements PluginApplicationAction {
+
+	private static final String META_INF_FOLDER = "META-INF/sbom/";
 
 	@Override
 	public Class<? extends Plugin<? extends Project>> getPluginClass() {
@@ -51,8 +52,8 @@ final class CycloneDxPluginAction implements PluginApplicationAction {
 		TaskProvider<CycloneDxTask> cycloneDxTaskProvider = project.getTasks()
 			.named("cyclonedxBom", CycloneDxTask.class);
 		configureCycloneDxTask(cycloneDxTaskProvider);
-		configureJavaPlugin(project, cycloneDxTaskProvider);
-		configureSpringBootPlugin(project, cycloneDxTaskProvider);
+		TaskProvider<Copy> copySbomTaskProvider = createCopySbomTask(project, cycloneDxTaskProvider);
+		configureSpringBootPlugin(project, cycloneDxTaskProvider, copySbomTaskProvider);
 	}
 
 	private void configureCycloneDxTask(TaskProvider<CycloneDxTask> taskProvider) {
@@ -64,51 +65,47 @@ final class CycloneDxPluginAction implements PluginApplicationAction {
 		});
 	}
 
-	private void configureJavaPlugin(Project project, TaskProvider<CycloneDxTask> cycloneDxTaskProvider) {
-		configurePlugin(project, JavaPlugin.class, (javaPlugin) -> {
-			JavaPluginExtension javaPluginExtension = project.getExtensions().getByType(JavaPluginExtension.class);
-			SourceSet main = javaPluginExtension.getSourceSets().getByName(SourceSet.MAIN_SOURCE_SET_NAME);
-			configureTask(project, main.getProcessResourcesTaskName(), Copy.class, (copy) -> {
-				copy.dependsOn(cycloneDxTaskProvider);
-				Provider<String> sbomFileName = cycloneDxTaskProvider
-					.map((cycloneDxTask) -> cycloneDxTask.getOutputName().get() + getSbomExtension(cycloneDxTask));
-				copy.from(cycloneDxTaskProvider, (spec) -> spec.include(sbomFileName.get()).into("META-INF/sbom"));
+	private TaskProvider<Copy> createCopySbomTask(Project project, TaskProvider<CycloneDxTask> cycloneDxTaskProvider) {
+		return project.getTasks().register("copySbom", Copy.class, (task) -> {
+			task.setDestinationDir(task.getTemporaryDir());
+			Provider<String> sbomFileName = getSbomFileName(cycloneDxTaskProvider);
+			task.from(cycloneDxTaskProvider, (spec) -> spec.include(sbomFileName.get()).into(META_INF_FOLDER));
+		});
+	}
+
+	private void configureSpringBootPlugin(Project project, TaskProvider<CycloneDxTask> cycloneDxTaskProvider,
+			TaskProvider<Copy> copySbomTaskProvider) {
+		configurePlugin(project, SpringBootPlugin.class, (springBootPlugin) -> {
+			configureTask(project, SpringBootPlugin.BOOT_JAR_TASK_NAME, BootJar.class, (bootJar) -> {
+				copySbomIntoArchive(bootJar, cycloneDxTaskProvider);
+				addSbomLocationToManifest(bootJar, cycloneDxTaskProvider);
+			});
+			configureTask(project, SpringBootPlugin.BOOT_WAR_TASK_NAME, BootWar.class, (bootWar) -> {
+				copySbomIntoArchive(bootWar, cycloneDxTaskProvider);
+				addSbomLocationToManifest(bootWar, cycloneDxTaskProvider);
+			});
+			configureTask(project, SpringBootPlugin.BOOT_RUN_TASK_NAME, BootRun.class, (bootRun) -> {
+				Provider<FileCollection> sbomFiles = copySbomTaskProvider.map((task) -> task.getOutputs().getFiles());
+				bootRun.setClasspath(project.files(sbomFiles, bootRun.getClasspath()));
 			});
 		});
 	}
 
-	private void configureSpringBootPlugin(Project project, TaskProvider<CycloneDxTask> cycloneDxTaskProvider) {
-		configurePlugin(project, SpringBootPlugin.class, (springBootPlugin) -> {
-			configureBootJarTask(project, cycloneDxTaskProvider);
-			configureBootWarTask(project, cycloneDxTaskProvider);
-		});
+	private void copySbomIntoArchive(Jar task, TaskProvider<CycloneDxTask> cycloneDxTaskProvider) {
+		Provider<String> sbomFileName = getSbomFileName(cycloneDxTaskProvider);
+		task.from(cycloneDxTaskProvider, (spec) -> spec.include(sbomFileName.get()).into(META_INF_FOLDER));
 	}
 
-	private void configureBootJarTask(Project project, TaskProvider<CycloneDxTask> cycloneDxTaskProvider) {
-		configureTask(project, SpringBootPlugin.BOOT_JAR_TASK_NAME, BootJar.class,
-				(bootJar) -> configureBootJarTask(bootJar, cycloneDxTaskProvider));
-	}
-
-	private void configureBootWarTask(Project project, TaskProvider<CycloneDxTask> cycloneDxTaskProvider) {
-		configureTask(project, SpringBootPlugin.BOOT_WAR_TASK_NAME, BootWar.class,
-				(bootWar) -> configureBootWarTask(bootWar, cycloneDxTaskProvider));
-	}
-
-	private void configureBootJarTask(BootJar task, TaskProvider<CycloneDxTask> cycloneDxTaskProvider) {
-		configureJarTask(task, cycloneDxTaskProvider);
-	}
-
-	private void configureBootWarTask(BootWar task, TaskProvider<CycloneDxTask> cycloneDxTaskProvider) {
-		configureJarTask(task, cycloneDxTaskProvider);
-	}
-
-	private void configureJarTask(Jar task, TaskProvider<CycloneDxTask> cycloneDxTaskProvider) {
-		Provider<String> sbomFileName = cycloneDxTaskProvider.map((cycloneDxTask) -> "META-INF/sbom/"
-				+ cycloneDxTask.getOutputName().get() + getSbomExtension(cycloneDxTask));
+	private void addSbomLocationToManifest(Jar task, TaskProvider<CycloneDxTask> cycloneDxTaskProvider) {
+		Provider<String> location = getSbomFileName(cycloneDxTaskProvider).map((file) -> META_INF_FOLDER + file);
 		task.manifest((manifest) -> {
 			manifest.getAttributes().put("Sbom-Format", "CycloneDX");
-			manifest.getAttributes().put("Sbom-Location", sbomFileName);
+			manifest.getAttributes().put("Sbom-Location", location);
 		});
+	}
+
+	private Provider<String> getSbomFileName(TaskProvider<CycloneDxTask> taskProvider) {
+		return taskProvider.map((task) -> task.getOutputName().get() + getSbomExtension(task));
 	}
 
 	private String getSbomExtension(CycloneDxTask task) {
