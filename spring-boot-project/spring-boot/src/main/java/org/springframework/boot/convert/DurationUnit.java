@@ -30,10 +30,12 @@ import java.time.temporal.ChronoUnit;
  *
  * @author Phillip Webb
  * @since 2.0.0
+ * @deprecated since 3.5.0 for removal in 4.0.0 in favor of {@link org.springframework.format.annotation.DurationFormat.Unit}
  */
 @Target({ ElementType.FIELD, ElementType.PARAMETER })
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
+@Deprecated(since = "3.5.0", forRemoval = true)
 public @interface DurationUnit {
 
 	/**

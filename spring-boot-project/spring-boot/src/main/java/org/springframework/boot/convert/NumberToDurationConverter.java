@@ -32,6 +32,7 @@ import org.springframework.core.convert.converter.GenericConverter;
  * @see DurationFormat
  * @see DurationUnit
  */
+@SuppressWarnings("removal")
 final class NumberToDurationConverter implements GenericConverter {
 
 	private final StringToDurationConverter delegate = new StringToDurationConverter();

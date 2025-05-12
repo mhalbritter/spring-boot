@@ -24,6 +24,9 @@ import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.PropertyMapper;
 import org.springframework.boot.convert.DurationUnit;
+import org.springframework.format.annotation.DurationFormat;
+import org.springframework.format.annotation.DurationFormat.Style;
+import org.springframework.format.annotation.DurationFormat.Unit;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.cors.CorsConfiguration;
 
@@ -76,6 +79,7 @@ public class CorsEndpointProperties {
 	 * duration suffix is not specified, seconds will be used.
 	 */
 	@DurationUnit(ChronoUnit.SECONDS)
+	@DurationFormat(style = Style.SIMPLE, defaultUnit = Unit.SECONDS)
 	private Duration maxAge = Duration.ofSeconds(1800);
 
 	public List<String> getAllowedOrigins() {

@@ -34,6 +34,7 @@ import org.springframework.util.ObjectUtils;
  * @see DurationFormat
  * @see DurationUnit
  */
+@SuppressWarnings("removal")
 final class StringToDurationConverter implements GenericConverter {
 
 	@Override

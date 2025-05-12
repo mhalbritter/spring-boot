@@ -33,6 +33,7 @@ import org.springframework.util.ReflectionUtils;
  * @see DurationFormat
  * @see DurationUnit
  */
+@SuppressWarnings("removal")
 final class DurationToNumberConverter implements GenericConverter {
 
 	@Override
