@@ -29,6 +29,9 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.boot.json.JsonValueWriter.Series;
 import org.springframework.boot.json.JsonWriter.Member.Extractor;
 import org.springframework.util.Assert;
@@ -73,6 +76,7 @@ import org.springframework.util.StringUtils;
  * @author Moritz Halbritter
  * @since 3.4.0
  */
+@NullUnmarked
 @FunctionalInterface
 public interface JsonWriter<T> {
 
@@ -82,14 +86,14 @@ public interface JsonWriter<T> {
 	 * @param out the output that should receive the JSON
 	 * @throws IOException on IO error
 	 */
-	void write(T instance, Appendable out) throws IOException;
+	void write(@Nullable T instance, Appendable out) throws IOException;
 
 	/**
 	 * Write the given instance to a JSON string.
 	 * @param instance the instance to write (may be {@code null})
 	 * @return the JSON string
 	 */
-	default String writeToString(T instance) {
+	default String writeToString(@Nullable T instance) {
 		return write(instance).toJsonString();
 	}
 
@@ -99,7 +103,7 @@ public interface JsonWriter<T> {
 	 * @param instance the instance to write (may be {@code null})
 	 * @return a {@link WritableJson} instance that may be used to write the JSON
 	 */
-	default WritableJson write(T instance) {
+	default WritableJson write(@Nullable T instance) {
 		return WritableJson.of((out) -> write(instance, out));
 	}
 
@@ -718,7 +722,7 @@ public interface JsonWriter<T> {
 			}
 
 			@SuppressWarnings("unchecked")
-			private <R> R apply(T extracted, Function<T, R> function) {
+			private <R> @Nullable R apply(T extracted, Function<T, R> function) {
 				if (skip(extracted)) {
 					return (R) SKIP;
 				}
@@ -762,7 +766,7 @@ public interface JsonWriter<T> {
 	 * include any {@link NameProcessor name processing}.
 	 * @param index the index of the member or {@link MemberPath#UNINDEXED}
 	 */
-	record MemberPath(MemberPath parent, String name, int index) {
+	record MemberPath(MemberPath parent, @Nullable String name, int index) {
 
 		private static final String[] ESCAPED = { "\\", ".", "[", "]" };
 
@@ -929,7 +933,7 @@ public interface JsonWriter<T> {
 		 * @param existingName the existing and possibly already processed name.
 		 * @return the new name
 		 */
-		String processName(MemberPath path, String existingName);
+		@Nullable String processName(MemberPath path, String existingName);
 
 		/**
 		 * Factory method to create a new {@link NameProcessor} for the given operation.
@@ -960,7 +964,7 @@ public interface JsonWriter<T> {
 		 * @param value the value being written (may be {@code null})
 		 * @return the processed value
 		 */
-		T processValue(MemberPath path, T value);
+		T processValue(MemberPath path, @Nullable T value);
 
 		/**
 		 * Return a new processor from this one that only applied to members with the

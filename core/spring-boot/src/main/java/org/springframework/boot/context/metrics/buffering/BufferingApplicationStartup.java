@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-present the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.context.metrics.buffering.StartupTimeline.TimelineEvent;
 import org.springframework.core.metrics.ApplicationStartup;
@@ -133,7 +135,7 @@ public class BufferingApplicationStartup implements ApplicationStartup {
 		}
 	}
 
-	private BufferedStartupStep getLatestActive(BufferedStartupStep step) {
+	private @Nullable BufferedStartupStep getLatestActive(@Nullable BufferedStartupStep step) {
 		while (step != null && step.isEnded()) {
 			step = step.getParent();
 		}
