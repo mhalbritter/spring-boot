@@ -25,11 +25,14 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.lang.ArchRule;
@@ -100,6 +103,7 @@ public abstract class ArchitectureCheck extends DefaultTask {
 	void checkArchitecture() throws Exception {
 		withCompileClasspath(() -> {
 			JavaClasses javaClasses = new ClassFileImporter().importPaths(classFilesPaths());
+			checkNullMarkedAnnotation(javaClasses);
 			List<EvaluationResult> violations = evaluate(javaClasses).filter(EvaluationResult::hasViolation).toList();
 			File outputFile = getOutputDirectory().file("failure-report.txt").get().getAsFile();
 			writeViolationReport(violations, outputFile);
@@ -108,6 +112,30 @@ public abstract class ArchitectureCheck extends DefaultTask {
 			}
 			return null;
 		});
+	}
+
+	private void checkNullMarkedAnnotation(JavaClasses javaClasses) {
+		if (!shouldCheckNullMarked()) {
+			return;
+		}
+		Set<String> unmarkedPackages = new HashSet<>();
+		for (JavaClass javaClass : javaClasses) {
+			if (!javaClass.getPackage().isAnnotatedWith("org.jspecify.annotations.NullMarked")) {
+				String packageName = javaClass.getPackage().getName();
+				unmarkedPackages.add(packageName);
+			}
+		}
+		if (!unmarkedPackages.isEmpty()) {
+			StringBuilder builder = new StringBuilder("Packages missing @NullMarked found:\n\n");
+			for (String unmarkedPackage : unmarkedPackages) {
+				builder.append("- ").append(unmarkedPackage).append("\n");
+			}
+			throw new VerificationException(builder.toString());
+		}
+	}
+
+	private boolean shouldCheckNullMarked() {
+		return getNullMarked().get();
 	}
 
 	private List<Path> classFilesPaths() {
@@ -185,5 +213,8 @@ public abstract class ArchitectureCheck extends DefaultTask {
 
 	@Input // Use descriptions as input since rules aren't serializable
 	abstract ListProperty<String> getRuleDescriptions();
+
+	@Internal
+	abstract Property<Boolean> getNullMarked();
 
 }

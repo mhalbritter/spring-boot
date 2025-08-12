@@ -1,7 +1,7 @@
 /*
  * Copyright 2012-present the original author or authors.
  *
- * Licensed under the Apache License, Version 2.0 (the License);
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
@@ -14,19 +14,22 @@
  * limitations under the License.
  */
 
-plugins {
-	id "java-library"
-	id "org.springframework.boot.deployed"
-	id "org.springframework.boot.annotation-processor"
-}
+package org.springframework.boot.build.architecture;
 
-description = "Spring Boot AutoConfigure Annotation Processor"
+import org.gradle.api.provider.Property;
+import org.jspecify.annotations.NullMarked;
 
-dependencies {
-	testImplementation(enforcedPlatform(project(":platform:spring-boot-dependencies")))
-	testImplementation(project(":test-support:spring-boot-test-support"))
-}
+/**
+ * Extension to configure the {@link ArchitecturePlugin}.
+ *
+ * @author Moritz Halbritter
+ */
+public abstract class ArchitectureCheckExtension {
 
-architectureCheck {
-	nullMarked = false
+	/**
+	 * Whether this project uses JSpecify's {@link NullMarked} annotations.
+	 * @return whether this project uses JSpecify's @NullMarked annotations
+	 */
+	public abstract Property<Boolean> getNullMarked();
+
 }

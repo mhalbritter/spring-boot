@@ -24,6 +24,7 @@ import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskProvider;
 import org.gradle.language.base.plugins.LifecycleBasePlugin;
@@ -39,10 +40,12 @@ public class ArchitecturePlugin implements Plugin<Project> {
 
 	@Override
 	public void apply(Project project) {
-		project.getPlugins().withType(JavaPlugin.class, (javaPlugin) -> registerTasks(project));
+		ArchitectureCheckExtension extension = project.getExtensions()
+			.create("architectureCheck", ArchitectureCheckExtension.class);
+		project.getPlugins().withType(JavaPlugin.class, (javaPlugin) -> registerTasks(project, extension));
 	}
 
-	private void registerTasks(Project project) {
+	private void registerTasks(Project project, ArchitectureCheckExtension extension) {
 		JavaPluginExtension javaPluginExtension = project.getExtensions().getByType(JavaPluginExtension.class);
 		List<TaskProvider<ArchitectureCheck>> packageTangleChecks = new ArrayList<>();
 		for (SourceSet sourceSet : javaPluginExtension.getSourceSets()) {
@@ -57,6 +60,7 @@ public class ArchitecturePlugin implements Plugin<Project> {
 							task.setDescription("Checks the architecture of the classes of the " + sourceSet.getName()
 									+ " source set.");
 							task.setGroup(LifecycleBasePlugin.VERIFICATION_GROUP);
+							task.getNullMarked().set(checkNullMarked(sourceSet, extension));
 						});
 			packageTangleChecks.add(checkPackageTangles);
 		}
@@ -64,6 +68,11 @@ public class ArchitecturePlugin implements Plugin<Project> {
 			TaskProvider<Task> checkTask = project.getTasks().named(LifecycleBasePlugin.CHECK_TASK_NAME);
 			checkTask.configure((check) -> check.dependsOn(packageTangleChecks));
 		}
+	}
+
+	private Provider<Boolean> checkNullMarked(SourceSet sourceSet, ArchitectureCheckExtension extension) {
+		// Default to true only on main source set
+		return extension.getNullMarked().orElse(sourceSet.getName().equals(SourceSet.MAIN_SOURCE_SET_NAME));
 	}
 
 }

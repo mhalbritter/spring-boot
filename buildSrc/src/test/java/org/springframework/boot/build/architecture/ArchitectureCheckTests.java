@@ -193,6 +193,9 @@ class ArchitectureCheckTests {
 				dependencies {
 					implementation("org.springframework.integration:spring-integration-jmx:6.3.9")
 				}
+				architectureCheck {
+					nullMarked = false
+				}
 				""");
 		Path testClass = this.projectDir.resolve("src/main/java/boot/architecture/bpp/external/TestClass.java");
 		Files.createDirectories(testClass.getParent());
@@ -245,6 +248,9 @@ class ArchitectureCheckTests {
 					main {
 						  output.classesDirs.setFrom(file("classes"))
 					  }
+				}
+				architectureCheck {
+					nullMarked = false
 				}
 				""");
 		runGradle(callback);
