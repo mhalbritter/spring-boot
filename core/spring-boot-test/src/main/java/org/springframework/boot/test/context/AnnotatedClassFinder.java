@@ -40,7 +40,7 @@ import org.springframework.util.ClassUtils;
  */
 public final class AnnotatedClassFinder {
 
-	private static final Map<String, Class<?>> cache = Collections.synchronizedMap(new Cache(40));
+	private static final Map<String, @Nullable Class<?>> cache = Collections.synchronizedMap(new Cache(40));
 
 	private final Class<? extends Annotation> annotationType;
 
