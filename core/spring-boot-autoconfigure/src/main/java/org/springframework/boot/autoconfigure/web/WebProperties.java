@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.PropertyMapper;
+import org.springframework.boot.context.properties.PropertyMapper2;
 import org.springframework.boot.convert.DurationUnit;
 import org.springframework.http.CacheControl;
 
@@ -568,7 +568,7 @@ public class WebProperties {
 				}
 
 				public @Nullable CacheControl toHttpCacheControl() {
-					PropertyMapper map = PropertyMapper.get();
+					PropertyMapper2 map = PropertyMapper2.get();
 					CacheControl control = createCacheControl();
 					map.from(this::getMustRevalidate).whenTrue().toCall(control::mustRevalidate);
 					map.from(this::getNoTransform).whenTrue().toCall(control::noTransform);
@@ -576,13 +576,10 @@ public class WebProperties {
 					map.from(this::getCachePrivate).whenTrue().toCall(control::cachePrivate);
 					map.from(this::getProxyRevalidate).whenTrue().toCall(control::proxyRevalidate);
 					map.from(this::getStaleWhileRevalidate)
-						.whenNonNull()
 						.to((duration) -> control.staleWhileRevalidate(duration.getSeconds(), TimeUnit.SECONDS));
 					map.from(this::getStaleIfError)
-						.whenNonNull()
 						.to((duration) -> control.staleIfError(duration.getSeconds(), TimeUnit.SECONDS));
 					map.from(this::getSMaxAge)
-						.whenNonNull()
 						.to((duration) -> control.sMaxAge(duration.getSeconds(), TimeUnit.SECONDS));
 					// check if cacheControl remained untouched
 					if (control.getHeaderValue() == null) {

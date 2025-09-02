@@ -25,7 +25,7 @@ import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.BeanUtils;
-import org.springframework.boot.context.properties.PropertyMapper;
+import org.springframework.boot.context.properties.PropertyMapper2;
 import org.springframework.core.task.TaskDecorator;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.util.Assert;
@@ -324,7 +324,7 @@ public class ThreadPoolTaskExecutorBuilder {
 	 * @see #build(Class)
 	 */
 	public <T extends ThreadPoolTaskExecutor> T configure(T taskExecutor) {
-		PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
+		PropertyMapper2 map = PropertyMapper2.get();
 		map.from(this.queueCapacity).to(taskExecutor::setQueueCapacity);
 		map.from(this.corePoolSize).to(taskExecutor::setCorePoolSize);
 		map.from(this.maxPoolSize).to(taskExecutor::setMaxPoolSize);

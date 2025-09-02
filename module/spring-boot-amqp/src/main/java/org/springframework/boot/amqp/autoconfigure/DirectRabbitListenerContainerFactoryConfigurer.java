@@ -18,7 +18,7 @@ package org.springframework.boot.amqp.autoconfigure;
 
 import org.springframework.amqp.rabbit.config.DirectRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
-import org.springframework.boot.context.properties.PropertyMapper;
+import org.springframework.boot.context.properties.PropertyMapper2;
 
 /**
  * Configure {@link DirectRabbitListenerContainerFactory} with sensible defaults tuned
@@ -45,10 +45,10 @@ public final class DirectRabbitListenerContainerFactoryConfigurer
 
 	@Override
 	public void configure(DirectRabbitListenerContainerFactory factory, ConnectionFactory connectionFactory) {
-		PropertyMapper map = PropertyMapper.get();
+		PropertyMapper2 map = PropertyMapper2.get();
 		RabbitProperties.DirectContainer config = getRabbitProperties().getListener().getDirect();
 		configure(factory, connectionFactory, config);
-		map.from(config::getConsumersPerQueue).whenNonNull().to(factory::setConsumersPerQueue);
+		map.from(config::getConsumersPerQueue).to(factory::setConsumersPerQueue);
 	}
 
 }

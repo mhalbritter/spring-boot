@@ -31,7 +31,7 @@ import org.jspecify.annotations.Nullable;
 
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
-import org.springframework.boot.context.properties.PropertyMapper;
+import org.springframework.boot.context.properties.PropertyMapper2;
 import org.springframework.boot.context.properties.bind.BindableRuntimeHintsRegistrar;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.context.properties.bind.DefaultValue;
@@ -136,7 +136,7 @@ record StructuredLoggingJsonProperties(Set<String> include, Set<String> exclude,
 		private StandardStackTracePrinter createStandardPrinter() {
 			StandardStackTracePrinter printer = (root() == Root.FIRST) ? StandardStackTracePrinter.rootFirst()
 					: StandardStackTracePrinter.rootLast();
-			PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
+			PropertyMapper2 map = PropertyMapper2.get();
 			printer = map.from(this::maxLength).to(printer, StandardStackTracePrinter::withMaximumLength);
 			printer = map.from(this::maxThrowableDepth)
 				.to(printer, StandardStackTracePrinter::withMaximumThrowableDepth);

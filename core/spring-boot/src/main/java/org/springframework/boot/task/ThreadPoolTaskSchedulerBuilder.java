@@ -24,7 +24,7 @@ import java.util.Set;
 
 import org.jspecify.annotations.Nullable;
 
-import org.springframework.boot.context.properties.PropertyMapper;
+import org.springframework.boot.context.properties.PropertyMapper2;
 import org.springframework.core.task.TaskDecorator;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.util.Assert;
@@ -209,7 +209,7 @@ public class ThreadPoolTaskSchedulerBuilder {
 	 * @see #build()
 	 */
 	public <T extends ThreadPoolTaskScheduler> T configure(T taskScheduler) {
-		PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
+		PropertyMapper2 map = PropertyMapper2.get();
 		map.from(this.poolSize).to(taskScheduler::setPoolSize);
 		map.from(this.awaitTermination).to(taskScheduler::setWaitForTasksToCompleteOnShutdown);
 		map.from(this.awaitTerminationPeriod).asInt(Duration::getSeconds).to(taskScheduler::setAwaitTerminationSeconds);

@@ -24,7 +24,7 @@ import java.util.Set;
 
 import org.jspecify.annotations.Nullable;
 
-import org.springframework.boot.context.properties.PropertyMapper;
+import org.springframework.boot.context.properties.PropertyMapper2;
 import org.springframework.core.task.TaskDecorator;
 import org.springframework.scheduling.concurrent.SimpleAsyncTaskScheduler;
 import org.springframework.util.Assert;
@@ -201,7 +201,7 @@ public class SimpleAsyncTaskSchedulerBuilder {
 	 * @see #build()
 	 */
 	public <T extends SimpleAsyncTaskScheduler> T configure(T taskScheduler) {
-		PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
+		PropertyMapper2 map = PropertyMapper2.get();
 		map.from(this.threadNamePrefix).to(taskScheduler::setThreadNamePrefix);
 		map.from(this.concurrencyLimit).to(taskScheduler::setConcurrencyLimit);
 		map.from(this.virtualThreads).to(taskScheduler::setVirtualThreads);

@@ -22,7 +22,7 @@ import org.jspecify.annotations.Nullable;
 
 import org.springframework.amqp.rabbit.connection.AbstractConnectionFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionNameStrategy;
-import org.springframework.boot.context.properties.PropertyMapper;
+import org.springframework.boot.context.properties.PropertyMapper2;
 import org.springframework.util.Assert;
 
 /**
@@ -81,16 +81,14 @@ public abstract class AbstractConnectionFactoryConfigurer<T extends AbstractConn
 	 */
 	public final void configure(T connectionFactory) {
 		Assert.notNull(connectionFactory, "'connectionFactory' must not be null");
-		PropertyMapper map = PropertyMapper.get();
+		PropertyMapper2 map = PropertyMapper2.get();
 		String addresses = this.connectionDetails.getAddresses()
 			.stream()
 			.map((address) -> address.host() + ":" + address.port())
 			.collect(Collectors.joining(","));
 		map.from(addresses).to(connectionFactory::setAddresses);
-		map.from(this.rabbitProperties::getAddressShuffleMode)
-			.whenNonNull()
-			.to(connectionFactory::setAddressShuffleMode);
-		map.from(this.connectionNameStrategy).whenNonNull().to(connectionFactory::setConnectionNameStrategy);
+		map.from(this.rabbitProperties::getAddressShuffleMode).to(connectionFactory::setAddressShuffleMode);
+		map.from(this.connectionNameStrategy).to(connectionFactory::setConnectionNameStrategy);
 		configure(connectionFactory, this.rabbitProperties);
 	}
 

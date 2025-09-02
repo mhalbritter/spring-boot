@@ -19,7 +19,7 @@ package org.springframework.boot.amqp.autoconfigure;
 import java.time.Duration;
 
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
-import org.springframework.boot.context.properties.PropertyMapper;
+import org.springframework.boot.context.properties.PropertyMapper2;
 
 /**
  * Configures Rabbit {@link CachingConnectionFactory} with sensible defaults tuned using
@@ -59,20 +59,15 @@ public class CachingConnectionFactoryConfigurer extends AbstractConnectionFactor
 
 	@Override
 	public void configure(CachingConnectionFactory connectionFactory, RabbitProperties rabbitProperties) {
-		PropertyMapper map = PropertyMapper.get();
+		PropertyMapper2 map = PropertyMapper2.get();
 		map.from(rabbitProperties::isPublisherReturns).to(connectionFactory::setPublisherReturns);
-		map.from(rabbitProperties::getPublisherConfirmType)
-			.whenNonNull()
-			.to(connectionFactory::setPublisherConfirmType);
+		map.from(rabbitProperties::getPublisherConfirmType).to(connectionFactory::setPublisherConfirmType);
 		RabbitProperties.Cache.Channel channel = rabbitProperties.getCache().getChannel();
-		map.from(channel::getSize).whenNonNull().to(connectionFactory::setChannelCacheSize);
-		map.from(channel::getCheckoutTimeout)
-			.whenNonNull()
-			.as(Duration::toMillis)
-			.to(connectionFactory::setChannelCheckoutTimeout);
+		map.from(channel::getSize).to(connectionFactory::setChannelCacheSize);
+		map.from(channel::getCheckoutTimeout).as(Duration::toMillis).to(connectionFactory::setChannelCheckoutTimeout);
 		RabbitProperties.Cache.Connection connection = rabbitProperties.getCache().getConnection();
-		map.from(connection::getMode).whenNonNull().to(connectionFactory::setCacheMode);
-		map.from(connection::getSize).whenNonNull().to(connectionFactory::setConnectionCacheSize);
+		map.from(connection::getMode).to(connectionFactory::setCacheMode);
+		map.from(connection::getSize).to(connectionFactory::setConnectionCacheSize);
 	}
 
 }

@@ -25,7 +25,7 @@ import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.BeanUtils;
-import org.springframework.boot.context.properties.PropertyMapper;
+import org.springframework.boot.context.properties.PropertyMapper2;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.core.task.TaskDecorator;
 import org.springframework.util.Assert;
@@ -243,7 +243,7 @@ public class SimpleAsyncTaskExecutorBuilder {
 	 * @see #build(Class)
 	 */
 	public <T extends SimpleAsyncTaskExecutor> T configure(T taskExecutor) {
-		PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
+		PropertyMapper2 map = PropertyMapper2.get();
 		map.from(this.virtualThreads).to(taskExecutor::setVirtualThreads);
 		map.from(this.threadNamePrefix).whenHasText().to(taskExecutor::setThreadNamePrefix);
 		map.from(this.rejectTasksWhenLimitReached).to(taskExecutor::setRejectTasksWhenLimitReached);
