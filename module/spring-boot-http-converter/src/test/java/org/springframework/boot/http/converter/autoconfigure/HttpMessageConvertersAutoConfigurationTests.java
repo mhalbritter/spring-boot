@@ -37,8 +37,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.data.rest.webmvc.config.RepositoryRestMvcConfiguration;
-import org.springframework.hateoas.RepresentationModel;
-import org.springframework.hateoas.server.mvc.TypeConstrainedMappingJackson2HttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.GsonHttpMessageConverter;
@@ -172,18 +170,6 @@ class HttpMessageConvertersAutoConfigurationTests {
 	void stringCustomConverter() {
 		this.contextRunner.withUserConfiguration(StringConverterConfig.class)
 			.run(assertConverter(StringHttpMessageConverter.class, "customStringMessageConverter"));
-	}
-
-	@Test
-	void typeConstrainedConverterDoesNotPreventAutoConfigurationOfJacksonConverter() {
-		this.contextRunner
-			.withUserConfiguration(JacksonObjectMapperBuilderConfig.class, TypeConstrainedConverterConfiguration.class)
-			.run((context) -> {
-				BeanDefinition beanDefinition = ((GenericApplicationContext) context.getSourceApplicationContext())
-					.getBeanDefinition("mappingJackson2HttpMessageConverter");
-				assertThat(beanDefinition.getFactoryBeanName())
-					.isEqualTo(MappingJackson2HttpMessageConverterConfiguration.class.getName());
-			});
 	}
 
 	@Test
@@ -357,16 +343,6 @@ class HttpMessageConvertersAutoConfigurationTests {
 		@Bean
 		StringHttpMessageConverter customStringMessageConverter() {
 			return new StringHttpMessageConverter();
-		}
-
-	}
-
-	@Configuration(proxyBeanMethods = false)
-	static class TypeConstrainedConverterConfiguration {
-
-		@Bean
-		TypeConstrainedMappingJackson2HttpMessageConverter typeConstrainedConverter() {
-			return new TypeConstrainedMappingJackson2HttpMessageConverter(RepresentationModel.class);
 		}
 
 	}

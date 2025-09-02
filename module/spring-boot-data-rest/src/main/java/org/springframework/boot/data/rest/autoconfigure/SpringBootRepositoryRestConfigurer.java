@@ -53,11 +53,4 @@ class SpringBootRepositoryRestConfigurer implements RepositoryRestConfigurer {
 		this.properties.applyTo(config);
 	}
 
-	@Override
-	public void configureJacksonObjectMapper(ObjectMapper objectMapper) {
-		if (this.objectMapperBuilder != null) {
-			this.objectMapperBuilder.configure(objectMapper);
-		}
-	}
-
 }
