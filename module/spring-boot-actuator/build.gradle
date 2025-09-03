@@ -79,3 +79,13 @@ dependencies {
 	testRuntimeOnly("org.apache.tomcat.embed:tomcat-embed-el")
 	testRuntimeOnly("org.hsqldb:hsqldb")
 }
+
+nullability {
+	check {
+		sourceSet {
+			"test" {
+				type = "test"
+			}
+		}
+	}
+}
