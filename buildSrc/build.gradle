@@ -32,6 +32,7 @@ java {
 }
 
 repositories {
+	mavenLocal()
 	spring.mavenRepositories("${springFrameworkVersion}".contains("-"))
 }
 
