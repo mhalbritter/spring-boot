@@ -23,7 +23,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import org.springframework.util.Assert;
@@ -94,7 +93,7 @@ public final class PropertyMapper {
 	 * @param value the value
 	 * @return a {@link Source} that can be used to complete the mapping
 	 */
-	public <T extends @Nullable Object> Source<T> from(@Nullable T value) {
+	public <T> Source<T> from(@Nullable T value) {
 		return from(() -> value);
 	}
 
@@ -106,16 +105,16 @@ public final class PropertyMapper {
 	 * @return a {@link Source} that can be used to complete the mapping
 	 * @see #from(Object)
 	 */
-	public <T extends @Nullable Object> Source<T> from(Supplier<? extends @Nullable T> supplier) {
+	public <T> Source<T> from(Supplier<? extends @Nullable T> supplier) {
 		Assert.notNull(supplier, "'supplier' must not be null");
-		Source<T> source = getSource(supplier::get);
+		Source<T> source = getSource(supplier);
 		if (this.sourceOperator != null) {
 			source = this.sourceOperator.apply(source);
 		}
 		return source;
 	}
 
-	private <T extends @Nullable Object> Source<T> getSource(Supplier<T> supplier) {
+	private <T> Source<T> getSource(Supplier<? extends @Nullable T> supplier) {
 		if (this.parent != null) {
 			return this.parent.from(supplier);
 		}
@@ -142,7 +141,7 @@ public final class PropertyMapper {
 		 * @param source the source to operate on
 		 * @return the updated source
 		 */
-		<T extends @Nullable Object> Source<T> apply(Source<T> source);
+		<T> Source<T> apply(Source<T> source);
 
 	}
 
@@ -151,13 +150,13 @@ public final class PropertyMapper {
 	 *
 	 * @param <T> the source type
 	 */
-	public static final class Source<T extends @Nullable Object> {
+	public static final class Source<T> {
 
-		private final Supplier<T> supplier;
+		private final Supplier<? extends @Nullable T> supplier;
 
-		private final Predicate<@NonNull T> predicate;
+		private final Predicate<T> predicate;
 
-		private Source(Supplier<T> supplier, Predicate<@NonNull T> predicate) {
+		private Source(Supplier<? extends @Nullable T> supplier, Predicate<T> predicate) {
 			Assert.notNull(predicate, "'predicate' must not be null");
 			this.supplier = supplier;
 			this.predicate = predicate;
@@ -172,7 +171,7 @@ public final class PropertyMapper {
 		 */
 		public Source<T> orFrom(Supplier<? extends @Nullable T> fallback) {
 			Assert.notNull(fallback, "'fallback' must not be null");
-			Supplier<T> supplier = () -> {
+			Supplier<@Nullable T> supplier = () -> {
 				T value = getValue();
 				return (value != null) ? value : fallback.get();
 			};
@@ -185,7 +184,7 @@ public final class PropertyMapper {
 		 * @param adapter an adapter to convert the current value to a number.
 		 * @return a new adapted source instance
 		 */
-		public <R extends @Nullable Number> Source<Integer> asInt(Adapter<? super T, ? extends R> adapter) {
+		public <R extends Number> Source<Integer> asInt(Adapter<? super T, ? extends R> adapter) {
 			return as(adapter).as(Number::intValue);
 		}
 
@@ -196,9 +195,9 @@ public final class PropertyMapper {
 		 * @param adapter the adapter to apply
 		 * @return a new adapted source instance
 		 */
-		public <R extends @Nullable Object> Source<R> as(Adapter<? super T, ? extends R> adapter) {
+		public <R> Source<R> as(Adapter<? super T, ? extends R> adapter) {
 			Assert.notNull(adapter, "'adapter' must not be null");
-			Supplier<R> supplier = () -> {
+			Supplier<@Nullable R> supplier = () -> {
 				T value = getValue();
 				return (value != null && this.predicate.test(value)) ? adapter.adapt(value) : null;
 			};
@@ -214,7 +213,7 @@ public final class PropertyMapper {
 		 * {@code true}.
 		 * @return a new filtered source instance
 		 */
-		public Source<@NonNull T> whenTrue() {
+		public Source<T> whenTrue() {
 			return when(Boolean.TRUE::equals);
 		}
 
@@ -223,7 +222,7 @@ public final class PropertyMapper {
 		 * {@code false}.
 		 * @return a new filtered source instance
 		 */
-		public Source<@NonNull T> whenFalse() {
+		public Source<T> whenFalse() {
 			return when(Boolean.FALSE::equals);
 		}
 
@@ -232,7 +231,7 @@ public final class PropertyMapper {
 		 * {@code toString()} containing actual text.
 		 * @return a new filtered source instance
 		 */
-		public Source<@NonNull T> whenHasText() {
+		public Source<T> whenHasText() {
 			return when((value) -> StringUtils.hasText(value.toString()));
 		}
 
@@ -264,7 +263,7 @@ public final class PropertyMapper {
 		 * @param predicate the predicate used to filter values
 		 * @return a new filtered source instance
 		 */
-		public Source<T> whenNot(Predicate<@NonNull T> predicate) {
+		public Source<T> whenNot(Predicate<T> predicate) {
 			Assert.notNull(predicate, "'predicate' must not be null");
 			return when(predicate.negate());
 		}
@@ -275,7 +274,7 @@ public final class PropertyMapper {
 		 * @param predicate the predicate used to filter values
 		 * @return a new filtered source instance
 		 */
-		public Source<T> when(Predicate<@NonNull T> predicate) {
+		public Source<T> when(Predicate<T> predicate) {
 			Assert.notNull(predicate, "'predicate' must not be null");
 			return new Source<>(this.supplier, this.predicate.and(predicate));
 		}
@@ -286,7 +285,7 @@ public final class PropertyMapper {
 		 * @param consumer the consumer that should accept the value if it's not been
 		 * filtered
 		 */
-		public void to(Consumer<? super @NonNull T> consumer) {
+		public void to(Consumer<? super T> consumer) {
 			Assert.notNull(consumer, "'consumer' must not be null");
 			T value = getValue();
 			if (value != null && test(value)) {
@@ -305,7 +304,7 @@ public final class PropertyMapper {
 		 * @return a new mapped instance or the original instance
 		 * @since 3.0.0
 		 */
-		public <R> R to(R instance, BiFunction<R, ? super @NonNull T, R> mapper) {
+		public <R> R to(R instance, BiFunction<R, ? super T, R> mapper) {
 			Assert.notNull(instance, "'instance' must not be null");
 			Assert.notNull(mapper, "'mapper' must not be null");
 			T value = getValue();
@@ -322,7 +321,7 @@ public final class PropertyMapper {
 		 * @return the instance
 		 * @throws NoSuchElementException if the value has been filtered
 		 */
-		public <R> R toInstance(Function<? super @NonNull T, R> factory) {
+		public <R> R toInstance(Function<? super T, R> factory) {
 			Assert.notNull(factory, "'factory' must not be null");
 			T value = getValue();
 			if (value != null && test(value)) {
@@ -350,7 +349,8 @@ public final class PropertyMapper {
 		 * @return a new {@link Always} instance
 		 */
 		public Always<T> always() {
-			return new Always<>(this::getValue, this::test);
+			Supplier<@Nullable T> getValue = this::getValue;
+			return new Always<>(getValue, this::test);
 		}
 
 		private @Nullable T getValue() {
@@ -374,10 +374,10 @@ public final class PropertyMapper {
 		 * @param <R> the result type
 		 */
 		@FunctionalInterface
-		public interface Adapter<T, R extends @Nullable Object> {
+		public interface Adapter<T, R> {
 
 			/**
-			 * Adapt the given value
+			 * Adapt the given value.
 			 * @param value the value to adapt
 			 * @return an adapted value or {@code null}
 			 */
@@ -390,13 +390,13 @@ public final class PropertyMapper {
 		 *
 		 * @param <T> the source type
 		 */
-		public static class Always<T extends @Nullable Object> {
+		public static class Always<T> {
 
-			private final Supplier<T> supplier;
+			private final Supplier<@Nullable T> supplier;
 
-			private final Predicate<@NonNull T> predicate;
+			private final Predicate<T> predicate;
 
-			Always(Supplier<T> supplier, Predicate<@NonNull T> predicate) {
+			Always(Supplier<@Nullable T> supplier, Predicate<T> predicate) {
 				this.supplier = supplier;
 				this.predicate = predicate;
 			}
@@ -408,9 +408,9 @@ public final class PropertyMapper {
 			 * @param adapter the adapter to apply
 			 * @return a new adapted source instance
 			 */
-			public <R extends @Nullable Object> Always<R> as(Adapter<@Nullable ? super T, ? extends R> adapter) {
+			public <R> Always<R> as(Adapter<? super T, ? extends R> adapter) {
 				Assert.notNull(adapter, "'adapter' must not be null");
-				Supplier<R> supplier = () -> {
+				Supplier<@Nullable R> supplier = () -> {
 					T value = getValue();
 					return (value == null || test(value)) ? adapter.adapt(value) : null;
 				};
@@ -445,7 +445,7 @@ public final class PropertyMapper {
 			 * @param mapper the mapping function
 			 * @return a new mapped instance or the original instance
 			 */
-			public <R extends @Nullable Object> R to(R instance, Mapper<R, ? super T> mapper) {
+			public <R> R to(R instance, Mapper<R, ? super T> mapper) {
 				Assert.notNull(instance, "'instance' must not be null");
 				Assert.notNull(mapper, "'mapper' must not be null");
 				T value = getValue();
@@ -463,11 +463,11 @@ public final class PropertyMapper {
 			 * @return the instance
 			 * @throws NoSuchElementException if the value has been filtered
 			 */
-			public <R extends @Nullable Object> R toInstance(Function<@Nullable ? super T, ? extends R> factory) {
+			public <R> R toInstance(Factory<? super T, ? extends R> factory) {
 				Assert.notNull(factory, "'factory' must not be null");
 				T value = getValue();
 				if (value == null || test(value)) {
-					return factory.apply(value);
+					return factory.create(value);
 				}
 				throw new NoSuchElementException("No value present");
 			}
@@ -501,14 +501,14 @@ public final class PropertyMapper {
 			 * @param <R> the result type
 			 */
 			@FunctionalInterface
-			public interface Adapter<T extends @Nullable Object, R extends @Nullable Object> {
+			public interface Adapter<T, R> {
 
 				/**
-				 * Adapt the given value
+				 * Adapt the given value.
 				 * @param value the value to adapt
 				 * @return an adapted value or {@code null}
 				 */
-				@Nullable R adapt(T value);
+				@Nullable R adapt(@Nullable T value);
 
 			}
 
