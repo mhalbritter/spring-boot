@@ -19,6 +19,7 @@ package org.springframework.boot.logging.logback;
 import java.math.BigDecimal;
 import java.util.Set;
 import java.util.function.BinaryOperator;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import ch.qos.logback.classic.pattern.ThrowableProxyConverter;
@@ -100,8 +101,10 @@ class GraylogExtendedLogFormatStructuredLogFormatter extends JsonWriterStructure
 			pairs.addMapEntries(ILoggingEvent::getMDCPropertyMap);
 			pairs.add(ILoggingEvent::getKeyValuePairs, keyValuePairExtractor);
 		}));
+		Function<@Nullable ILoggingEvent, @Nullable Object> getThrowableProxy = (event) -> (event != null)
+				? event.getThrowableProxy() : null;
 		members.add()
-			.whenNotNull(ILoggingEvent::getThrowableProxy)
+			.whenNotNull(getThrowableProxy)
 			.usingMembers((throwableMembers) -> throwableMembers(throwableMembers, extractor));
 	}
 

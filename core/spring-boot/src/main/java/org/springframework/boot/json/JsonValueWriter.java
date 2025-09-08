@@ -149,7 +149,7 @@ class JsonValueWriter {
 		}
 	}
 
-	private <V> boolean canWriteAsArray(Iterable<?> iterable) {
+	private boolean canWriteAsArray(Iterable<?> iterable) {
 		return !(iterable instanceof Path);
 	}
 
@@ -389,7 +389,7 @@ class JsonValueWriter {
 
 		private int index;
 
-		private Set<String> names = new HashSet<>();
+		private final Set<String> names = new HashSet<>();
 
 		private ActiveSeries(Series series) {
 			this.series = series;
