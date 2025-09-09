@@ -61,3 +61,16 @@ dependencies {
 dockerTest {
 	jvmArgs += "--add-opens=java.base/java.util.concurrent=ALL-UNNAMED"
 }
+
+nullability {
+	check {
+		sourceSet {
+			"test" {
+				type = "test"
+			}
+			"dockerTest" {
+				type = "test"
+			}
+		}
+	}
+}
