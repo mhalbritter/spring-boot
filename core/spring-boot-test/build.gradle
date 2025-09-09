@@ -49,3 +49,12 @@ dependencies {
 	testRuntimeOnly("org.junit.vintage:junit-vintage-engine")
 }
 
+nullability {
+	check {
+		sourceSet {
+			"test" {
+				type = "test"
+			}
+		}
+	}
+}
