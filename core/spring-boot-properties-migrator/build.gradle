@@ -35,3 +35,13 @@ tasks.named("javadoc").configure {
 	// No public or protected classes
 	enabled = false
 }
+
+nullability {
+	check {
+		sourceSet {
+			"test" {
+				type = "test"
+			}
+		}
+	}
+}
