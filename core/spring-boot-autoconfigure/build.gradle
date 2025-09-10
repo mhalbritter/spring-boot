@@ -56,3 +56,13 @@ dependencies {
 test {
 	jvmArgs += "--add-opens=java.base/java.net=ALL-UNNAMED"
 }
+
+nullability {
+	check {
+		sourceSet {
+			"test" {
+				type = "test"
+			}
+		}
+	}
+}
