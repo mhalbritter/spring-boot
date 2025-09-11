@@ -60,18 +60,21 @@ class ConfigurationPropertiesBeanTests {
 			Map<String, ConfigurationPropertiesBean> all = ConfigurationPropertiesBean.getAll(context);
 			assertThat(all).containsOnlyKeys("annotatedComponent", "annotatedBean", ValueObject.class.getName());
 			ConfigurationPropertiesBean component = all.get("annotatedComponent");
+			assertThat(component).isNotNull();
 			assertThat(component.getName()).isEqualTo("annotatedComponent");
 			assertThat(component.getInstance()).isInstanceOf(AnnotatedComponent.class);
 			assertThat(component.getAnnotation()).isNotNull();
 			assertThat(component.getType()).isEqualTo(AnnotatedComponent.class);
 			assertThat(component.asBindTarget().getBindMethod()).isEqualTo(BindMethod.JAVA_BEAN);
 			ConfigurationPropertiesBean bean = all.get("annotatedBean");
+			assertThat(bean).isNotNull();
 			assertThat(bean.getName()).isEqualTo("annotatedBean");
 			assertThat(bean.getInstance()).isInstanceOf(AnnotatedBean.class);
 			assertThat(bean.getType()).isEqualTo(AnnotatedBean.class);
 			assertThat(bean.getAnnotation()).isNotNull();
 			assertThat(bean.asBindTarget().getBindMethod()).isEqualTo(BindMethod.JAVA_BEAN);
 			ConfigurationPropertiesBean valueObject = all.get(ValueObject.class.getName());
+			assertThat(valueObject).isNotNull();
 			assertThat(valueObject.getName()).isEqualTo(ValueObject.class.getName());
 			assertThat(valueObject.getInstance()).isInstanceOf(ValueObject.class);
 			assertThat(valueObject.getType()).isEqualTo(ValueObject.class);
@@ -197,6 +200,7 @@ class ConfigurationPropertiesBeanTests {
 	void getWhenHasValidatedBeanBindsWithBeanAnnotation() throws Throwable {
 		get(ValidatedBeanConfiguration.class, "validatedBean", (propertiesBean) -> {
 			Validated validated = propertiesBean.asBindTarget().getAnnotation(Validated.class);
+			assertThat(validated).isNotNull();
 			assertThat(validated.value()).containsExactly(BeanGroup.class);
 		});
 	}
@@ -205,6 +209,7 @@ class ConfigurationPropertiesBeanTests {
 	void getWhenHasValidatedFactoryMethodBindsWithFactoryMethodAnnotation() throws Throwable {
 		get(ValidatedMethodConfiguration.class, "annotatedBean", (propertiesBean) -> {
 			Validated validated = propertiesBean.asBindTarget().getAnnotation(Validated.class);
+			assertThat(validated).isNotNull();
 			assertThat(validated.value()).containsExactly(FactoryMethodGroup.class);
 		});
 	}
@@ -213,6 +218,7 @@ class ConfigurationPropertiesBeanTests {
 	void getWhenHasValidatedBeanAndFactoryMethodBindsWithFactoryMethodAnnotation() throws Throwable {
 		get(ValidatedMethodAndBeanConfiguration.class, "validatedBean", (propertiesBean) -> {
 			Validated validated = propertiesBean.asBindTarget().getAnnotation(Validated.class);
+			assertThat(validated).isNotNull();
 			assertThat(validated.value()).containsExactly(FactoryMethodGroup.class);
 		});
 	}

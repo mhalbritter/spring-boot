@@ -18,6 +18,7 @@ package org.springframework.boot.logging.structured;
 
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.boot.json.JsonWriter.Members;
@@ -60,9 +61,14 @@ class StructuredLogFormatterFactoryTests {
 	}
 
 	private void addCommonFormatters(CommonFormatters<LogEvent> commonFormatters) {
-		commonFormatters.add(CommonStructuredLogFormat.ELASTIC_COMMON_SCHEMA,
-				(instantiator) -> new TestEcsFormatter(instantiator.getArg(Environment.class),
-						instantiator.getArg(StackTracePrinter.class), instantiator.getArg(StringBuilder.class)));
+		commonFormatters.add(CommonStructuredLogFormat.ELASTIC_COMMON_SCHEMA, (instantiator) -> {
+			Environment environment = instantiator.getArg(Environment.class);
+			assertThat(environment).isNotNull();
+			StackTracePrinter stackTracePrinter = instantiator.getArg(StackTracePrinter.class);
+			StringBuilder stringBuilder = instantiator.getArg(StringBuilder.class);
+			assertThat(stringBuilder).isNotNull();
+			return new TestEcsFormatter(environment, stackTracePrinter, stringBuilder);
+		});
 	}
 
 	@Test
@@ -172,11 +178,11 @@ class StructuredLogFormatterFactoryTests {
 
 		private final Environment environment;
 
-		private final StackTracePrinter stackTracePrinter;
+		private final @Nullable StackTracePrinter stackTracePrinter;
 
 		private final StringBuilder custom;
 
-		TestEcsFormatter(Environment environment, StackTracePrinter stackTracePrinter, StringBuilder custom) {
+		TestEcsFormatter(Environment environment, @Nullable StackTracePrinter stackTracePrinter, StringBuilder custom) {
 			this.environment = environment;
 			this.stackTracePrinter = stackTracePrinter;
 			this.custom = custom;
@@ -191,7 +197,7 @@ class StructuredLogFormatterFactoryTests {
 			return this.environment;
 		}
 
-		StackTracePrinter getStackTracePrinter() {
+		@Nullable StackTracePrinter getStackTracePrinter() {
 			return this.stackTracePrinter;
 		}
 
