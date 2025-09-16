@@ -38,6 +38,8 @@ import org.springframework.util.StringUtils;
  */
 public final class ConfigDataLocation implements OriginProvider {
 
+	private static final ConfigDataLocation EMPTY = new ConfigDataLocation(true, "", null);
+
 	/**
 	 * Prefix used to indicate that a {@link ConfigDataResource} is optional.
 	 */
@@ -123,7 +125,7 @@ public final class ConfigDataLocation implements OriginProvider {
 		for (int i = 0; i < values.length; i++) {
 			int index = i;
 			ConfigDataLocation configDataLocation = of(values[index]);
-			Assert.state(configDataLocation != null, () -> "Unable to parse '%s'".formatted(values[index]));
+			Assert.state(!configDataLocation.isEmpty(), () -> "Unable to parse '%s'".formatted(values[index]));
 			result[i] = configDataLocation.withOrigin(getOrigin());
 		}
 		return result;
@@ -151,6 +153,10 @@ public final class ConfigDataLocation implements OriginProvider {
 		return (!this.optional) ? this.value : OPTIONAL_PREFIX + this.value;
 	}
 
+	boolean isEmpty() {
+		return !StringUtils.hasText(this.value);
+	}
+
 	/**
 	 * Create a new {@link ConfigDataLocation} with a specific {@link Origin}.
 	 * @param origin the origin to set
@@ -163,10 +169,9 @@ public final class ConfigDataLocation implements OriginProvider {
 	/**
 	 * Factory method to create a new {@link ConfigDataLocation} from a string.
 	 * @param location the location string
-	 * @return a {@link ConfigDataLocation} instance or {@code null} if no location was
-	 * provided
+	 * @return the {@link ConfigDataLocation}
 	 */
-	public static @Nullable ConfigDataLocation of(@Nullable String location) {
+	public static ConfigDataLocation of(@Nullable String location) {
 		boolean optional = location != null && location.startsWith(OPTIONAL_PREFIX);
 		String value;
 		if (optional) {
@@ -177,7 +182,7 @@ public final class ConfigDataLocation implements OriginProvider {
 			value = location;
 		}
 		if (!StringUtils.hasText(value)) {
-			return null;
+			return EMPTY;
 		}
 		return new ConfigDataLocation(optional, value, null);
 	}

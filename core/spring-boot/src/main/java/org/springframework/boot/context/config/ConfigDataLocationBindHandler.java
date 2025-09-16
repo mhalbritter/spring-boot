@@ -19,8 +19,9 @@ package org.springframework.boot.context.config;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.context.properties.bind.AbstractBindHandler;
 import org.springframework.boot.context.properties.bind.BindContext;
@@ -45,18 +46,28 @@ class ConfigDataLocationBindHandler extends AbstractBindHandler {
 		}
 		if (result instanceof List<?> list) {
 			return list.stream()
-				.filter(Objects::nonNull)
+				.filter(this::isValid)
 				.map((element) -> (element instanceof ConfigDataLocation location) ? withOrigin(context, location)
 						: element)
 				.collect(Collectors.toCollection(ArrayList::new));
 		}
 		if (result instanceof ConfigDataLocation[] unfilteredLocations) {
 			return Arrays.stream(unfilteredLocations)
-				.filter(Objects::nonNull)
+				.filter(this::isValid)
 				.map((element) -> withOrigin(context, element))
 				.toArray(ConfigDataLocation[]::new);
 		}
 		return result;
+	}
+
+	private boolean isValid(@Nullable Object element) {
+		if (element == null) {
+			return false;
+		}
+		if (element instanceof ConfigDataLocation location) {
+			return !location.isEmpty();
+		}
+		return true;
 	}
 
 	private ConfigDataLocation withOrigin(BindContext context, ConfigDataLocation result) {
