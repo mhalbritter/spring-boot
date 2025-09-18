@@ -46,3 +46,13 @@ dependencies {
 	testRuntimeOnly("com.zaxxer:HikariCP")
 	testRuntimeOnly("jakarta.servlet:jakarta.servlet-api")
 }
+
+nullability {
+	check {
+		sourceSet {
+			"test" {
+				type = "test"
+			}
+		}
+	}
+}
