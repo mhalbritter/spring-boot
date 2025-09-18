@@ -44,5 +44,20 @@ dependencies {
 	testImplementation(project(":core:spring-boot-test"))
 	testImplementation(project(":test-support:spring-boot-test-support"))
 
+	testCompileOnly("com.google.code.findbugs:jsr305")
+
 	testRuntimeOnly("ch.qos.logback:logback-classic")
+}
+
+nullability {
+	check {
+		sourceSet {
+			"test" {
+				type = "test"
+			}
+			"dockerTest" {
+				type = "test"
+			}
+		}
+	}
 }
