@@ -186,9 +186,10 @@ class BatchAutoConfigurationTests {
 			.run((context) -> {
 				assertThat(context).hasSingleBean(JobOperator.class);
 				context.getBean(JobLauncherApplicationRunner.class).run();
-				assertThat(context.getBean(JobRepository.class)
-					.getLastJobExecution("discreteRegisteredJob", new JobParameters())
-					.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+				JobExecution lastJobExecution = context.getBean(JobRepository.class)
+					.getLastJobExecution("discreteRegisteredJob", new JobParameters());
+				assertThat(lastJobExecution).isNotNull();
+				assertThat(lastJobExecution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
 			});
 	}
 
@@ -210,8 +211,11 @@ class BatchAutoConfigurationTests {
 		this.contextRunner.withUserConfiguration(MultipleJobConfiguration.class, EmbeddedDataSourceConfiguration.class)
 			.run((context) -> {
 				assertThat(context).hasFailed();
-				assertThat(context.getStartupFailure().getCause().getMessage())
-					.contains("Job name must be specified in case of multiple jobs");
+				Throwable startupFailure = context.getStartupFailure();
+				assertThat(startupFailure).isNotNull();
+				Throwable cause = startupFailure.getCause();
+				assertThat(cause).isNotNull();
+				assertThat(cause.getMessage()).contains("Job name must be specified in case of multiple jobs");
 			});
 	}
 
@@ -637,7 +641,7 @@ class BatchAutoConfigurationTests {
 
 				@Override
 				public Step getStep(String stepName) {
-					return null;
+					return mock(Step.class);
 				}
 
 				@Override
@@ -674,7 +678,7 @@ class BatchAutoConfigurationTests {
 
 				@Override
 				public Step getStep(String stepName) {
-					return null;
+					return mock(Step.class);
 				}
 
 				@Override
@@ -705,7 +709,7 @@ class BatchAutoConfigurationTests {
 
 				@Override
 				public Step getStep(String stepName) {
-					return null;
+					return mock(Step.class);
 				}
 
 				@Override
@@ -751,7 +755,7 @@ class BatchAutoConfigurationTests {
 
 				@Override
 				public Step getStep(String stepName) {
-					return null;
+					return mock(Step.class);
 				}
 
 				@Override
