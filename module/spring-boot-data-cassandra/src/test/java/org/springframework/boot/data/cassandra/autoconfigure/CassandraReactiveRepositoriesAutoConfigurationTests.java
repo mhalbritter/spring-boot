@@ -93,7 +93,9 @@ class CassandraReactiveRepositoriesAutoConfigurationTests {
 
 	private ManagedTypes getManagedTypes(ApplicationContext context) {
 		CassandraMappingContext mappingContext = context.getBean(CassandraMappingContext.class);
-		return (ManagedTypes) ReflectionTestUtils.getField(mappingContext, "managedTypes");
+		Object field = ReflectionTestUtils.getField(mappingContext, "managedTypes");
+		assertThat(field).isNotNull();
+		return (ManagedTypes) field;
 	}
 
 	@Configuration(proxyBeanMethods = false)
