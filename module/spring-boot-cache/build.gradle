@@ -66,5 +66,20 @@ dependencies {
 	testImplementation(testFixtures(project(":module:spring-boot-webmvc")))
 	testImplementation(testFixtures(project(":module:spring-boot-webflux")))
 
+	testCompileOnly("com.google.code.findbugs:jsr305")
+
 	testRuntimeOnly("ch.qos.logback:logback-classic")
+}
+
+nullability {
+	check {
+		sourceSet {
+			"test" {
+				type = "test"
+			}
+			"dockerTest" {
+				type = "test"
+			}
+		}
+	}
 }
