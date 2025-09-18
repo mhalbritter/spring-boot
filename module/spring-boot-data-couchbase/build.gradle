@@ -41,3 +41,13 @@ dependencies {
 
 	testRuntimeOnly("ch.qos.logback:logback-classic")
 }
+
+nullability {
+	check {
+		sourceSet {
+			"test" {
+				type = "test"
+			}
+		}
+	}
+}
