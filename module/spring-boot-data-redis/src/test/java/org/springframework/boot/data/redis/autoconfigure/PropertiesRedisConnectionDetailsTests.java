@@ -21,7 +21,9 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.springframework.boot.data.redis.autoconfigure.RedisConnectionDetails.Cluster;
 import org.springframework.boot.data.redis.autoconfigure.RedisConnectionDetails.Node;
+import org.springframework.boot.data.redis.autoconfigure.RedisConnectionDetails.Sentinel;
 import org.springframework.boot.ssl.DefaultSslBundleRegistry;
 import org.springframework.boot.ssl.SslBundle;
 
@@ -143,7 +145,9 @@ class PropertiesRedisConnectionDetailsTests {
 		RedisProperties.Cluster cluster = new RedisProperties.Cluster();
 		cluster.setNodes(List.of("localhost:1111", "127.0.0.1:2222", "[::1]:3333"));
 		this.properties.setCluster(cluster);
-		assertThat(this.connectionDetails.getCluster().getNodes()).containsExactly(new Node("localhost", 1111),
+		Cluster connectionDetailsCluster = this.connectionDetails.getCluster();
+		assertThat(connectionDetailsCluster).isNotNull();
+		assertThat(connectionDetailsCluster.getNodes()).containsExactly(new Node("localhost", 1111),
 				new Node("127.0.0.1", 2222), new Node("[::1]", 3333));
 	}
 
@@ -155,9 +159,11 @@ class PropertiesRedisConnectionDetailsTests {
 		this.properties.setDatabase(5);
 		PropertiesRedisConnectionDetails connectionDetails = new PropertiesRedisConnectionDetails(this.properties,
 				null);
-		assertThat(connectionDetails.getSentinel().getNodes()).containsExactly(new Node("localhost", 1111),
+		Sentinel connectionDetailsSentinel = connectionDetails.getSentinel();
+		assertThat(connectionDetailsSentinel).isNotNull();
+		assertThat(connectionDetailsSentinel.getNodes()).containsExactly(new Node("localhost", 1111),
 				new Node("127.0.0.1", 2222), new Node("[::1]", 3333));
-		assertThat(connectionDetails.getSentinel().getDatabase()).isEqualTo(5);
+		assertThat(connectionDetailsSentinel.getDatabase()).isEqualTo(5);
 	}
 
 	@Test
@@ -169,7 +175,9 @@ class PropertiesRedisConnectionDetailsTests {
 		this.properties.setDatabase(5);
 		PropertiesRedisConnectionDetails connectionDetails = new PropertiesRedisConnectionDetails(this.properties,
 				null);
-		assertThat(connectionDetails.getSentinel().getDatabase()).isEqualTo(9999);
+		Sentinel connectionDetailsSentinel = connectionDetails.getSentinel();
+		assertThat(connectionDetailsSentinel).isNotNull();
+		assertThat(connectionDetailsSentinel.getDatabase()).isEqualTo(9999);
 	}
 
 	@Test

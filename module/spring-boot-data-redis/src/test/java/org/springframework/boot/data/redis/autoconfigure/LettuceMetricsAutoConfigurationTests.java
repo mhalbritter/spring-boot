@@ -46,6 +46,7 @@ class LettuceMetricsAutoConfigurationTests {
 			.withConfiguration(AutoConfigurations.of(RedisAutoConfiguration.class))
 			.run((context) -> {
 				ClientResources clientResources = context.getBean(LettuceConnectionFactory.class).getClientResources();
+				assertThat(clientResources).isNotNull();
 				assertThat(clientResources.commandLatencyRecorder())
 					.isInstanceOf(MicrometerCommandLatencyRecorder.class);
 			});
@@ -72,6 +73,7 @@ class LettuceMetricsAutoConfigurationTests {
 			.withUserConfiguration(CustomMicrometerOptionsConfiguration.class)
 			.run((context) -> {
 				ClientResources clientResources = context.getBean(LettuceConnectionFactory.class).getClientResources();
+				assertThat(clientResources).isNotNull();
 				assertThat(clientResources.commandLatencyRecorder())
 					.isInstanceOf(MicrometerCommandLatencyRecorder.class);
 				assertThat(clientResources.commandLatencyRecorder()).hasFieldOrPropertyWithValue("options",
@@ -83,6 +85,7 @@ class LettuceMetricsAutoConfigurationTests {
 	void whenThereIsNoMeterRegistryThenClientResourcesCustomizationBacksOff() {
 		this.contextRunner.withConfiguration(AutoConfigurations.of(RedisAutoConfiguration.class)).run((context) -> {
 			ClientResources clientResources = context.getBean(LettuceConnectionFactory.class).getClientResources();
+			assertThat(clientResources).isNotNull();
 			assertThat(clientResources.commandLatencyRecorder())
 				.isNotInstanceOf(MicrometerCommandLatencyRecorder.class);
 		});

@@ -37,6 +37,7 @@ import io.lettuce.core.models.role.RedisNodeDescription;
 import io.lettuce.core.resource.DefaultClientResources;
 import io.lettuce.core.tracing.Tracing;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
@@ -55,6 +56,7 @@ import org.springframework.boot.testsupport.classpath.resources.WithPackageResou
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.data.redis.connection.NamedNode;
 import org.springframework.data.redis.connection.RedisClusterConfiguration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisNode;
@@ -382,7 +384,9 @@ class RedisAutoConfigurationTests {
 			.run((context) -> {
 				LettuceConnectionFactory connectionFactory = context.getBean(LettuceConnectionFactory.class);
 				assertThat(connectionFactory.isRedisSentinelAware()).isTrue();
-				assertThat(connectionFactory.getSentinelConfiguration().getSentinels()).isNotNull()
+				RedisSentinelConfiguration sentinelConfiguration = connectionFactory.getSentinelConfiguration();
+				assertThat(sentinelConfiguration).isNotNull();
+				assertThat(sentinelConfiguration.getSentinels()).isNotNull()
 					.containsExactlyInAnyOrder(new RedisNode("[0:0:0:0:0:0:0:1]", 26379),
 							new RedisNode("[0:0:0:0:0:0:0:1]", 26380));
 			});
@@ -445,8 +449,8 @@ class RedisAutoConfigurationTests {
 			}));
 	}
 
-	private ContextConsumer<AssertableApplicationContext> assertSentinelConfiguration(String userName, String password,
-			Consumer<RedisSentinelConfiguration> sentinelConfiguration) {
+	private ContextConsumer<AssertableApplicationContext> assertSentinelConfiguration(@Nullable String userName,
+			String password, Consumer<RedisSentinelConfiguration> sentinelConfiguration) {
 		return (context) -> {
 			LettuceConnectionFactory connectionFactory = context.getBean(LettuceConnectionFactory.class);
 			assertThat(getUserName(connectionFactory)).isEqualTo(userName);
@@ -478,6 +482,7 @@ class RedisAutoConfigurationTests {
 			.run((context) -> {
 				RedisClusterConfiguration clusterConfiguration = context.getBean(LettuceConnectionFactory.class)
 					.getClusterConfiguration();
+				assertThat(clusterConfiguration).isNotNull();
 				assertThat(clusterConfiguration.getClusterNodes()).hasSize(3);
 				assertThat(clusterConfiguration.getClusterNodes()).containsExactlyInAnyOrder(
 						new RedisNode("127.0.0.1", 27379), new RedisNode("127.0.0.1", 27380),
@@ -607,7 +612,9 @@ class RedisAutoConfigurationTests {
 			assertThat(configuration.getUsername()).isEqualTo("user-1");
 			assertThat(configuration.getPassword()).isEqualTo(RedisPassword.of("password-1"));
 			assertThat(configuration.getDatabase()).isOne();
-			assertThat(configuration.getMaster().getName()).isEqualTo("master.redis.example.com");
+			NamedNode master = configuration.getMaster();
+			assertThat(master).isNotNull();
+			assertThat(master.getName()).isEqualTo("master.redis.example.com");
 		});
 	}
 
@@ -694,7 +701,7 @@ class RedisAutoConfigurationTests {
 		return (LettucePoolingClientConfiguration) factory.getClientConfiguration();
 	}
 
-	private String getUserName(LettuceConnectionFactory factory) {
+	private @Nullable String getUserName(LettuceConnectionFactory factory) {
 		return ReflectionTestUtils.invokeMethod(factory, "getRedisUsername");
 	}
 

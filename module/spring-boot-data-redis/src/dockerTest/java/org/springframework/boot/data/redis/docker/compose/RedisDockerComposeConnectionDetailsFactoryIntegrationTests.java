@@ -47,6 +47,7 @@ class RedisDockerComposeConnectionDetailsFactoryIntegrationTests {
 	void runWithSslCreatesConnectionDetails(RedisConnectionDetails connectionDetails) {
 		assertConnectionDetails(connectionDetails);
 		Standalone standalone = connectionDetails.getStandalone();
+		assertThat(standalone).isNotNull();
 		SslBundle sslBundle = standalone.getSslBundle();
 		assertThat(sslBundle).isNotNull();
 		SSLContext sslContext = sslBundle.createSslContext();

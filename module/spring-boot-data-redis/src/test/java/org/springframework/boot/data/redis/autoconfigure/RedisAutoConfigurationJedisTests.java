@@ -18,6 +18,7 @@ package org.springframework.boot.data.redis.autoconfigure;
 
 import java.time.Duration;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
@@ -221,8 +222,11 @@ class RedisAutoConfigurationJedisTests {
 			.withPropertyValues("spring.data.redis.sentinel.master:mymaster",
 					"spring.data.redis.sentinel.nodes:127.0.0.1:26379,127.0.0.1:26380")
 			.withUserConfiguration(JedisConnectionFactoryCaptorConfiguration.class)
-			.run((context) -> assertThat(JedisConnectionFactoryCaptor.connectionFactory.isRedisSentinelAware())
-				.isTrue());
+			.run((context) -> {
+				JedisConnectionFactory connectionFactory = JedisConnectionFactoryCaptor.connectionFactory;
+				assertThat(connectionFactory).isNotNull();
+				assertThat(connectionFactory.isRedisSentinelAware()).isTrue();
+			});
 	}
 
 	@Test
@@ -233,9 +237,11 @@ class RedisAutoConfigurationJedisTests {
 					"spring.data.redis.sentinel.nodes:127.0.0.1:26379,127.0.0.1:26380")
 			.withUserConfiguration(JedisConnectionFactoryCaptorConfiguration.class)
 			.run((context) -> {
-				assertThat(JedisConnectionFactoryCaptor.connectionFactory.isRedisSentinelAware()).isTrue();
-				assertThat(getUserName(JedisConnectionFactoryCaptor.connectionFactory)).isEqualTo("user");
-				assertThat(JedisConnectionFactoryCaptor.connectionFactory.getPassword()).isEqualTo("password");
+				JedisConnectionFactory connectionFactory = JedisConnectionFactoryCaptor.connectionFactory;
+				assertThat(connectionFactory).isNotNull();
+				assertThat(connectionFactory.isRedisSentinelAware()).isTrue();
+				assertThat(getUserName(connectionFactory)).isEqualTo("user");
+				assertThat(connectionFactory.getPassword()).isEqualTo("password");
 			});
 	}
 
@@ -243,8 +249,11 @@ class RedisAutoConfigurationJedisTests {
 	void testRedisConfigurationWithCluster() {
 		this.contextRunner.withPropertyValues("spring.data.redis.cluster.nodes=127.0.0.1:27379,127.0.0.1:27380")
 			.withUserConfiguration(JedisConnectionFactoryCaptorConfiguration.class)
-			.run((context) -> assertThat(JedisConnectionFactoryCaptor.connectionFactory.isRedisClusterAware())
-				.isTrue());
+			.run((context) -> {
+				JedisConnectionFactory connectionFactory = JedisConnectionFactoryCaptor.connectionFactory;
+				assertThat(connectionFactory).isNotNull();
+				assertThat(connectionFactory.isRedisClusterAware()).isTrue();
+			});
 	}
 
 	@Test
@@ -298,7 +307,7 @@ class RedisAutoConfigurationJedisTests {
 		});
 	}
 
-	private String getUserName(JedisConnectionFactory factory) {
+	private @Nullable String getUserName(JedisConnectionFactory factory) {
 		return ReflectionTestUtils.invokeMethod(factory, "getRedisUsername");
 	}
 
@@ -353,7 +362,7 @@ class RedisAutoConfigurationJedisTests {
 
 	static class JedisConnectionFactoryCaptor implements BeanPostProcessor {
 
-		static JedisConnectionFactory connectionFactory;
+		static @Nullable JedisConnectionFactory connectionFactory;
 
 		@Override
 		public Object postProcessBeforeInitialization(Object bean, String beanName) {
