@@ -118,3 +118,16 @@ tasks.register("syncIntTestDependencies", Sync) {
 intTest {
 	dependsOn syncIntTestDependencies
 }
+
+nullability {
+	check {
+		sourceSet {
+			"test" {
+				type = "test"
+			}
+			"intTest" {
+				type = "test"
+			}
+		}
+	}
+}
