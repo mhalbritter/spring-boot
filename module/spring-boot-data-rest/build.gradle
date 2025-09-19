@@ -43,3 +43,13 @@ dependencies {
 	testRuntimeOnly("com.h2database:h2")
 	testRuntimeOnly("com.zaxxer:HikariCP")
 }
+
+nullability {
+	check {
+		sourceSet {
+			"test" {
+				type = "test"
+			}
+		}
+	}
+}
