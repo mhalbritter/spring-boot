@@ -39,15 +39,10 @@ dependencies {
 	testFixturesImplementation(project(":test-support:spring-boot-docker-test-support"))
 }
 
-nullability {
-	check {
-		sourceSet {
-			"test" {
-				type = "test"
-			}
-			"dockerTest" {
-				type = "test"
-			}
-		}
-	}
+tasks.named("compileTestJava") {
+	options.nullability.checking = "tests"
+}
+
+tasks.named("compileDockerTestJava") {
+	options.nullability.checking = "tests"
 }

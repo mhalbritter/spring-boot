@@ -49,12 +49,6 @@ dependencies {
 	testRuntimeOnly("org.junit.vintage:junit-vintage-engine")
 }
 
-nullability {
-	check {
-		sourceSet {
-			"test" {
-				type = "test"
-			}
-		}
-	}
+tasks.named("compileTestJava") {
+    options.nullability.checking = "tests"
 }

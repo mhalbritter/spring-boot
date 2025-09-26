@@ -57,12 +57,6 @@ test {
 	jvmArgs += "--add-opens=java.base/java.net=ALL-UNNAMED"
 }
 
-nullability {
-	check {
-		sourceSet {
-			"test" {
-				type = "test"
-			}
-		}
-	}
+tasks.named("compileTestJava") {
+    options.nullability.checking = "tests"
 }

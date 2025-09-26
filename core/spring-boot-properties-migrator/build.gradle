@@ -36,12 +36,6 @@ tasks.named("javadoc").configure {
 	enabled = false
 }
 
-nullability {
-	check {
-		sourceSet {
-			"test" {
-				type = "test"
-			}
-		}
-	}
+tasks.named("compileTestJava") {
+    options.nullability.checking = "tests"
 }

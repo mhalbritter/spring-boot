@@ -119,15 +119,11 @@ intTest {
 	dependsOn syncIntTestDependencies
 }
 
-nullability {
-	check {
-		sourceSet {
-			"test" {
-				type = "test"
-			}
-			"intTest" {
-				type = "test"
-			}
-		}
-	}
+tasks.named("compileTestJava") {
+	options.nullability.checking = "tests"
 }
+
+tasks.named("compileIntTestJava") {
+	options.nullability.checking = "tests"
+}
+

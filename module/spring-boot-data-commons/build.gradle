@@ -47,12 +47,6 @@ dependencies {
 	testRuntimeOnly("jakarta.servlet:jakarta.servlet-api")
 }
 
-nullability {
-	check {
-		sourceSet {
-			"test" {
-				type = "test"
-			}
-		}
-	}
+tasks.named("compileTestJava") {
+    options.nullability.checking = "tests"
 }

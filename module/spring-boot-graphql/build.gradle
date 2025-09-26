@@ -59,12 +59,6 @@ dependencies {
 	testRuntimeOnly("ch.qos.logback:logback-classic")
 }
 
-nullability {
-	check {
-		sourceSet {
-			"test" {
-				type = "test"
-			}
-		}
-	}
+tasks.named("compileTestJava") {
+    options.nullability.checking = "tests"
 }
