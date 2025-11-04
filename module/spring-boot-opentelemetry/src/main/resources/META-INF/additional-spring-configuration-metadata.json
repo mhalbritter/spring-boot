@@ -12,7 +12,7 @@
 			}
 		},
 		{
-			"name": "management.opentelemetry.logging.export.enabled",
+			"name": "management.otlp.logging.export.enabled",
 			"type": "java.lang.Boolean",
 			"description": "Whether auto-configuration of logging is enabled to export logs over OTLP."
     	},
@@ -54,15 +54,6 @@
 			"sourceType": "org.springframework.boot.opentelemetry.actuate.autoconfigure.logging.OpenTelemetryLoggingExportProperties",
 			"deprecation": {
 				"replacement": "management.opentelemetry.logging.export.otlp.endpoint",
-				"level": "error"
-			}
-		},
-		{
-			"name": "management.otlp.logging.export.enabled",
-			"type": "java.lang.Boolean",
-			"description": "Whether auto-configuration of logging is enabled to export OTLP logs.",
-			"deprecation": {
-				"replacement": "management.opentelemetry.logging.export.enabled",
 				"level": "error"
 			}
 		},

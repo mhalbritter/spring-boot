@@ -35,7 +35,7 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.context.annotation.ImportCandidates;
 import org.springframework.boot.opentelemetry.autoconfigure.OpenTelemetrySdkAutoConfiguration;
 import org.springframework.boot.opentelemetry.autoconfigure.SdkLoggerProviderBuilderCustomizer;
-import org.springframework.boot.opentelemetry.autoconfigure.logging.OpenTelemetryLoggingConnectionDetailsConfiguration.PropertiesOtlpLoggingConnectionDetails;
+import org.springframework.boot.opentelemetry.autoconfigure.logging.OtlpLoggingConfigurations.ConnectionDetails.PropertiesOtlpLoggingConnectionDetails;
 import org.springframework.boot.opentelemetry.autoconfigure.otlp.Transport;
 import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -45,24 +45,24 @@ import org.springframework.context.annotation.Configuration;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link OpenTelemetryLoggingExportAutoConfiguration}.
+ * Tests for {@link OtlpLoggingExportAutoConfiguration}.
  *
  * @author Toshiaki Maki
  * @author Moritz Halbritter
  */
-class OpenTelemetryLoggingExportAutoConfigurationTests {
+class OtlpLoggingExportAutoConfigurationTests {
 
 	private final ApplicationContextRunner contextRunner;
 
-	OpenTelemetryLoggingExportAutoConfigurationTests() {
+	OtlpLoggingExportAutoConfigurationTests() {
 		this.contextRunner = new ApplicationContextRunner().withConfiguration(AutoConfigurations
-			.of(OpenTelemetrySdkAutoConfiguration.class, OpenTelemetryLoggingExportAutoConfiguration.class));
+			.of(OpenTelemetrySdkAutoConfiguration.class, OtlpLoggingExportAutoConfiguration.class));
 	}
 
 	@Test
 	void registeredInAutoConfigurationImports() {
 		assertThat(ImportCandidates.load(AutoConfiguration.class, null).getCandidates())
-			.contains(OpenTelemetryLoggingExportAutoConfiguration.class.getName());
+			.contains(OtlpLoggingExportAutoConfiguration.class.getName());
 	}
 
 	@ParameterizedTest
@@ -99,7 +99,7 @@ class OpenTelemetryLoggingExportAutoConfigurationTests {
 	@Test
 	void whenOpenTelemetryLoggingExportEnabledPropertyIsFalseProvidesExpectedBeans() {
 		this.contextRunner
-			.withPropertyValues("management.opentelemetry.logging.export.enabled=false",
+			.withPropertyValues("management.otlp.logging.export.enabled=false",
 					"management.opentelemetry.logging.export.otlp.endpoint=http://localhost:4318/v1/logs")
 			.run((context) -> {
 				assertThat(context).doesNotHaveBean(OtlpLoggingConnectionDetails.class);
