@@ -118,9 +118,17 @@ class CompositePropagationFactory extends Propagation.Factory {
 	static CompositePropagationFactory create(TracingProperties.Propagation properties,
 			@Nullable BaggageManager baggageManager, @Nullable LocalBaggageFields localFields) {
 		PropagationFactoryMapper mapper = new PropagationFactoryMapper(baggageManager, localFields);
-		List<Factory> injectors = properties.getEffectiveProducedTypes().stream().map(mapper::map).toList();
-		List<Factory> extractors = properties.getEffectiveConsumedTypes().stream().map(mapper::map).toList();
+		List<Factory> injectors = getEffectiveProducedTypes(properties).stream().map(mapper::map).toList();
+		List<Factory> extractors = getEffectiveConsumedTypes(properties).stream().map(mapper::map).toList();
 		return new CompositePropagationFactory(injectors, extractors);
+	}
+
+	private static List<PropagationType> getEffectiveConsumedTypes(TracingProperties.Propagation properties) {
+		return (properties.getType() != null) ? properties.getType() : properties.getConsume();
+	}
+
+	private static List<PropagationType> getEffectiveProducedTypes(TracingProperties.Propagation properties) {
+		return (properties.getType() != null) ? properties.getType() : properties.getProduce();
 	}
 
 	/**

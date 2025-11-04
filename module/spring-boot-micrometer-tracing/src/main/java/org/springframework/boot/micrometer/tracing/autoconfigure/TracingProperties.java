@@ -16,7 +16,6 @@
 
 package org.springframework.boot.micrometer.tracing.autoconfigure;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -54,11 +53,6 @@ public class TracingProperties {
 	 */
 	private final Brave brave = new Brave();
 
-	/**
-	 * OpenTelemetry configuration.
-	 */
-	private final OpenTelemetry opentelemetry = new OpenTelemetry();
-
 	public Sampling getSampling() {
 		return this.sampling;
 	}
@@ -73,10 +67,6 @@ public class TracingProperties {
 
 	public Brave getBrave() {
 		return this.brave;
-	}
-
-	public OpenTelemetry getOpentelemetry() {
-		return this.opentelemetry;
 	}
 
 	public static class Sampling {
@@ -243,24 +233,6 @@ public class TracingProperties {
 		}
 
 		/**
-		 * Returns the effective context propagation types produced by the application.
-		 * This will be {@link #getType()} if set or {@link #getProduce()} otherwise.
-		 * @return the effective context propagation types produced by the application
-		 */
-		List<PropagationType> getEffectiveProducedTypes() {
-			return (this.type != null) ? this.type : this.produce;
-		}
-
-		/**
-		 * Returns the effective context propagation types consumed by the application.
-		 * This will be {@link #getType()} if set or {@link #getConsume()} otherwise.
-		 * @return the effective context propagation types consumed by the application
-		 */
-		List<PropagationType> getEffectiveConsumedTypes() {
-			return (this.type != null) ? this.type : this.consume;
-		}
-
-		/**
 		 * Supported propagation types. The declared order of the values matter.
 		 */
 		public enum PropagationType {
@@ -301,90 +273,6 @@ public class TracingProperties {
 
 		public void setSpanJoiningSupported(boolean spanJoiningSupported) {
 			this.spanJoiningSupported = spanJoiningSupported;
-		}
-
-	}
-
-	public static class OpenTelemetry {
-
-		/**
-		 * Span export configuration.
-		 */
-		private final Export export = new Export();
-
-		public Export getExport() {
-			return this.export;
-		}
-
-		public static class Export {
-
-			/**
-			 * Whether unsampled spans should be exported.
-			 */
-			private boolean includeUnsampled;
-
-			/**
-			 * Maximum time an export will be allowed to run before being cancelled.
-			 */
-			private Duration timeout = Duration.ofSeconds(30);
-
-			/**
-			 * Maximum batch size for each export. This must be less than or equal to
-			 * 'maxQueueSize'.
-			 */
-			private int maxBatchSize = 512;
-
-			/**
-			 * Maximum number of spans that are kept in the queue before they will be
-			 * dropped.
-			 */
-			private int maxQueueSize = 2048;
-
-			/**
-			 * The delay interval between two consecutive exports.
-			 */
-			private Duration scheduleDelay = Duration.ofSeconds(5);
-
-			public boolean isIncludeUnsampled() {
-				return this.includeUnsampled;
-			}
-
-			public void setIncludeUnsampled(boolean includeUnsampled) {
-				this.includeUnsampled = includeUnsampled;
-			}
-
-			public Duration getTimeout() {
-				return this.timeout;
-			}
-
-			public void setTimeout(Duration timeout) {
-				this.timeout = timeout;
-			}
-
-			public int getMaxBatchSize() {
-				return this.maxBatchSize;
-			}
-
-			public void setMaxBatchSize(int maxBatchSize) {
-				this.maxBatchSize = maxBatchSize;
-			}
-
-			public int getMaxQueueSize() {
-				return this.maxQueueSize;
-			}
-
-			public void setMaxQueueSize(int maxQueueSize) {
-				this.maxQueueSize = maxQueueSize;
-			}
-
-			public Duration getScheduleDelay() {
-				return this.scheduleDelay;
-			}
-
-			public void setScheduleDelay(Duration scheduleDelay) {
-				this.scheduleDelay = scheduleDelay;
-			}
-
 		}
 
 	}
