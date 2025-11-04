@@ -23,6 +23,8 @@ import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.opentelemetry.autoconfigure.otlp.Compression;
+import org.springframework.boot.opentelemetry.autoconfigure.otlp.Transport;
 
 /**
  * Configuration properties for exporting logs using OpenTelemetry.
@@ -30,8 +32,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author Jonatan Ivanov
  * @since 4.0.0
  */
-@ConfigurationProperties("management.opentelemetry.logging.export")
-public class OpenTelemetryLoggingExportProperties {
+@ConfigurationProperties("management.opentelemetry.logging.export.otlp")
+public class OtlpLoggingExportProperties {
 
 	/**
 	 * URL to the OTel collector's HTTP API.
@@ -44,22 +46,22 @@ public class OpenTelemetryLoggingExportProperties {
 	 * server processing, and reading the response body. If the call requires redirects or
 	 * retries all must complete within one timeout period.
 	 */
-	private Duration timeout = Duration.ofSeconds(10);
+	private @Nullable Duration timeout;
 
 	/**
 	 * Connect timeout for the OTel collector connection.
 	 */
-	private Duration connectTimeout = Duration.ofSeconds(10);
+	private @Nullable Duration connectTimeout;
 
 	/**
 	 * Transport used to send the logs.
 	 */
-	private Transport transport = Transport.HTTP;
+	private @Nullable Transport transport;
 
 	/**
 	 * Method used to compress the payload.
 	 */
-	private Compression compression = Compression.NONE;
+	private @Nullable Compression compression;
 
 	/**
 	 * Custom HTTP headers you want to pass to the collector, for example auth headers.
@@ -74,54 +76,40 @@ public class OpenTelemetryLoggingExportProperties {
 		this.endpoint = endpoint;
 	}
 
-	public Duration getTimeout() {
+	public @Nullable Duration getTimeout() {
 		return this.timeout;
 	}
 
-	public void setTimeout(Duration timeout) {
+	public void setTimeout(@Nullable Duration timeout) {
 		this.timeout = timeout;
 	}
 
-	public Duration getConnectTimeout() {
+	public @Nullable Duration getConnectTimeout() {
 		return this.connectTimeout;
 	}
 
-	public void setConnectTimeout(Duration connectTimeout) {
+	public void setConnectTimeout(@Nullable Duration connectTimeout) {
 		this.connectTimeout = connectTimeout;
 	}
 
-	public Transport getTransport() {
+	public @Nullable Transport getTransport() {
 		return this.transport;
 	}
 
-	public void setTransport(Transport transport) {
+	public void setTransport(@Nullable Transport transport) {
 		this.transport = transport;
 	}
 
-	public Compression getCompression() {
+	public @Nullable Compression getCompression() {
 		return this.compression;
 	}
 
-	public void setCompression(Compression compression) {
+	public void setCompression(@Nullable Compression compression) {
 		this.compression = compression;
 	}
 
 	public Map<String, String> getHeaders() {
 		return this.headers;
-	}
-
-	public enum Compression {
-
-		/**
-		 * Gzip compression.
-		 */
-		GZIP,
-
-		/**
-		 * No compression.
-		 */
-		NONE
-
 	}
 
 }

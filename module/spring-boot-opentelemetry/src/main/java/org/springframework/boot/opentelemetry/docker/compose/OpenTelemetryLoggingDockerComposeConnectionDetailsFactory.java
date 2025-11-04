@@ -19,17 +19,17 @@ package org.springframework.boot.opentelemetry.docker.compose;
 import org.springframework.boot.docker.compose.core.RunningService;
 import org.springframework.boot.docker.compose.service.connection.DockerComposeConnectionDetailsFactory;
 import org.springframework.boot.docker.compose.service.connection.DockerComposeConnectionSource;
-import org.springframework.boot.opentelemetry.autoconfigure.logging.OpenTelemetryLoggingConnectionDetails;
-import org.springframework.boot.opentelemetry.autoconfigure.logging.Transport;
+import org.springframework.boot.opentelemetry.autoconfigure.logging.OtlpLoggingConnectionDetails;
+import org.springframework.boot.opentelemetry.autoconfigure.otlp.Transport;
 
 /**
  * {@link DockerComposeConnectionDetailsFactory} to create
- * {@link OpenTelemetryLoggingConnectionDetails} for an OTLP service.
+ * {@link OtlpLoggingConnectionDetails} for an OTLP service.
  *
  * @author Eddú Meléndez
  */
 class OpenTelemetryLoggingDockerComposeConnectionDetailsFactory
-		extends DockerComposeConnectionDetailsFactory<OpenTelemetryLoggingConnectionDetails> {
+		extends DockerComposeConnectionDetailsFactory<OtlpLoggingConnectionDetails> {
 
 	private static final String[] OPENTELEMETRY_IMAGE_NAMES = { "otel/opentelemetry-collector-contrib",
 			"grafana/otel-lgtm" };
@@ -44,13 +44,12 @@ class OpenTelemetryLoggingDockerComposeConnectionDetailsFactory
 	}
 
 	@Override
-	protected OpenTelemetryLoggingConnectionDetails getDockerComposeConnectionDetails(
-			DockerComposeConnectionSource source) {
-		return new OpenTelemetryLoggingDockerComposeConnectionDetails(source.getRunningService());
+	protected OtlpLoggingConnectionDetails getDockerComposeConnectionDetails(DockerComposeConnectionSource source) {
+		return new OtlpLoggingDockerComposeConnectionDetails(source.getRunningService());
 	}
 
-	private static final class OpenTelemetryLoggingDockerComposeConnectionDetails extends DockerComposeConnectionDetails
-			implements OpenTelemetryLoggingConnectionDetails {
+	private static final class OtlpLoggingDockerComposeConnectionDetails extends DockerComposeConnectionDetails
+			implements OtlpLoggingConnectionDetails {
 
 		private final String host;
 
@@ -58,7 +57,7 @@ class OpenTelemetryLoggingDockerComposeConnectionDetailsFactory
 
 		private final int httpPort;
 
-		private OpenTelemetryLoggingDockerComposeConnectionDetails(RunningService source) {
+		private OtlpLoggingDockerComposeConnectionDetails(RunningService source) {
 			super(source);
 			this.host = source.host();
 			this.grpcPort = source.ports().get(OTLP_GRPC_PORT);

@@ -110,18 +110,4 @@ public class OtlpExportProperties {
 		return this.headers;
 	}
 
-	public enum Compression {
-
-		/**
-		 * Gzip compression.
-		 */
-		GZIP,
-
-		/**
-		 * No compression.
-		 */
-		NONE
-
-	}
-
 }

@@ -23,7 +23,7 @@ import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.opentelemetry.autoconfigure.otlp.OtlpExportProperties;
+import org.springframework.boot.opentelemetry.autoconfigure.otlp.Compression;
 import org.springframework.boot.opentelemetry.autoconfigure.otlp.Transport;
 
 /**
@@ -66,7 +66,7 @@ public class OtlpTracingExportProperties {
 	 * Method used to compress the payload. If not set,
 	 * 'management.opentelemetry.export.otlp.compression' is used.
 	 */
-	private OtlpExportProperties.@Nullable Compression compression;
+	private @Nullable Compression compression;
 
 	/**
 	 * Custom HTTP headers you want to pass to the collector, for example auth headers.
@@ -106,11 +106,11 @@ public class OtlpTracingExportProperties {
 		this.transport = transport;
 	}
 
-	public OtlpExportProperties.@Nullable Compression getCompression() {
+	public @Nullable Compression getCompression() {
 		return this.compression;
 	}
 
-	public void setCompression(OtlpExportProperties.@Nullable Compression compression) {
+	public void setCompression(@Nullable Compression compression) {
 		this.compression = compression;
 	}
 

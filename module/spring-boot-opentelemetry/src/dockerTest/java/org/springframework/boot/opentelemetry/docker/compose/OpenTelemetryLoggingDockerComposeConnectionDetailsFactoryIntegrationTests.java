@@ -17,8 +17,8 @@
 package org.springframework.boot.opentelemetry.docker.compose;
 
 import org.springframework.boot.docker.compose.service.connection.test.DockerComposeTest;
-import org.springframework.boot.opentelemetry.autoconfigure.logging.OpenTelemetryLoggingConnectionDetails;
-import org.springframework.boot.opentelemetry.autoconfigure.logging.Transport;
+import org.springframework.boot.opentelemetry.autoconfigure.logging.OtlpLoggingConnectionDetails;
+import org.springframework.boot.opentelemetry.autoconfigure.otlp.Transport;
 import org.springframework.boot.testsupport.container.TestImage;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,7 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class OpenTelemetryLoggingDockerComposeConnectionDetailsFactoryIntegrationTests {
 
 	@DockerComposeTest(composeFile = "otlp-compose.yaml", image = TestImage.OPENTELEMETRY)
-	void runCreatesConnectionDetails(OpenTelemetryLoggingConnectionDetails connectionDetails) {
+	void runCreatesConnectionDetails(OtlpLoggingConnectionDetails connectionDetails) {
 		assertThat(connectionDetails.getUrl(Transport.HTTP)).startsWith("http://").endsWith("/v1/logs");
 		assertThat(connectionDetails.getUrl(Transport.GRPC)).startsWith("http://").endsWith("/v1/logs");
 	}

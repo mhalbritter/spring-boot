@@ -23,9 +23,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
-import org.springframework.boot.opentelemetry.autoconfigure.logging.OpenTelemetryLoggingConnectionDetails;
 import org.springframework.boot.opentelemetry.autoconfigure.logging.OpenTelemetryLoggingExportAutoConfiguration;
-import org.springframework.boot.opentelemetry.autoconfigure.logging.Transport;
+import org.springframework.boot.opentelemetry.autoconfigure.logging.OtlpLoggingConnectionDetails;
+import org.springframework.boot.opentelemetry.autoconfigure.otlp.Transport;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.testsupport.container.TestImage;
 import org.springframework.context.annotation.Configuration;
@@ -48,7 +48,7 @@ class OpenTelemetryLoggingContainerConnectionDetailsFactoryIntegrationTests {
 		.withExposedPorts(4317, 4318);
 
 	@Autowired
-	private OpenTelemetryLoggingConnectionDetails connectionDetails;
+	private OtlpLoggingConnectionDetails connectionDetails;
 
 	@Test
 	void connectionCanBeMadeToOpenTelemetryContainer() {

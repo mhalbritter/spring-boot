@@ -16,7 +16,10 @@
 
 package org.springframework.boot.opentelemetry.autoconfigure.logging;
 
+import java.time.Duration;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 import io.opentelemetry.api.metrics.MeterProvider;
 import io.opentelemetry.exporter.otlp.http.logs.OtlpHttpLogRecordExporter;
@@ -29,6 +32,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.opentelemetry.autoconfigure.otlp.OtlpExportProperties;
+import org.springframework.boot.opentelemetry.autoconfigure.otlp.Transport;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -40,36 +45,69 @@ import org.springframework.context.annotation.Configuration;
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnClass(OtlpHttpLogRecordExporter.class)
 @ConditionalOnMissingBean({ OtlpGrpcLogRecordExporter.class, OtlpHttpLogRecordExporter.class })
-@ConditionalOnBean(OpenTelemetryLoggingConnectionDetails.class)
+@ConditionalOnBean(OtlpLoggingConnectionDetails.class)
 class OpenTelemetryLoggingTransportConfiguration {
 
 	@Bean
-	@ConditionalOnProperty(name = "management.opentelemetry.logging.export.transport", havingValue = "http",
+	@ConditionalOnProperty(name = "management.opentelemetry.logging.export.otlp.transport", havingValue = "http",
 			matchIfMissing = true)
-	OtlpHttpLogRecordExporter otlpHttpLogRecordExporter(OpenTelemetryLoggingExportProperties properties,
-			OpenTelemetryLoggingConnectionDetails connectionDetails, ObjectProvider<MeterProvider> meterProvider) {
+	OtlpHttpLogRecordExporter otlpHttpLogRecordExporter(OtlpLoggingExportProperties otlpLoggingExportProperties,
+			OtlpExportProperties exportProperties, OtlpLoggingConnectionDetails connectionDetails,
+			ObjectProvider<MeterProvider> meterProvider) {
 		OtlpHttpLogRecordExporterBuilder builder = OtlpHttpLogRecordExporter.builder()
 			.setEndpoint(connectionDetails.getUrl(Transport.HTTP))
-			.setTimeout(properties.getTimeout())
-			.setConnectTimeout(properties.getConnectTimeout())
-			.setCompression(properties.getCompression().name().toLowerCase(Locale.US));
-		properties.getHeaders().forEach(builder::addHeader);
+			.setTimeout(getTimeout(otlpLoggingExportProperties, exportProperties))
+			.setConnectTimeout(getConnectTimeout(otlpLoggingExportProperties, exportProperties))
+			.setCompression(getCompression(otlpLoggingExportProperties, exportProperties));
+		getHeaders(otlpLoggingExportProperties, exportProperties).forEach(builder::addHeader);
 		meterProvider.ifAvailable(builder::setMeterProvider);
 		return builder.build();
 	}
 
 	@Bean
-	@ConditionalOnProperty(name = "management.opentelemetry.logging.export.transport", havingValue = "grpc")
-	OtlpGrpcLogRecordExporter otlpGrpcLogRecordExporter(OpenTelemetryLoggingExportProperties properties,
-			OpenTelemetryLoggingConnectionDetails connectionDetails, ObjectProvider<MeterProvider> meterProvider) {
+	@ConditionalOnProperty(name = "management.opentelemetry.logging.export.otlp.transport", havingValue = "grpc")
+	OtlpGrpcLogRecordExporter otlpGrpcLogRecordExporter(OtlpLoggingExportProperties otlpLoggingExportProperties,
+			OtlpExportProperties exportProperties, OtlpLoggingConnectionDetails connectionDetails,
+			ObjectProvider<MeterProvider> meterProvider) {
 		OtlpGrpcLogRecordExporterBuilder builder = OtlpGrpcLogRecordExporter.builder()
 			.setEndpoint(connectionDetails.getUrl(Transport.GRPC))
-			.setTimeout(properties.getTimeout())
-			.setConnectTimeout(properties.getConnectTimeout())
-			.setCompression(properties.getCompression().name().toLowerCase(Locale.US));
-		properties.getHeaders().forEach(builder::addHeader);
+			.setTimeout(getTimeout(otlpLoggingExportProperties, exportProperties))
+			.setConnectTimeout(getConnectTimeout(otlpLoggingExportProperties, exportProperties))
+			.setCompression(getCompression(otlpLoggingExportProperties, exportProperties));
+		getHeaders(otlpLoggingExportProperties, exportProperties).forEach(builder::addHeader);
 		meterProvider.ifAvailable(builder::setMeterProvider);
 		return builder.build();
+	}
+
+	private Map<String, String> getHeaders(OtlpLoggingExportProperties otlpLoggingExportProperties,
+			OtlpExportProperties exportProperties) {
+		Map<String, String> headers = new HashMap<>(exportProperties.getHeaders());
+		headers.putAll(otlpLoggingExportProperties.getHeaders());
+		return headers;
+	}
+
+	private String getCompression(OtlpLoggingExportProperties otlpLoggingExportProperties,
+			OtlpExportProperties exportProperties) {
+		if (otlpLoggingExportProperties.getCompression() != null) {
+			return otlpLoggingExportProperties.getCompression().name().toLowerCase(Locale.US);
+		}
+		return exportProperties.getCompression().name().toLowerCase(Locale.US);
+	}
+
+	private Duration getConnectTimeout(OtlpLoggingExportProperties otlpLoggingExportProperties,
+			OtlpExportProperties exportProperties) {
+		if (otlpLoggingExportProperties.getConnectTimeout() != null) {
+			return otlpLoggingExportProperties.getConnectTimeout();
+		}
+		return exportProperties.getConnectTimeout();
+	}
+
+	private Duration getTimeout(OtlpLoggingExportProperties otlpLoggingExportProperties,
+			OtlpExportProperties exportProperties) {
+		if (otlpLoggingExportProperties.getTimeout() != null) {
+			return otlpLoggingExportProperties.getTimeout();
+		}
+		return exportProperties.getTimeout();
 	}
 
 }

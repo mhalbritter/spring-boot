@@ -16,14 +16,18 @@
 
 package org.springframework.boot.opentelemetry.autoconfigure.logging;
 
+import org.springframework.boot.autoconfigure.condition.AnyNestedCondition;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.opentelemetry.autoconfigure.otlp.OtlpExportProperties;
+import org.springframework.boot.opentelemetry.autoconfigure.otlp.Transport;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.util.Assert;
 
 /**
- * {@link Configuration @Configuration} for {@link OpenTelemetryLoggingConnectionDetails}.
+ * {@link Configuration @Configuration} for {@link OtlpLoggingConnectionDetails}.
  *
  * @author Toshiaki Maki
  */
@@ -32,32 +36,66 @@ class OpenTelemetryLoggingConnectionDetailsConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean
-	@ConditionalOnProperty("management.opentelemetry.logging.export.endpoint")
-	PropertiesOpenTelemetryLoggingConnectionDetails openTelemetryLoggingConnectionDetails(
-			OpenTelemetryLoggingExportProperties properties) {
-		return new PropertiesOpenTelemetryLoggingConnectionDetails(properties);
+	@Conditional(EndpointSetCondition.class)
+	PropertiesOtlpLoggingConnectionDetails openTelemetryLoggingConnectionDetails(
+			OtlpLoggingExportProperties loggingExportProperties, OtlpExportProperties exportProperties) {
+		return new PropertiesOtlpLoggingConnectionDetails(loggingExportProperties, exportProperties);
 	}
 
 	/**
-	 * Adapts {@link OpenTelemetryLoggingExportProperties} to
-	 * {@link OpenTelemetryLoggingConnectionDetails}.
+	 * Adapts {@link OtlpLoggingExportProperties} to {@link OtlpLoggingConnectionDetails}.
 	 */
-	static class PropertiesOpenTelemetryLoggingConnectionDetails implements OpenTelemetryLoggingConnectionDetails {
+	static class PropertiesOtlpLoggingConnectionDetails implements OtlpLoggingConnectionDetails {
 
-		private final OpenTelemetryLoggingExportProperties properties;
+		private final OtlpLoggingExportProperties loggingExportProperties;
 
-		PropertiesOpenTelemetryLoggingConnectionDetails(OpenTelemetryLoggingExportProperties properties) {
-			this.properties = properties;
+		private final OtlpExportProperties exportProperties;
+
+		PropertiesOtlpLoggingConnectionDetails(OtlpLoggingExportProperties loggingExportProperties,
+				OtlpExportProperties exportProperties) {
+			this.loggingExportProperties = loggingExportProperties;
+			this.exportProperties = exportProperties;
 		}
 
 		@Override
 		public String getUrl(Transport transport) {
-			Assert.state(transport == this.properties.getTransport(),
-					"Requested transport %s doesn't match configured transport %s".formatted(transport,
-							this.properties.getTransport()));
-			String endpoint = this.properties.getEndpoint();
+			Assert.state(transport == getTransport(), "Requested transport %s doesn't match configured transport %s"
+				.formatted(transport, getTransport()));
+			return getEndpoint();
+		}
+
+		private String getEndpoint() {
+			if (this.loggingExportProperties.getEndpoint() != null) {
+				return this.loggingExportProperties.getEndpoint();
+			}
+			String endpoint = this.exportProperties.getEndpoint();
 			Assert.state(endpoint != null, "'endpoint' must not be null");
 			return endpoint;
+		}
+
+		private Transport getTransport() {
+			if (this.loggingExportProperties.getTransport() != null) {
+				return this.loggingExportProperties.getTransport();
+			}
+			return this.exportProperties.getTransport();
+		}
+
+	}
+
+	static class EndpointSetCondition extends AnyNestedCondition {
+
+		EndpointSetCondition() {
+			super(ConfigurationPhase.REGISTER_BEAN);
+		}
+
+		@ConditionalOnProperty("management.opentelemetry.export.otlp.endpoint")
+		static class OtlpEndpoint {
+
+		}
+
+		@ConditionalOnProperty("management.opentelemetry.logging.export.otlp.endpoint")
+		static class OtlpTracingEndpoint {
+
 		}
 
 	}
