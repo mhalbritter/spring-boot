@@ -23,6 +23,8 @@ import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.opentelemetry.autoconfigure.otlp.OtlpExportProperties;
+import org.springframework.boot.opentelemetry.autoconfigure.otlp.Transport;
 
 /**
  * Configuration properties for exporting traces using OTLP.
@@ -31,10 +33,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @since 4.0.0
  */
 @ConfigurationProperties("management.opentelemetry.tracing.export.otlp")
-public class OtlpTracingProperties {
+public class OtlpTracingExportProperties {
 
 	/**
-	 * URL to the OTel collector's HTTP API.
+	 * URL to the OTel collector's HTTP API. If not set,
+	 * 'management.opentelemetry.export.otlp.endpoint' is used.
 	 */
 	private @Nullable String endpoint;
 
@@ -42,29 +45,34 @@ public class OtlpTracingProperties {
 	 * Call timeout for the OTel Collector to process an exported batch of data. This
 	 * timeout spans the entire call: resolving DNS, connecting, writing the request body,
 	 * server processing, and reading the response body. If the call requires redirects or
-	 * retries all must complete within one timeout period.
+	 * retries all must complete within one timeout period. If not set,
+	 * 'management.opentelemetry.export.otlp.timeout' is used.
 	 */
-	private Duration timeout = Duration.ofSeconds(10);
+	private @Nullable Duration timeout;
 
 	/**
-	 * Connect timeout for the OTel collector connection.
+	 * Connect timeout for the OTel collector connection. If not set,
+	 * 'management.opentelemetry.export.otlp.connect-timeout' is used.
 	 */
-	private Duration connectTimeout = Duration.ofSeconds(10);
+	private @Nullable Duration connectTimeout;
 
 	/**
-	 * Transport used to send the spans.
+	 * Transport used to send the spans. If not set,
+	 * 'management.opentelemetry.export.otlp.transport' is used.
 	 */
-	private Transport transport = Transport.HTTP;
+	private @Nullable Transport transport;
 
 	/**
-	 * Method used to compress the payload.
+	 * Method used to compress the payload. If not set,
+	 * 'management.opentelemetry.export.otlp.compression' is used.
 	 */
-	private Compression compression = Compression.NONE;
+	private OtlpExportProperties.@Nullable Compression compression;
 
 	/**
 	 * Custom HTTP headers you want to pass to the collector, for example auth headers.
+	 * Merged with 'management.opentelemetry.export.otlp.headers'.
 	 */
-	private Map<String, String> headers = new HashMap<>();
+	private final Map<String, String> headers = new HashMap<>();
 
 	public @Nullable String getEndpoint() {
 		return this.endpoint;
@@ -74,58 +82,40 @@ public class OtlpTracingProperties {
 		this.endpoint = endpoint;
 	}
 
-	public Duration getTimeout() {
+	public @Nullable Duration getTimeout() {
 		return this.timeout;
 	}
 
-	public void setTimeout(Duration timeout) {
+	public void setTimeout(@Nullable Duration timeout) {
 		this.timeout = timeout;
 	}
 
-	public Duration getConnectTimeout() {
+	public @Nullable Duration getConnectTimeout() {
 		return this.connectTimeout;
 	}
 
-	public void setConnectTimeout(Duration connectTimeout) {
+	public void setConnectTimeout(@Nullable Duration connectTimeout) {
 		this.connectTimeout = connectTimeout;
 	}
 
-	public Transport getTransport() {
+	public @Nullable Transport getTransport() {
 		return this.transport;
 	}
 
-	public void setTransport(Transport transport) {
+	public void setTransport(@Nullable Transport transport) {
 		this.transport = transport;
 	}
 
-	public Compression getCompression() {
+	public OtlpExportProperties.@Nullable Compression getCompression() {
 		return this.compression;
 	}
 
-	public void setCompression(Compression compression) {
+	public void setCompression(OtlpExportProperties.@Nullable Compression compression) {
 		this.compression = compression;
 	}
 
 	public Map<String, String> getHeaders() {
 		return this.headers;
-	}
-
-	public void setHeaders(Map<String, String> headers) {
-		this.headers = headers;
-	}
-
-	public enum Compression {
-
-		/**
-		 * Gzip compression.
-		 */
-		GZIP,
-
-		/**
-		 * No compression.
-		 */
-		NONE
-
 	}
 
 }

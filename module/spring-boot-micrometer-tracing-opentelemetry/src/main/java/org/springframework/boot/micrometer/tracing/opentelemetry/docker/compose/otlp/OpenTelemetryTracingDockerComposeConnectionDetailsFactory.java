@@ -20,7 +20,7 @@ import org.springframework.boot.docker.compose.core.RunningService;
 import org.springframework.boot.docker.compose.service.connection.DockerComposeConnectionDetailsFactory;
 import org.springframework.boot.docker.compose.service.connection.DockerComposeConnectionSource;
 import org.springframework.boot.micrometer.tracing.opentelemetry.autoconfigure.otlp.OtlpTracingConnectionDetails;
-import org.springframework.boot.micrometer.tracing.opentelemetry.autoconfigure.otlp.Transport;
+import org.springframework.boot.opentelemetry.autoconfigure.otlp.Transport;
 
 /**
  * {@link DockerComposeConnectionDetailsFactory} to create

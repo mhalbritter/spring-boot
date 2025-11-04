@@ -18,7 +18,7 @@ package org.springframework.boot.micrometer.tracing.opentelemetry.docker.compose
 
 import org.springframework.boot.docker.compose.service.connection.test.DockerComposeTest;
 import org.springframework.boot.micrometer.tracing.opentelemetry.autoconfigure.otlp.OtlpTracingConnectionDetails;
-import org.springframework.boot.micrometer.tracing.opentelemetry.autoconfigure.otlp.Transport;
+import org.springframework.boot.opentelemetry.autoconfigure.otlp.Transport;
 import org.springframework.boot.testsupport.container.TestImage;
 
 import static org.assertj.core.api.Assertions.assertThat;

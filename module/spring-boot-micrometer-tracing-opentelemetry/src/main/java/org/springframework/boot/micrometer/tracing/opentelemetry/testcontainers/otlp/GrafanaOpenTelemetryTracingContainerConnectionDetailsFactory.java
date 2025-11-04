@@ -19,7 +19,7 @@ package org.springframework.boot.micrometer.tracing.opentelemetry.testcontainers
 import org.testcontainers.grafana.LgtmStackContainer;
 
 import org.springframework.boot.micrometer.tracing.opentelemetry.autoconfigure.otlp.OtlpTracingConnectionDetails;
-import org.springframework.boot.micrometer.tracing.opentelemetry.autoconfigure.otlp.Transport;
+import org.springframework.boot.opentelemetry.autoconfigure.otlp.Transport;
 import org.springframework.boot.testcontainers.service.connection.ContainerConnectionDetailsFactory;
 import org.springframework.boot.testcontainers.service.connection.ContainerConnectionSource;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;

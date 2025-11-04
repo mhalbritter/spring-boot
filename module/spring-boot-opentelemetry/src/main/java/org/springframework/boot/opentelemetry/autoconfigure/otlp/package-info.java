@@ -14,24 +14,10 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.micrometer.tracing.opentelemetry.autoconfigure.otlp;
-
 /**
- * Transport used to send OTLP data.
- *
- * @author Moritz Halbritter
- * @since 4.0.0
+ * Auto-configuration for OpenTelemetry OTLP.
  */
-public enum Transport {
+@NullMarked
+package org.springframework.boot.opentelemetry.autoconfigure.otlp;
 
-	/**
-	 * HTTP transport.
-	 */
-	HTTP,
-
-	/**
-	 * gRPC transport.
-	 */
-	GRPC
-
-}
+import org.jspecify.annotations.NullMarked;

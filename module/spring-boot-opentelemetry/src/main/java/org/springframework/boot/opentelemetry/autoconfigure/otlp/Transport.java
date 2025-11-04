@@ -14,25 +14,24 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.micrometer.tracing.opentelemetry.autoconfigure.otlp;
-
-import org.springframework.boot.autoconfigure.service.connection.ConnectionDetails;
-import org.springframework.boot.opentelemetry.autoconfigure.otlp.Transport;
+package org.springframework.boot.opentelemetry.autoconfigure.otlp;
 
 /**
- * Details required to establish a connection to an OpenTelemetry service.
+ * Transport used to send OTLP data.
  *
- * @author Eddú Meléndez
  * @author Moritz Halbritter
  * @since 4.0.0
  */
-public interface OtlpTracingConnectionDetails extends ConnectionDetails {
+public enum Transport {
 
 	/**
-	 * Address to where tracing will be published.
-	 * @param transport the transport to use
-	 * @return the address to where tracing will be published
+	 * HTTP transport.
 	 */
-	String getUrl(Transport transport);
+	HTTP,
+
+	/**
+	 * gRPC transport.
+	 */
+	GRPC
 
 }
