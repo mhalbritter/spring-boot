@@ -39,14 +39,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 /**
- * Tests for {@link ZipkinTracingAutoConfiguration}.
+ * Tests for {@link ZipkinWithBraveTracingAutoConfiguration}.
  *
  * @author Moritz Halbritter
  */
-class ZipkinTracingAutoConfigurationTests {
+class ZipkinWithBraveTracingAutoConfigurationTests {
 
 	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner().withConfiguration(
-			AutoConfigurations.of(DefaultEncodingConfiguration.class, ZipkinTracingAutoConfiguration.class));
+			AutoConfigurations.of(DefaultEncodingConfiguration.class, ZipkinWithBraveTracingAutoConfiguration.class));
 
 	@Test
 	void shouldSupplyBeans() {

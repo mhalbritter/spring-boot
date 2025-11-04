@@ -35,7 +35,7 @@ import org.springframework.boot.micrometer.tracing.autoconfigure.ConditionalOnEn
 import org.springframework.context.annotation.Bean;
 
 /**
- * {@link EnableAutoConfiguration Auto-configuration} for Zipkin tracing.
+ * {@link EnableAutoConfiguration Auto-configuration} for Zipkin tracing with Brave.
  *
  * @author Moritz Halbritter
  * @author Stefan Bratanov
@@ -45,7 +45,7 @@ import org.springframework.context.annotation.Bean;
  */
 @AutoConfiguration(afterName = "org.springframework.boot.zipkin.autoconfigure.ZipkinAutoConfiguration")
 @ConditionalOnClass({ Encoding.class, AsyncZipkinSpanHandler.class })
-public final class ZipkinTracingAutoConfiguration {
+public final class ZipkinWithBraveTracingAutoConfiguration {
 
 	@Bean
 	@ConditionalOnBean(Encoding.class)
@@ -64,30 +64,5 @@ public final class ZipkinTracingAutoConfiguration {
 			BytesEncoder<MutableSpan> mutableSpanBytesEncoder) {
 		return AsyncZipkinSpanHandler.newBuilder(sender).build(mutableSpanBytesEncoder);
 	}
-
-	// TODO MH: Move this to OTel
-	// @Configuration(proxyBeanMethods = false)
-	// @ConditionalOnClass({ ZipkinSpanExporter.class, Span.class })
-	// static class OpenTelemetryConfiguration {
-	//
-	// @Bean
-	// @ConditionalOnBean(Encoding.class)
-	// @ConditionalOnMissingBean(value = Span.class, parameterizedContainer =
-	// BytesEncoder.class)
-	// BytesEncoder<Span> spanBytesEncoder(Encoding encoding) {
-	// return SpanBytesEncoder.forEncoding(encoding);
-	// }
-	//
-	// @Bean
-	// @ConditionalOnMissingBean
-	// @ConditionalOnBean(BytesMessageSender.class)
-	// @ConditionalOnEnabledTracingExport("zipkin")
-	// ZipkinSpanExporter zipkinSpanExporter(BytesMessageSender sender, BytesEncoder<Span>
-	// spanBytesEncoder) {
-	// return
-	// ZipkinSpanExporter.builder().setSender(sender).setEncoder(spanBytesEncoder).build();
-	// }
-	//
-	// }
 
 }
