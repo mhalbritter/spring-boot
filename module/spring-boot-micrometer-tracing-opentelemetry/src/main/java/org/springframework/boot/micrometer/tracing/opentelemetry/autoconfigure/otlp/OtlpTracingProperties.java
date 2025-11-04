@@ -30,7 +30,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author Jonatan Ivanov
  * @since 4.0.0
  */
-@ConfigurationProperties("management.otlp.tracing")
+@ConfigurationProperties("management.opentelemetry.tracing.export.otlp")
 public class OtlpTracingProperties {
 
 	/**

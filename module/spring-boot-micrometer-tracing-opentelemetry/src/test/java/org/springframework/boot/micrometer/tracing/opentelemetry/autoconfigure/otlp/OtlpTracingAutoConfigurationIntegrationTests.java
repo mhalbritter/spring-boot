@@ -90,8 +90,10 @@ class OtlpTracingAutoConfigurationIntegrationTests {
 	void httpSpanExporterShouldUseProtobufAndNoCompressionByDefault() {
 		this.mockWebServer.enqueue(new MockResponse());
 		this.contextRunner
-			.withPropertyValues("management.otlp.tracing.endpoint=http://localhost:%d/v1/traces"
-				.formatted(this.mockWebServer.getPort()), "management.otlp.tracing.headers.custom=42")
+			.withPropertyValues(
+					"management.opentelemetry.tracing.export.otlp.endpoint=http://localhost:%d/v1/traces"
+						.formatted(this.mockWebServer.getPort()),
+					"management.opentelemetry.tracing.export.otlp.headers.custom=42")
 			.run((context) -> {
 				context.getBean(Tracer.class).nextSpan().name("test").end();
 				assertThat(context.getBean(OtlpHttpSpanExporter.class).flush())
@@ -112,8 +114,9 @@ class OtlpTracingAutoConfigurationIntegrationTests {
 	void httpSpanExporterCanBeConfiguredToUseGzipCompression() {
 		this.mockWebServer.enqueue(new MockResponse());
 		this.contextRunner
-			.withPropertyValues("management.otlp.tracing.compression=gzip",
-					"management.otlp.tracing.endpoint=http://localhost:%d/test".formatted(this.mockWebServer.getPort()))
+			.withPropertyValues("management.opentelemetry.tracing.export.otlp.compression=gzip",
+					"management.opentelemetry.tracing.export.otlp.endpoint=http://localhost:%d/test"
+						.formatted(this.mockWebServer.getPort()))
 			.run((context) -> {
 				assertThat(context).hasSingleBean(OtlpHttpSpanExporter.class).hasSingleBean(SpanExporter.class);
 				context.getBean(Tracer.class).nextSpan().name("test").end();
@@ -137,8 +140,10 @@ class OtlpTracingAutoConfigurationIntegrationTests {
 	void grpcSpanExporterShouldExportSpans() {
 		this.contextRunner
 			.withPropertyValues(
-					"management.otlp.tracing.endpoint=http://localhost:%d".formatted(this.mockGrpcServer.getPort()),
-					"management.otlp.tracing.headers.custom=42", "management.otlp.tracing.transport=grpc")
+					"management.opentelemetry.tracing.export.otlp.endpoint=http://localhost:%d"
+						.formatted(this.mockGrpcServer.getPort()),
+					"management.opentelemetry.tracing.export.otlp.headers.custom=42",
+					"management.opentelemetry.tracing.export.otlp.transport=grpc")
 			.run((context) -> {
 				context.getBean(Tracer.class).nextSpan().name("test").end();
 				assertThat(context.getBean(OtlpGrpcSpanExporter.class).flush())

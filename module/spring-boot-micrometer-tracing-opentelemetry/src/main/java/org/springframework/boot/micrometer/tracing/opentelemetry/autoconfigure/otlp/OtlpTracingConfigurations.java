@@ -46,7 +46,7 @@ final class OtlpTracingConfigurations {
 
 		@Bean
 		@ConditionalOnMissingBean
-		@ConditionalOnProperty("management.otlp.tracing.endpoint")
+		@ConditionalOnProperty("management.opentelemetry.tracing.export.otlp.endpoint")
 		OtlpTracingConnectionDetails otlpTracingConnectionDetails(OtlpTracingProperties properties) {
 			return new PropertiesOtlpTracingConnectionDetails(properties);
 		}
@@ -83,7 +83,8 @@ final class OtlpTracingConfigurations {
 	static class Exporters {
 
 		@Bean
-		@ConditionalOnProperty(name = "management.otlp.tracing.transport", havingValue = "http", matchIfMissing = true)
+		@ConditionalOnProperty(name = "management.opentelemetry.tracing.export.otlp.transport", havingValue = "http",
+				matchIfMissing = true)
 		OtlpHttpSpanExporter otlpHttpSpanExporter(OtlpTracingProperties properties,
 				OtlpTracingConnectionDetails connectionDetails, ObjectProvider<MeterProvider> meterProvider,
 				ObjectProvider<OtlpHttpSpanExporterBuilderCustomizer> customizers) {
@@ -99,7 +100,7 @@ final class OtlpTracingConfigurations {
 		}
 
 		@Bean
-		@ConditionalOnProperty(name = "management.otlp.tracing.transport", havingValue = "grpc")
+		@ConditionalOnProperty(name = "management.opentelemetry.tracing.export.otlp.transport", havingValue = "grpc")
 		OtlpGrpcSpanExporter otlpGrpcSpanExporter(OtlpTracingProperties properties,
 				OtlpTracingConnectionDetails connectionDetails, ObjectProvider<MeterProvider> meterProvider,
 				ObjectProvider<OtlpGrpcSpanExporterBuilderCustomizer> customizers) {
