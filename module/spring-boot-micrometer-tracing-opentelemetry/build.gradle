@@ -68,5 +68,3 @@ tasks.named("compileTestJava") {
 tasks.named("compileDockerTestJava") {
 	options.nullability.checking = "tests"
 }
-
-// TODO MH: create starter for this
