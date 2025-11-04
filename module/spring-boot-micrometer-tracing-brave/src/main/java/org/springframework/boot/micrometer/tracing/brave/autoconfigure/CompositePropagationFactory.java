@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.micrometer.tracing.autoconfigure;
+package org.springframework.boot.micrometer.tracing.brave.autoconfigure;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -30,6 +30,7 @@ import io.micrometer.tracing.BaggageManager;
 import io.micrometer.tracing.brave.bridge.W3CPropagation;
 import org.jspecify.annotations.Nullable;
 
+import org.springframework.boot.micrometer.tracing.autoconfigure.TracingProperties;
 import org.springframework.boot.micrometer.tracing.autoconfigure.TracingProperties.Propagation.PropagationType;
 
 /**

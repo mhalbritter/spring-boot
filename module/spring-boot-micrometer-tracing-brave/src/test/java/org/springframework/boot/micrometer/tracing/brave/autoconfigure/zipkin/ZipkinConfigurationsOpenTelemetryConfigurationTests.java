@@ -15,7 +15,7 @@
  */
 
 // TODO MH: Enable
-package org.springframework.boot.micrometer.tracing.autoconfigure.zipkin;
+package org.springframework.boot.micrometer.tracing.brave.autoconfigure.zipkin;
 
 /**
  * Tests for {@link OpenTelemetryConfiguration}.

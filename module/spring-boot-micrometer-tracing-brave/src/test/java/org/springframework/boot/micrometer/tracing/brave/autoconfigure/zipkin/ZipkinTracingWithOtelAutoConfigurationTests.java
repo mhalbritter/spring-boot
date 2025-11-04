@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.micrometer.tracing.autoconfigure.zipkin;
+package org.springframework.boot.micrometer.tracing.brave.autoconfigure.zipkin;
 
 /**
  * Tests for {@link ZipkinTracingAutoConfiguration}.
  *
  * @author Stephane Nicoll
  */
-// TODO MH: Enable
-class ZipkinTracingAutoConfigurationTests {
+// TODO MH: Enable this and move it to opentelemetry-tracing, this is OTel with Zipkin
+class ZipkinTracingWithOtelAutoConfigurationTests {
 
 	//
 	// private final ApplicationContextRunner contextRunner = new
@@ -55,6 +55,5 @@ class ZipkinTracingAutoConfigurationTests {
 	// assertThat(context).doesNotHaveBean(ZipkinSpanExporter.class);
 	// });
 	// }
-	//
 
 }

@@ -18,6 +18,6 @@
  * Auto-configuration for tracing with Zipkin.
  */
 @NullMarked
-package org.springframework.boot.micrometer.tracing.autoconfigure.zipkin;
+package org.springframework.boot.micrometer.tracing.brave.autoconfigure.zipkin;
 
 import org.jspecify.annotations.NullMarked;

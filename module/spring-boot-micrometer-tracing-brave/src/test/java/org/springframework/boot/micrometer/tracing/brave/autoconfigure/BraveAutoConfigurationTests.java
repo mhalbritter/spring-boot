@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.micrometer.tracing.autoconfigure;
+package org.springframework.boot.micrometer.tracing.brave.autoconfigure;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -53,7 +53,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.context.properties.IncompatibleConfigurationException;
 import org.springframework.boot.micrometer.observation.autoconfigure.ObservationAutoConfiguration;
-import org.springframework.boot.micrometer.tracing.autoconfigure.BraveAutoConfigurationTests.SpanHandlerConfiguration.AdditionalSpanHandler;
+import org.springframework.boot.micrometer.tracing.autoconfigure.MicrometerTracingAutoConfiguration;
+import org.springframework.boot.micrometer.tracing.brave.autoconfigure.BraveAutoConfigurationTests.SpanHandlerConfiguration.AdditionalSpanHandler;
 import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
@@ -272,7 +273,7 @@ class BraveAutoConfigurationTests {
 	void shouldSupportJoinedSpansIfB3UsedAndBackendSupportsIt() {
 		this.contextRunner
 			.withPropertyValues("management.tracing.propagation.type=B3",
-					"management.tracing.brave.span-joining-supported=true")
+					"management.brave.tracing.span-joining-supported=true")
 			.run((context) -> {
 				Tracing tracing = context.getBean(Tracing.class);
 				Span parentSpan = tracing.tracer().nextSpan();
@@ -288,34 +289,34 @@ class BraveAutoConfigurationTests {
 	void shouldFailIfSupportJoinedSpansIsEnabledAndW3cIsChosenAsType() {
 		this.contextRunner
 			.withPropertyValues("management.tracing.propagation.type=W3C",
-					"management.tracing.brave.span-joining-supported=true")
+					"management.brave.tracing.span-joining-supported=true")
 			.run((context) -> assertThatException().isThrownBy(() -> context.getBean(Tracing.class))
 				.havingRootCause()
 				.isExactlyInstanceOf(IncompatibleConfigurationException.class)
 				.withMessage("The following configuration properties have incompatible values: "
-						+ "[management.tracing.propagation.type, management.tracing.brave.span-joining-supported]"));
+						+ "[management.tracing.propagation.type, management.brave.tracing.span-joining-supported]"));
 	}
 
 	@Test
 	void shouldFailIfSupportJoinedSpansIsEnabledAndW3cIsChosenAsConsume() {
 		this.contextRunner.withPropertyValues("management.tracing.propagation.produce=B3",
-				"management.tracing.propagation.consume=W3C", "management.tracing.brave.span-joining-supported=true")
+				"management.tracing.propagation.consume=W3C", "management.brave.tracing.span-joining-supported=true")
 			.run((context) -> assertThatException().isThrownBy(() -> context.getBean(Tracing.class))
 				.havingRootCause()
 				.isExactlyInstanceOf(IncompatibleConfigurationException.class)
 				.withMessage("The following configuration properties have incompatible values: "
-						+ "[management.tracing.propagation.consume, management.tracing.brave.span-joining-supported]"));
+						+ "[management.tracing.propagation.consume, management.brave.tracing.span-joining-supported]"));
 	}
 
 	@Test
 	void shouldFailIfSupportJoinedSpansIsEnabledAndW3cIsChosenAsProduce() {
 		this.contextRunner.withPropertyValues("management.tracing.propagation.consume=B3",
-				"management.tracing.propagation.produce=W3C", "management.tracing.brave.span-joining-supported=true")
+				"management.tracing.propagation.produce=W3C", "management.brave.tracing.span-joining-supported=true")
 			.run((context) -> assertThatException().isThrownBy(() -> context.getBean(Tracing.class))
 				.havingRootCause()
 				.isExactlyInstanceOf(IncompatibleConfigurationException.class)
 				.withMessage("The following configuration properties have incompatible values: "
-						+ "[management.tracing.propagation.produce, management.tracing.brave.span-joining-supported]"));
+						+ "[management.tracing.propagation.produce, management.brave.tracing.span-joining-supported]"));
 	}
 
 	@Test

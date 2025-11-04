@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.micrometer.tracing.autoconfigure;
+package org.springframework.boot.micrometer.tracing.brave.autoconfigure;
 
 import java.util.List;
 
@@ -47,6 +47,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.IncompatibleConfigurationException;
+import org.springframework.boot.micrometer.tracing.autoconfigure.MicrometerTracingAutoConfiguration;
+import org.springframework.boot.micrometer.tracing.autoconfigure.NoopTracerAutoConfiguration;
+import org.springframework.boot.micrometer.tracing.autoconfigure.TracingProperties;
 import org.springframework.boot.micrometer.tracing.autoconfigure.TracingProperties.Propagation.PropagationType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
@@ -64,7 +67,7 @@ import org.springframework.core.env.Environment;
  */
 @AutoConfiguration(before = { MicrometerTracingAutoConfiguration.class, NoopTracerAutoConfiguration.class })
 @ConditionalOnClass({ Tracer.class, BraveTracer.class })
-@EnableConfigurationProperties(TracingProperties.class)
+@EnableConfigurationProperties({ TracingProperties.class, BraveTracingProperties.class })
 @Import({ BravePropagationConfigurations.PropagationWithoutBaggage.class,
 		BravePropagationConfigurations.PropagationWithBaggage.class,
 		BravePropagationConfigurations.NoPropagation.class })
@@ -77,8 +80,11 @@ public final class BraveAutoConfiguration {
 
 	private final TracingProperties tracingProperties;
 
-	BraveAutoConfiguration(TracingProperties tracingProperties) {
+	private final BraveTracingProperties braveTracingProperties;
+
+	BraveAutoConfiguration(TracingProperties tracingProperties, BraveTracingProperties braveTracingProperties) {
 		this.tracingProperties = tracingProperties;
+		this.braveTracingProperties = braveTracingProperties;
 	}
 
 	@Bean
@@ -95,28 +101,28 @@ public final class BraveAutoConfiguration {
 	Tracing braveTracing(Environment environment, List<SpanHandler> spanHandlers,
 			List<TracingCustomizer> tracingCustomizers, CurrentTraceContext currentTraceContext,
 			Factory propagationFactory, Sampler sampler) {
-		if (this.tracingProperties.getBrave().isSpanJoiningSupported()) {
+		if (this.braveTracingProperties.isSpanJoiningSupported()) {
 			if (this.tracingProperties.getPropagation().getType() != null
 					&& this.tracingProperties.getPropagation().getType().contains(PropagationType.W3C)) {
 				throw new IncompatibleConfigurationException("management.tracing.propagation.type",
-						"management.tracing.brave.span-joining-supported");
+						"management.brave.tracing.span-joining-supported");
 			}
 			if (this.tracingProperties.getPropagation().getType() == null
 					&& this.tracingProperties.getPropagation().getProduce().contains(PropagationType.W3C)) {
 				throw new IncompatibleConfigurationException("management.tracing.propagation.produce",
-						"management.tracing.brave.span-joining-supported");
+						"management.brave.tracing.span-joining-supported");
 			}
 			if (this.tracingProperties.getPropagation().getType() == null
 					&& this.tracingProperties.getPropagation().getConsume().contains(PropagationType.W3C)) {
 				throw new IncompatibleConfigurationException("management.tracing.propagation.consume",
-						"management.tracing.brave.span-joining-supported");
+						"management.brave.tracing.span-joining-supported");
 			}
 		}
 		String applicationName = environment.getProperty("spring.application.name", DEFAULT_APPLICATION_NAME);
 		Builder builder = Tracing.newBuilder()
 			.currentTraceContext(currentTraceContext)
 			.traceId128Bit(true)
-			.supportsJoin(this.tracingProperties.getBrave().isSpanJoiningSupported())
+			.supportsJoin(this.braveTracingProperties.isSpanJoiningSupported())
 			.propagationFactory(propagationFactory)
 			.sampler(sampler)
 			.localServiceName(applicationName);

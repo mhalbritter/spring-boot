@@ -14,25 +14,31 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.micrometer.tracing.autoconfigure.zipkin;
+package org.springframework.boot.micrometer.tracing.brave.autoconfigure.zipkin;
 
+import java.io.IOException;
+import java.util.List;
+
+import zipkin2.reporter.BytesMessageSender;
 import zipkin2.reporter.Encoding;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.zipkin.autoconfigure.ZipkinAutoConfiguration;
-import org.springframework.context.annotation.Bean;
+class NoopSender extends BytesMessageSender.Base {
 
-/**
- * Configures the bean {@linkplain ZipkinAutoConfiguration} would from properties.
- */
-@TestConfiguration(proxyBeanMethods = false)
-class DefaultEncodingConfiguration {
+	NoopSender(Encoding encoding) {
+		super(encoding);
+	}
 
-	@Bean
-	@ConditionalOnMissingBean
-	Encoding zipkinReporterEncoding() {
-		return Encoding.JSON;
+	@Override
+	public int messageMaxBytes() {
+		return 1024;
+	}
+
+	@Override
+	public void send(List<byte[]> encodedSpans) {
+	}
+
+	@Override
+	public void close() throws IOException {
 	}
 
 }

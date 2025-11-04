@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.micrometer.tracing.autoconfigure;
+package org.springframework.boot.micrometer.tracing.brave.autoconfigure;
 
 import java.util.function.Supplier;
 

@@ -32,28 +32,12 @@ dependencies {
 	}
 
 	optional(project(":core:spring-boot-autoconfigure"))
-	optional(project(":core:spring-boot-docker-compose"))
-	optional(project(":core:spring-boot-testcontainers"))
-	optional(project(":module:spring-boot-actuator-autoconfigure"))
 	optional(project(":module:spring-boot-micrometer-metrics"))
-	optional(project(":module:spring-boot-zipkin"))
-	optional("io.micrometer:micrometer-core")
-	optional("io.micrometer:micrometer-tracing-bridge-brave")
 	optional("io.prometheus:prometheus-metrics-tracer-common")
-	optional("io.zipkin.reporter2:zipkin-reporter-brave")
 	optional("org.aspectj:aspectjweaver")
 
 	testImplementation(project(":core:spring-boot-test"))
 	testImplementation(project(":test-support:spring-boot-test-support"))
-	testImplementation("com.squareup.okhttp3:mockwebserver")
-	testImplementation("io.micrometer:micrometer-registry-prometheus")
-	testImplementation("io.opentelemetry:opentelemetry-exporter-common")
-	testImplementation("io.prometheus:prometheus-metrics-exposition-formats")
-	testImplementation("org.eclipse.jetty.ee11:jetty-ee11-webapp")
-	testImplementation("org.eclipse.jetty.http2:jetty-http2-server")
-
-	testRuntimeOnly("ch.qos.logback:logback-classic")
-	testRuntimeOnly("io.grpc:grpc-api")
 }
 
 tasks.named("compileTestJava") {

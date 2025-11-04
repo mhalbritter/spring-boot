@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.micrometer.tracing.autoconfigure.prometheus;
+package org.springframework.boot.micrometer.tracing.brave.autoconfigure;
 
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -35,8 +35,8 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.micrometer.metrics.autoconfigure.MetricsAutoConfiguration;
 import org.springframework.boot.micrometer.metrics.autoconfigure.export.prometheus.PrometheusMetricsExportAutoConfiguration;
 import org.springframework.boot.micrometer.observation.autoconfigure.ObservationAutoConfiguration;
-import org.springframework.boot.micrometer.tracing.autoconfigure.BraveAutoConfiguration;
 import org.springframework.boot.micrometer.tracing.autoconfigure.MicrometerTracingAutoConfiguration;
+import org.springframework.boot.micrometer.tracing.autoconfigure.prometheus.PrometheusExemplarsAutoConfiguration;
 import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;

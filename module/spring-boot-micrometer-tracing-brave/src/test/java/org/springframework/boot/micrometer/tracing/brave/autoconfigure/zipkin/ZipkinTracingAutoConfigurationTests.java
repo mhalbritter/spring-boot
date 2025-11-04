@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.micrometer.tracing.autoconfigure.zipkin;
+package org.springframework.boot.micrometer.tracing.brave.autoconfigure.zipkin;
 
 import java.nio.charset.StandardCharsets;
 
@@ -30,7 +30,6 @@ import zipkin2.reporter.Encoding;
 import zipkin2.reporter.brave.AsyncZipkinSpanHandler;
 
 import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.micrometer.tracing.autoconfigure.zipkin.ZipkinTracingAutoConfiguration.BraveConfiguration;
 import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
@@ -40,14 +39,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 /**
- * Tests for {@link BraveConfiguration}.
+ * Tests for {@link ZipkinTracingAutoConfiguration}.
  *
  * @author Moritz Halbritter
  */
-class ZipkinConfigurationsBraveConfigurationTests {
+class ZipkinTracingAutoConfigurationTests {
 
-	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-		.withConfiguration(AutoConfigurations.of(DefaultEncodingConfiguration.class, BraveConfiguration.class));
+	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner().withConfiguration(
+			AutoConfigurations.of(DefaultEncodingConfiguration.class, ZipkinTracingAutoConfiguration.class));
 
 	@Test
 	void shouldSupplyBeans() {

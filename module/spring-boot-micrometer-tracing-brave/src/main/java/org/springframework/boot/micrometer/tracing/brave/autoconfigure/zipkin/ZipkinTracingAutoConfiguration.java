@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.micrometer.tracing.autoconfigure.zipkin;
+package org.springframework.boot.micrometer.tracing.brave.autoconfigure.zipkin;
 
 import brave.Tag;
 import brave.Tags;
@@ -32,10 +32,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.micrometer.tracing.autoconfigure.ConditionalOnEnabledTracingExport;
-import org.springframework.boot.micrometer.tracing.autoconfigure.zipkin.ZipkinTracingAutoConfiguration.BraveConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 
 /**
  * {@link EnableAutoConfiguration Auto-configuration} for Zipkin tracing.
@@ -47,36 +44,28 @@ import org.springframework.context.annotation.Import;
  * @since 4.0.0
  */
 @AutoConfiguration(afterName = "org.springframework.boot.zipkin.autoconfigure.ZipkinAutoConfiguration")
-@ConditionalOnClass(Encoding.class)
-// TODO MH: Enable this again
-// @Import({ BraveConfiguration.class, OpenTelemetryConfiguration.class })
-@Import({ BraveConfiguration.class })
+@ConditionalOnClass({ Encoding.class, AsyncZipkinSpanHandler.class })
 public final class ZipkinTracingAutoConfiguration {
 
-	@Configuration(proxyBeanMethods = false)
-	@ConditionalOnClass(AsyncZipkinSpanHandler.class)
-	static class BraveConfiguration {
-
-		@Bean
-		@ConditionalOnBean(Encoding.class)
-		@ConditionalOnMissingBean(value = MutableSpan.class, parameterizedContainer = BytesEncoder.class)
-		BytesEncoder<MutableSpan> mutableSpanBytesEncoder(Encoding encoding,
-				ObjectProvider<Tag<Throwable>> throwableTagProvider) {
-			Tag<Throwable> throwableTag = throwableTagProvider.getIfAvailable(() -> Tags.ERROR);
-			return MutableSpanBytesEncoder.create(encoding, throwableTag);
-		}
-
-		@Bean
-		@ConditionalOnMissingBean
-		@ConditionalOnBean(BytesMessageSender.class)
-		@ConditionalOnEnabledTracingExport("zipkin")
-		AsyncZipkinSpanHandler asyncZipkinSpanHandler(BytesMessageSender sender,
-				BytesEncoder<MutableSpan> mutableSpanBytesEncoder) {
-			return AsyncZipkinSpanHandler.newBuilder(sender).build(mutableSpanBytesEncoder);
-		}
-
+	@Bean
+	@ConditionalOnBean(Encoding.class)
+	@ConditionalOnMissingBean(value = MutableSpan.class, parameterizedContainer = BytesEncoder.class)
+	BytesEncoder<MutableSpan> mutableSpanBytesEncoder(Encoding encoding,
+			ObjectProvider<Tag<Throwable>> throwableTagProvider) {
+		Tag<Throwable> throwableTag = throwableTagProvider.getIfAvailable(() -> Tags.ERROR);
+		return MutableSpanBytesEncoder.create(encoding, throwableTag);
 	}
 
+	@Bean
+	@ConditionalOnMissingBean
+	@ConditionalOnBean(BytesMessageSender.class)
+	@ConditionalOnEnabledTracingExport("zipkin")
+	AsyncZipkinSpanHandler asyncZipkinSpanHandler(BytesMessageSender sender,
+			BytesEncoder<MutableSpan> mutableSpanBytesEncoder) {
+		return AsyncZipkinSpanHandler.newBuilder(sender).build(mutableSpanBytesEncoder);
+	}
+
+	// TODO MH: Move this to OTel
 	// @Configuration(proxyBeanMethods = false)
 	// @ConditionalOnClass({ ZipkinSpanExporter.class, Span.class })
 	// static class OpenTelemetryConfiguration {

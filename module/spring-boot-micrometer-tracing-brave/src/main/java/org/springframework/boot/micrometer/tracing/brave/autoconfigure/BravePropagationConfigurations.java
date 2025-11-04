@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.micrometer.tracing.autoconfigure;
+package org.springframework.boot.micrometer.tracing.brave.autoconfigure;
 
 import java.util.List;
 
@@ -37,6 +37,8 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.micrometer.tracing.autoconfigure.ConditionalOnEnabledTracingExport;
+import org.springframework.boot.micrometer.tracing.autoconfigure.TracingProperties;
 import org.springframework.boot.micrometer.tracing.autoconfigure.TracingProperties.Baggage.Correlation;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -48,11 +48,6 @@ public class TracingProperties {
 	 */
 	private final Propagation propagation = new Propagation();
 
-	/**
-	 * Brave configuration.
-	 */
-	private final Brave brave = new Brave();
-
 	public Sampling getSampling() {
 		return this.sampling;
 	}
@@ -63,10 +58,6 @@ public class TracingProperties {
 
 	public Propagation getPropagation() {
 		return this.propagation;
-	}
-
-	public Brave getBrave() {
-		return this.brave;
 	}
 
 	public static class Sampling {
@@ -254,25 +245,6 @@ public class TracingProperties {
 			 */
 			B3_MULTI
 
-		}
-
-	}
-
-	public static class Brave {
-
-		/**
-		 * Whether the propagation type and tracing backend support sharing the span ID
-		 * between client and server spans. Requires B3 propagation and a compatible
-		 * backend.
-		 */
-		private boolean spanJoiningSupported = false;
-
-		public boolean isSpanJoiningSupported() {
-			return this.spanJoiningSupported;
-		}
-
-		public void setSpanJoiningSupported(boolean spanJoiningSupported) {
-			this.spanJoiningSupported = spanJoiningSupported;
 		}
 
 	}
