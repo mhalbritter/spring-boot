@@ -32,8 +32,13 @@ import org.springframework.boot.opentelemetry.autoconfigure.otlp.Transport;
  * @author Jonatan Ivanov
  * @since 4.0.0
  */
-@ConfigurationProperties("management.opentelemetry.tracing.export.otlp")
+@ConfigurationProperties(OtlpTracingExportProperties.PREFIX)
 public class OtlpTracingExportProperties {
+
+	/**
+	 * {@link ConfigurationProperties} prefix.
+	 */
+	public static final String PREFIX = "management.opentelemetry.tracing.export.otlp";
 
 	/**
 	 * URL to the OTel collector's HTTP API. If not set,

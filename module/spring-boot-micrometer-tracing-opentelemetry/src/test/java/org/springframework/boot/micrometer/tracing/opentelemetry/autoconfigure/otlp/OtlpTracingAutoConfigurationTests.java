@@ -19,6 +19,7 @@ package org.springframework.boot.micrometer.tracing.opentelemetry.autoconfigure.
 import java.time.Duration;
 import java.util.List;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import io.opentelemetry.api.metrics.MeterProvider;
 import io.opentelemetry.exporter.internal.compression.GzipCompressor;
@@ -28,6 +29,9 @@ import io.opentelemetry.sdk.trace.export.SpanExporter;
 import okhttp3.HttpUrl;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.micrometer.tracing.opentelemetry.autoconfigure.otlp.OtlpTracingConfigurations.ConnectionDetails.PropertiesOtlpTracingConnectionDetails;
@@ -58,28 +62,28 @@ class OtlpTracingAutoConfigurationTests {
 		this.contextRunner.run((context) -> assertThat(context).doesNotHaveBean(OtlpHttpSpanExporter.class));
 	}
 
-	@Test
-	void shouldNotSupplyBeansIfGrpcTransportIsEnabledButPropertyIsNotSet() {
-		this.contextRunner.withPropertyValues("management.opentelemetry.tracing.export.otlp.transport=grpc")
+	@ParameterizedTest
+	@MethodSource("propertyPrefixes")
+	void shouldNotSupplyBeansIfGrpcTransportIsEnabledButPropertyIsNotSet(String propertyPrefix) {
+		this.contextRunner.withPropertyValues(propertyPrefix + ".transport=grpc")
 			.run((context) -> assertThat(context).doesNotHaveBean(OtlpGrpcSpanExporter.class));
 	}
 
-	@Test
-	void shouldSupplyBeans() {
-		this.contextRunner
-			.withPropertyValues("management.opentelemetry.tracing.export.otlp.endpoint=http://localhost:4318/v1/traces")
+	@ParameterizedTest
+	@MethodSource("propertyPrefixes")
+	void shouldSupplyBeans(String propertyPrefix) {
+		this.contextRunner.withPropertyValues(propertyPrefix + ".endpoint=http://localhost:4318/v1/traces")
 			.run((context) -> assertThat(context).hasSingleBean(OtlpHttpSpanExporter.class)
 				.hasSingleBean(SpanExporter.class));
 	}
 
-	@Test
-	void shouldCustomizeHttpTransportWithProperties() {
+	@ParameterizedTest
+	@MethodSource("propertyPrefixes")
+	void shouldCustomizeHttpTransportWithProperties(String propertyPrefix) {
 		this.contextRunner
-			.withPropertyValues("management.opentelemetry.tracing.export.otlp.endpoint=http://localhost:4317/v1/traces",
-					"management.opentelemetry.tracing.export.otlp.timeout=10m",
-					"management.opentelemetry.tracing.export.otlp.connect-timeout=20m",
-					"management.opentelemetry.tracing.export.otlp.compression=GZIP",
-					"management.opentelemetry.tracing.export.otlp.headers.spring=boot")
+			.withPropertyValues(propertyPrefix + ".endpoint=http://localhost:4317/v1/traces",
+					propertyPrefix + ".timeout=10m", propertyPrefix + ".connect-timeout=20m",
+					propertyPrefix + ".compression=GZIP", propertyPrefix + ".headers.spring=boot")
 			.run((context) -> {
 				assertThat(context).hasSingleBean(OtlpHttpSpanExporter.class).hasSingleBean(SpanExporter.class);
 				OtlpHttpSpanExporter exporter = context.getBean(OtlpHttpSpanExporter.class);
@@ -95,24 +99,24 @@ class OtlpTracingAutoConfigurationTests {
 			});
 	}
 
-	@Test
-	void shouldSupplyBeansIfGrpcTransportIsEnabled() {
+	@ParameterizedTest
+	@MethodSource("propertyPrefixes")
+	void shouldSupplyBeansIfGrpcTransportIsEnabled(String propertyPrefix) {
 		this.contextRunner
-			.withPropertyValues("management.opentelemetry.tracing.export.otlp.endpoint=http://localhost:4317/v1/traces",
-					"management.opentelemetry.tracing.export.otlp.transport=grpc")
+			.withPropertyValues(propertyPrefix + ".endpoint=http://localhost:4317/v1/traces",
+					propertyPrefix + ".transport=grpc")
 			.run((context) -> assertThat(context).hasSingleBean(OtlpGrpcSpanExporter.class)
 				.hasSingleBean(SpanExporter.class));
 	}
 
-	@Test
-	void shouldCustomizeGrpcTransportWithProperties() {
+	@ParameterizedTest
+	@MethodSource("propertyPrefixes")
+	void shouldCustomizeGrpcTransportWithProperties(String propertyPrefix) {
 		this.contextRunner
-			.withPropertyValues("management.opentelemetry.tracing.export.otlp.endpoint=http://localhost:4317/v1/traces",
-					"management.opentelemetry.tracing.export.otlp.transport=grpc",
-					"management.opentelemetry.tracing.export.otlp.timeout=10m",
-					"management.opentelemetry.tracing.export.otlp.connect-timeout=20m",
-					"management.opentelemetry.tracing.export.otlp.compression=GZIP",
-					"management.opentelemetry.tracing.export.otlp.headers.spring=boot")
+			.withPropertyValues(propertyPrefix + ".endpoint=http://localhost:4317/v1/traces",
+					propertyPrefix + ".transport=grpc", propertyPrefix + ".timeout=10m",
+					propertyPrefix + ".connect-timeout=20m", propertyPrefix + ".compression=GZIP",
+					propertyPrefix + ".headers.spring=boot")
 			.run((context) -> {
 				assertThat(context).hasSingleBean(OtlpGrpcSpanExporter.class).hasSingleBean(SpanExporter.class);
 				OtlpGrpcSpanExporter exporter = context.getBean(OtlpGrpcSpanExporter.class);
@@ -178,17 +182,18 @@ class OtlpTracingAutoConfigurationTests {
 				.hasSingleBean(SpanExporter.class));
 	}
 
-	@Test
-	void shouldNotSupplyOtlpHttpSpanExporterIfTracingIsDisabled() {
+	@ParameterizedTest
+	@MethodSource("propertyPrefixes")
+	void shouldNotSupplyOtlpHttpSpanExporterIfTracingIsDisabled(String propertyPrefix) {
 		this.tracingDisabledContextRunner
-			.withPropertyValues("management.opentelemetry.tracing.export.otlp.endpoint=http://localhost:4318/v1/traces")
+			.withPropertyValues(propertyPrefix + ".endpoint=http://localhost:4318/v1/traces")
 			.run((context) -> assertThat(context).doesNotHaveBean(OtlpHttpSpanExporter.class));
 	}
 
-	@Test
-	void definesPropertiesBasedConnectionDetailsByDefault() {
-		this.contextRunner
-			.withPropertyValues("management.opentelemetry.tracing.export.otlp.endpoint=http://localhost:4318/v1/traces")
+	@ParameterizedTest
+	@MethodSource("propertyPrefixes")
+	void definesPropertiesBasedConnectionDetailsByDefault(String propertyPrefix) {
+		this.contextRunner.withPropertyValues(propertyPrefix + ".endpoint=http://localhost:4318/v1/traces")
 			.run((context) -> assertThat(context).hasSingleBean(PropertiesOtlpTracingConnectionDetails.class));
 	}
 
@@ -203,10 +208,11 @@ class OtlpTracingAutoConfigurationTests {
 		});
 	}
 
-	@Test
-	void httpShouldUseMeterProviderIfSet() {
+	@ParameterizedTest
+	@MethodSource("propertyPrefixes")
+	void httpShouldUseMeterProviderIfSet(String propertyPrefix) {
 		this.contextRunner.withUserConfiguration(MeterProviderConfiguration.class)
-			.withPropertyValues("management.opentelemetry.tracing.export.otlp.endpoint=http://localhost:4318/v1/traces")
+			.withPropertyValues(propertyPrefix + ".endpoint=http://localhost:4318/v1/traces")
 			.run((context) -> {
 				OtlpHttpSpanExporter otlpHttpSpanExporter = context.getBean(OtlpHttpSpanExporter.class);
 				assertThat(otlpHttpSpanExporter.toBuilder())
@@ -216,11 +222,12 @@ class OtlpTracingAutoConfigurationTests {
 			});
 	}
 
-	@Test
-	void grpcShouldUseMeterProviderIfSet() {
+	@ParameterizedTest
+	@MethodSource("propertyPrefixes")
+	void grpcShouldUseMeterProviderIfSet(String propertyPrefix) {
 		this.contextRunner.withUserConfiguration(MeterProviderConfiguration.class)
-			.withPropertyValues("management.opentelemetry.tracing.export.otlp.endpoint=http://localhost:4318/v1/traces",
-					"management.opentelemetry.tracing.export.otlp.transport=grpc")
+			.withPropertyValues(propertyPrefix + ".endpoint=http://localhost:4318/v1/traces",
+					propertyPrefix + ".transport=grpc")
 			.run((context) -> {
 				OtlpGrpcSpanExporter otlpGrpcSpanExporter = context.getBean(OtlpGrpcSpanExporter.class);
 				assertThat(otlpGrpcSpanExporter.toBuilder())
@@ -230,8 +237,9 @@ class OtlpTracingAutoConfigurationTests {
 			});
 	}
 
-	@Test
-	void shouldCustomizeHttpTransportWithOtlpHttpSpanExporterBuilderCustomizer() {
+	@ParameterizedTest
+	@MethodSource("propertyPrefixes")
+	void shouldCustomizeHttpTransportWithOtlpHttpSpanExporterBuilderCustomizer(String propertyPrefix) {
 		Duration connectTimeout = Duration.ofMinutes(20);
 		Duration timeout = Duration.ofMinutes(10);
 		this.contextRunner
@@ -239,7 +247,7 @@ class OtlpTracingAutoConfigurationTests {
 					() -> (builder) -> builder.setConnectTimeout(connectTimeout))
 			.withBean("httpCustomizer2", OtlpHttpSpanExporterBuilderCustomizer.class,
 					() -> (builder) -> builder.setTimeout(timeout))
-			.withPropertyValues("management.opentelemetry.tracing.export.otlp.endpoint=http://localhost:4317/v1/traces")
+			.withPropertyValues(propertyPrefix + ".endpoint=http://localhost:4317/v1/traces")
 			.run((context) -> {
 				assertThat(context).hasSingleBean(OtlpHttpSpanExporter.class).hasSingleBean(SpanExporter.class);
 				OtlpHttpSpanExporter exporter = context.getBean(OtlpHttpSpanExporter.class);
@@ -249,8 +257,9 @@ class OtlpTracingAutoConfigurationTests {
 			});
 	}
 
-	@Test
-	void shouldCustomizeGrpcTransportWhenEnabledWithOtlpGrpcSpanExporterBuilderCustomizer() {
+	@ParameterizedTest
+	@MethodSource("propertyPrefixes")
+	void shouldCustomizeGrpcTransportWhenEnabledWithOtlpGrpcSpanExporterBuilderCustomizer(String propertyPrefix) {
 		Duration timeout = Duration.ofMinutes(10);
 		Duration connectTimeout = Duration.ofMinutes(20);
 		this.contextRunner
@@ -258,8 +267,8 @@ class OtlpTracingAutoConfigurationTests {
 					() -> (builder) -> builder.setConnectTimeout(connectTimeout))
 			.withBean("grpcCustomizer2", OtlpGrpcSpanExporterBuilderCustomizer.class,
 					() -> (builder) -> builder.setTimeout(timeout))
-			.withPropertyValues("management.opentelemetry.tracing.export.otlp.endpoint=http://localhost:4317/v1/traces",
-					"management.opentelemetry.tracing.export.otlp.transport=grpc")
+			.withPropertyValues(propertyPrefix + ".endpoint=http://localhost:4317/v1/traces",
+					propertyPrefix + ".transport=grpc")
 			.run((context) -> {
 				assertThat(context).hasSingleBean(OtlpGrpcSpanExporter.class).hasSingleBean(SpanExporter.class);
 				OtlpGrpcSpanExporter exporter = context.getBean(OtlpGrpcSpanExporter.class);
@@ -267,6 +276,11 @@ class OtlpTracingAutoConfigurationTests {
 					.hasFieldOrPropertyWithValue("connectTimeoutMillis", (int) connectTimeout.toMillis())
 					.hasFieldOrPropertyWithValue("callTimeoutMillis", (int) timeout.toMillis());
 			});
+	}
+
+	private static Stream<Arguments> propertyPrefixes() {
+		return Stream.of(Arguments.of("management.opentelemetry.export.otlp"),
+				Arguments.of("management.opentelemetry.tracing.export.otlp"));
 	}
 
 	@Configuration(proxyBeanMethods = false)

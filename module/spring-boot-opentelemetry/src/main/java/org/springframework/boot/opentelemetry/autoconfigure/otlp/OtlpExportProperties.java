@@ -30,8 +30,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author Jonatan Ivanov
  * @since 4.0.0
  */
-@ConfigurationProperties("management.opentelemetry.export.otlp")
+@ConfigurationProperties(OtlpExportProperties.PREFIX)
 public class OtlpExportProperties {
+
+	/**
+	 * {@link ConfigurationProperties} prefix.
+	 */
+	public static final String PREFIX = "management.opentelemetry.export.otlp";
 
 	/**
 	 * URL to the OTel collector's HTTP API.

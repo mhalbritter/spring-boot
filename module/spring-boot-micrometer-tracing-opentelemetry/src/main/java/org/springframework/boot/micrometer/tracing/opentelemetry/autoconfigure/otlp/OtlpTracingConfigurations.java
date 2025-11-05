@@ -26,18 +26,26 @@ import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter;
 import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporterBuilder;
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporterBuilder;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.AnyNestedCondition;
+import org.springframework.boot.autoconfigure.condition.ConditionMessage;
+import org.springframework.boot.autoconfigure.condition.ConditionMessage.Builder;
+import org.springframework.boot.autoconfigure.condition.ConditionOutcome;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.SpringBootCondition;
 import org.springframework.boot.micrometer.tracing.autoconfigure.ConditionalOnEnabledTracingExport;
 import org.springframework.boot.opentelemetry.autoconfigure.otlp.OtlpExportProperties;
 import org.springframework.boot.opentelemetry.autoconfigure.otlp.Transport;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ConditionContext;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.core.type.AnnotatedTypeMetadata;
 import org.springframework.util.Assert;
 
 /**
@@ -106,13 +114,13 @@ final class OtlpTracingConfigurations {
 				super(ConfigurationPhase.REGISTER_BEAN);
 			}
 
-			@ConditionalOnProperty("management.opentelemetry.export.otlp.endpoint")
-			static class OtlpEndpoint {
+			@ConditionalOnProperty("management.opentelemetry.tracing.export.otlp.endpoint")
+			static class OtlpTracingEndpoint {
 
 			}
 
-			@ConditionalOnProperty("management.opentelemetry.tracing.export.otlp.endpoint")
-			static class OtlpTracingEndpoint {
+			@ConditionalOnProperty("management.opentelemetry.export.otlp.endpoint")
+			static class OtlpEndpoint {
 
 			}
 
@@ -127,8 +135,7 @@ final class OtlpTracingConfigurations {
 	static class Exporters {
 
 		@Bean
-		@ConditionalOnProperty(name = "management.opentelemetry.tracing.export.otlp.transport", havingValue = "http",
-				matchIfMissing = true)
+		@Conditional(HttpTransportPropertyCondition.class)
 		OtlpHttpSpanExporter otlpHttpSpanExporter(OtlpTracingExportProperties tracingExportProperties,
 				OtlpExportProperties exportProperties, OtlpTracingConnectionDetails connectionDetails,
 				ObjectProvider<MeterProvider> meterProvider,
@@ -145,7 +152,7 @@ final class OtlpTracingConfigurations {
 		}
 
 		@Bean
-		@ConditionalOnProperty(name = "management.opentelemetry.tracing.export.otlp.transport", havingValue = "grpc")
+		@Conditional(GrpcTransportPropertyCondition.class)
 		OtlpGrpcSpanExporter otlpGrpcSpanExporter(OtlpTracingExportProperties tracingExportProperties,
 				OtlpExportProperties exportProperties, OtlpTracingConnectionDetails connectionDetails,
 				ObjectProvider<MeterProvider> meterProvider,
@@ -190,6 +197,68 @@ final class OtlpTracingConfigurations {
 				return tracingExportProperties.getTimeout();
 			}
 			return exportProperties.getTimeout();
+		}
+
+		private abstract static class TransportPropertyCondition extends SpringBootCondition {
+
+			private static final Transport DEFAULT_TRANSPORT = Transport.HTTP;
+
+			private final Transport expectedTransport;
+
+			TransportPropertyCondition(Transport expectedTransport) {
+				this.expectedTransport = expectedTransport;
+			}
+
+			@Override
+			public ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata) {
+				String matchedProperty = getMatchedProperty(context.getEnvironment());
+				String expectedTransportName = this.expectedTransport.name().toLowerCase(Locale.ROOT);
+				Builder messageBuilder = ConditionMessage.forCondition(ConditionalOnProperty.class);
+				if (matchedProperty == null) {
+					if (this.expectedTransport == DEFAULT_TRANSPORT) {
+						return ConditionOutcome.match(messageBuilder.because("The default value of '%s' matches '%s'"
+							.formatted(OtlpExportProperties.PREFIX + ".transport", expectedTransportName)));
+					}
+					return ConditionOutcome
+						.noMatch(messageBuilder.because("The default value of '%s' doesn't match '%s'"
+							.formatted(OtlpExportProperties.PREFIX + ".transport", expectedTransportName)));
+				}
+				String propertyValue = context.getEnvironment()
+					.getProperty(matchedProperty, DEFAULT_TRANSPORT.name().toLowerCase(Locale.ROOT));
+				if (propertyValue.equals(expectedTransportName)) {
+					return ConditionOutcome.match(messageBuilder
+						.because("'%s' matches '%s'".formatted(matchedProperty, expectedTransportName)));
+				}
+				return ConditionOutcome.noMatch(messageBuilder
+					.because("'%s' doesn't match '%s'".formatted(matchedProperty, expectedTransportName)));
+			}
+
+			private @Nullable String getMatchedProperty(Environment environment) {
+				if (environment.containsProperty(OtlpTracingExportProperties.PREFIX + ".transport")) {
+					return OtlpTracingExportProperties.PREFIX + ".transport";
+				}
+				if (environment.containsProperty(OtlpExportProperties.PREFIX + ".transport")) {
+					return OtlpExportProperties.PREFIX + ".transport";
+				}
+				return null;
+			}
+
+		}
+
+		private static class HttpTransportPropertyCondition extends TransportPropertyCondition {
+
+			HttpTransportPropertyCondition() {
+				super(Transport.HTTP);
+			}
+
+		}
+
+		private static class GrpcTransportPropertyCondition extends TransportPropertyCondition {
+
+			GrpcTransportPropertyCondition() {
+				super(Transport.GRPC);
+			}
+
 		}
 
 	}
