@@ -36,7 +36,8 @@ import org.springframework.boot.opentelemetry.autoconfigure.otlp.Transport;
 public class OtlpLoggingExportProperties {
 
 	/**
-	 * URL to the OTel collector's HTTP API.
+	 * URL to the OTel collector's HTTP API. If not set,
+	 * 'management.opentelemetry.export.otlp.endpoint' is used.
 	 */
 	private @Nullable String endpoint;
 
@@ -44,27 +45,32 @@ public class OtlpLoggingExportProperties {
 	 * Call timeout for the OTel Collector to process an exported batch of data. This
 	 * timeout spans the entire call: resolving DNS, connecting, writing the request body,
 	 * server processing, and reading the response body. If the call requires redirects or
-	 * retries all must complete within one timeout period.
+	 * retries all must complete within one timeout period. If not set,
+	 * 'management.opentelemetry.export.otlp.timeout' is used.
 	 */
 	private @Nullable Duration timeout;
 
 	/**
-	 * Connect timeout for the OTel collector connection.
+	 * Connect timeout for the OTel collector connection. If not set,
+	 * 'management.opentelemetry.export.otlp.connect-timeout' is used.
 	 */
 	private @Nullable Duration connectTimeout;
 
 	/**
-	 * Transport used to send the logs.
+	 * Transport used to send the logs. If not set,
+	 * 'management.opentelemetry.export.otlp.transport' is used.
 	 */
 	private @Nullable Transport transport;
 
 	/**
-	 * Method used to compress the payload.
+	 * Method used to compress the payload. If not set,
+	 * 'management.opentelemetry.export.otlp.compression' is used.
 	 */
 	private @Nullable Compression compression;
 
 	/**
 	 * Custom HTTP headers you want to pass to the collector, for example auth headers.
+	 * Merged with 'management.opentelemetry.export.otlp.headers'.
 	 */
 	private final Map<String, String> headers = new HashMap<>();
 
