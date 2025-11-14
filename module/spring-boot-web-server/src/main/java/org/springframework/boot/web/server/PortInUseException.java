@@ -20,6 +20,7 @@ import java.net.BindException;
 import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
+import java.util.function.Predicate;
 
 import org.jspecify.annotations.Nullable;
 
@@ -82,13 +83,25 @@ public class PortInUseException extends WebServerException {
 	 * @since 2.2.7
 	 */
 	public static void ifPortBindingException(Exception ex, Consumer<BindException> action) {
-		ifCausedBy(ex, BindException.class, (bindException) -> {
-			// bind exception can be also thrown because an address can't be assigned
-			String message = bindException.getMessage();
-			if (message != null && message.toLowerCase(Locale.ROOT).contains("in use")) {
-				action.accept(bindException);
+		ifCausedBy(ex, BindException.class, (bindException) -> checkForPortInUse(action, bindException));
+		ifCausedBy(ex, (cause) -> cause.getClass().getName().equals("io.netty.channel.unix.Errors$NativeIoException"),
+				(bindException) -> checkForPortInUse(action, bindException));
+	}
+
+	private static void checkForPortInUse(Consumer<BindException> action, Exception exception) {
+		// bind exception can be also thrown because an address can't be assigned
+		String message = exception.getMessage();
+		if (message != null && message.toLowerCase(Locale.ROOT).contains("in use")) {
+			BindException bindException;
+			if (exception instanceof BindException) {
+				bindException = (BindException) exception;
 			}
-		});
+			else {
+				bindException = new BindException(exception.getMessage());
+				bindException.initCause(exception);
+			}
+			action.accept(bindException);
+		}
 	}
 
 	/**
@@ -99,11 +112,16 @@ public class PortInUseException extends WebServerException {
 	 * @param action the action to perform
 	 * @since 2.2.7
 	 */
-	@SuppressWarnings("unchecked")
 	public static <E extends Exception> void ifCausedBy(Exception ex, Class<E> causedBy, Consumer<E> action) {
+		ifCausedBy(ex, causedBy::isInstance, action);
+	}
+
+	@SuppressWarnings("unchecked")
+	private static <E extends Exception> void ifCausedBy(Exception ex, Predicate<Throwable> predicate,
+			Consumer<E> action) {
 		Throwable candidate = ex;
 		while (candidate != null) {
-			if (causedBy.isInstance(candidate)) {
+			if (predicate.test(candidate)) {
 				action.accept((E) candidate);
 				return;
 			}
