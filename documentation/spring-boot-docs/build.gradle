@@ -275,6 +275,7 @@ dependencies {
 	javadocMacros("com.redis:testcontainers-redis")
 	javadocMacros("io.lettuce:lettuce-core")
 	javadocMacros("io.micrometer:micrometer-registry-new-relic")
+	javadocMacros("io.micrometer:micrometer-registry-opentsdb")
 	javadocMacros("io.micrometer:micrometer-registry-otlp")
 	javadocMacros("io.opentelemetry:opentelemetry-sdk-logs")
 	javadocMacros("io.opentelemetry:opentelemetry-sdk-metrics")

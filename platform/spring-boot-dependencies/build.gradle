@@ -1600,6 +1600,7 @@ bom {
 			javadoc("micrometer-core", version -> "https://javadoc.io/doc/io.micrometer/micrometer-core/%s".formatted(version), "io.micrometer.core")
 			javadoc("micrometer-observation", version -> "https://javadoc.io/doc/io.micrometer/micrometer-observation/%s".formatted(version), "io.micrometer.observation")
 			javadoc("micrometer-registry-graphite", version -> "https://javadoc.io/doc/io.micrometer/micrometer-registry-graphite/%s".formatted(version), "io.micrometer.graphite")
+			javadoc("micrometer-registry-opentsdb", version -> "https://javadoc.io/doc/io.micrometer/micrometer-registry-opentsdb/%s".formatted(version), "io.micrometer.registry.opentsdb")
 			javadoc("micrometer-registry-otlp", version -> "https://javadoc.io/doc/io.micrometer/micrometer-registry-otlp/%s".formatted(version), "io.micrometer.registry.otlp")
 			javadoc("micrometer-registry-jmx", version -> "https://javadoc.io/doc/io.micrometer/micrometer-registry-jmx/%s".formatted(version), "io.micrometer.jmx")
 			javadoc("micrometer-new-relic", version -> "https://javadoc.io/doc/io.micrometer/micrometer-registry-new-relic/%s".formatted(version), "io.micrometer.newrelic")
