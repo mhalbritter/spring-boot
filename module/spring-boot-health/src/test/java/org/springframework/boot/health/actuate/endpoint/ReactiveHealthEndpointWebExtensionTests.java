@@ -32,11 +32,14 @@ import org.springframework.boot.actuate.endpoint.web.WebEndpointResponse;
 import org.springframework.boot.health.actuate.endpoint.HealthEndpointSupport.Result;
 import org.springframework.boot.health.contributor.CompositeReactiveHealthContributor;
 import org.springframework.boot.health.contributor.Health;
+import org.springframework.boot.health.contributor.HealthIndicatorExecutor;
 import org.springframework.boot.health.contributor.ReactiveHealthContributor;
 import org.springframework.boot.health.contributor.ReactiveHealthIndicator;
+import org.springframework.boot.health.contributor.ReactiveHealthIndicatorExecutor;
 import org.springframework.boot.health.contributor.Status;
 import org.springframework.boot.health.registry.DefaultReactiveHealthContributorRegistry;
 import org.springframework.boot.health.registry.ReactiveHealthContributorRegistry;
+import org.springframework.mock.env.MockEnvironment;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -111,7 +114,8 @@ class ReactiveHealthEndpointWebExtensionTests extends
 	@Override
 	protected ReactiveHealthEndpointWebExtension create(ReactiveHealthContributorRegistry registry,
 			HealthEndpointGroups groups, @Nullable Duration slowContributorLoggingThreshold) {
-		return new ReactiveHealthEndpointWebExtension(registry, null, groups, slowContributorLoggingThreshold);
+		return new ReactiveHealthEndpointWebExtension(registry, null, groups, slowContributorLoggingThreshold,
+				new ReactiveHealthIndicatorExecutor(new HealthIndicatorExecutor(new MockEnvironment())));
 	}
 
 	@Override

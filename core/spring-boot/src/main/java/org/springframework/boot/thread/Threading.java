@@ -18,6 +18,7 @@ package org.springframework.boot.thread;
 
 import org.springframework.boot.system.JavaVersion;
 import org.springframework.core.env.Environment;
+import org.springframework.core.env.PropertyResolver;
 
 /**
  * Threading of the application.
@@ -33,8 +34,8 @@ public enum Threading {
 	PLATFORM {
 
 		@Override
-		public boolean isActive(Environment environment) {
-			return !VIRTUAL.isActive(environment);
+		public boolean isActive(PropertyResolver propertyResolver) {
+			return !VIRTUAL.isActive(propertyResolver);
 		}
 
 	},
@@ -45,8 +46,8 @@ public enum Threading {
 	VIRTUAL {
 
 		@Override
-		public boolean isActive(Environment environment) {
-			return environment.getProperty("spring.threads.virtual.enabled", boolean.class, false)
+		public boolean isActive(PropertyResolver propertyResolver) {
+			return propertyResolver.getProperty("spring.threads.virtual.enabled", boolean.class, false)
 					&& JavaVersion.getJavaVersion().isEqualOrNewerThan(JavaVersion.TWENTY_ONE);
 		}
 
@@ -57,6 +58,16 @@ public enum Threading {
 	 * @param environment the environment
 	 * @return whether the threading is active
 	 */
-	public abstract boolean isActive(Environment environment);
+	public boolean isActive(Environment environment) {
+		return isActive((PropertyResolver) environment);
+	}
+
+	/**
+	 * Determines whether the threading is active.
+	 * @param propertyResolver the property resolver
+	 * @return whether the threading is active
+	 * @since 4.2.0
+	 */
+	public abstract boolean isActive(PropertyResolver propertyResolver);
 
 }

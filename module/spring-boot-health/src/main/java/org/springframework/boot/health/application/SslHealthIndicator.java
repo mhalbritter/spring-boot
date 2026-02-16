@@ -26,6 +26,8 @@ import org.springframework.boot.health.contributor.AbstractHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.boot.health.contributor.Status;
+import org.springframework.boot.health.contributor.TimeoutAwareHealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutEnforcement;
 import org.springframework.boot.info.SslInfo;
 import org.springframework.boot.info.SslInfo.BundleInfo;
 import org.springframework.boot.info.SslInfo.CertificateChainInfo;
@@ -39,9 +41,10 @@ import org.springframework.util.Assert;
  *
  * @author Jonatan Ivanov
  * @author Young Jae You
+ * @author Moritz Halbritter
  * @since 4.0.0
  */
-public class SslHealthIndicator extends AbstractHealthIndicator {
+public class SslHealthIndicator extends AbstractHealthIndicator implements TimeoutAwareHealthIndicator {
 
 	private final SslInfo sslInfo;
 
@@ -55,7 +58,7 @@ public class SslHealthIndicator extends AbstractHealthIndicator {
 	}
 
 	@Override
-	protected void doHealthCheck(Health.Builder builder) throws Exception {
+	protected void doHealthCheck(Health.Builder builder) {
 		List<CertificateChainInfo> validCertificateChains = new ArrayList<>();
 		List<CertificateChainInfo> invalidCertificateChains = new ArrayList<>();
 		List<CertificateChainInfo> expiringCertificateChains = new ArrayList<>();
@@ -76,6 +79,16 @@ public class SslHealthIndicator extends AbstractHealthIndicator {
 		builder.withDetail("expiringChains", expiringCertificateChains);
 		builder.withDetail("invalidChains", invalidCertificateChains);
 		builder.withDetail("validChains", validCertificateChains);
+	}
+
+	@Override
+	public TimeoutEnforcement getTimeoutEnforcement() {
+		return TimeoutEnforcement.INDICATOR;
+	}
+
+	@Override
+	public Health health(Duration timeout) {
+		return health();
 	}
 
 	private boolean containsOnlyValidCertificates(CertificateChainInfo certificateChain) {

@@ -16,11 +16,17 @@
 
 package org.springframework.boot.mongodb.health;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 import com.mongodb.MongoException;
+import com.mongodb.MongoOperationTimeoutException;
+import com.mongodb.MongoTimeoutException;
 import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoCluster;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.MongoIterable;
 import org.bson.Document;
@@ -30,12 +36,16 @@ import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.Status;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.longThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 
 /**
  * Tests for {@link MongoHealthIndicator}.
@@ -43,6 +53,7 @@ import static org.mockito.Mockito.never;
  * @author Christian Dupuis
  * @author Andy Wilkinson
  * @author Seonwoo Jung
+ * @author Moritz Halbritter
  */
 class MongoHealthIndicatorTests {
 
@@ -103,6 +114,73 @@ class MongoHealthIndicatorTests {
 		Health health = healthIndicator.health();
 		assertThat(health.getStatus()).isEqualTo(Status.DOWN);
 		assertThat((String) health.getDetails().get("error")).contains("Connection failed");
+	}
+
+	@Test
+	void shouldRunOperationsWithRemainingTimeout() throws TimeoutException {
+		MongoClient mongoClient = mock(MongoClient.class);
+		MongoCluster cluster = mockCluster("admin");
+		given(mongoClient.withTimeout(anyLong(), any(TimeUnit.class))).willReturn(cluster);
+		MongoHealthIndicator healthIndicator = new MongoHealthIndicator(mongoClient);
+		Health health = healthIndicator.health(Duration.ofSeconds(5));
+		assertThat(health.getStatus()).isEqualTo(Status.UP);
+		assertThat(health.getDetails()).containsEntry("maxWireVersion", 10);
+		then(mongoClient).should(times(2))
+			.withTimeout(longThat((timeout) -> timeout > 0 && timeout <= 5000), any(TimeUnit.class));
+		then(mongoClient).should(never()).listDatabaseNames();
+		then(mongoClient).should(never()).getDatabase(any());
+	}
+
+	@Test
+	void shouldUseMinimumTimeoutWhenBudgetIsExhausted() throws TimeoutException {
+		MongoClient mongoClient = mock(MongoClient.class);
+		MongoCluster cluster = mockCluster("admin");
+		given(mongoClient.withTimeout(anyLong(), any(TimeUnit.class))).willReturn(cluster);
+		MongoHealthIndicator healthIndicator = new MongoHealthIndicator(mongoClient);
+		healthIndicator.health(Duration.ZERO);
+		then(mongoClient).should(times(2)).withTimeout(1, TimeUnit.MILLISECONDS);
+	}
+
+	@Test
+	void shouldThrowTimeoutExceptionWhenOperationTimesOut() {
+		MongoClient mongoClient = mock(MongoClient.class);
+		MongoCluster cluster = mock(MongoCluster.class);
+		MongoOperationTimeoutException timeout = new MongoOperationTimeoutException("timed out");
+		given(cluster.listDatabaseNames()).willThrow(timeout);
+		given(mongoClient.withTimeout(anyLong(), any(TimeUnit.class))).willReturn(cluster);
+		MongoHealthIndicator healthIndicator = new MongoHealthIndicator(mongoClient);
+		assertThatExceptionOfType(TimeoutException.class)
+			.isThrownBy(() -> healthIndicator.health(Duration.ofSeconds(1)))
+			.withMessage("timed out")
+			.withCause(timeout);
+	}
+
+	@Test
+	void shouldReportDownWhenServerSelectionTimesOut() throws TimeoutException {
+		MongoClient mongoClient = mock(MongoClient.class);
+		MongoCluster cluster = mock(MongoCluster.class);
+		given(cluster.listDatabaseNames()).willThrow(new MongoTimeoutException("no server"));
+		given(mongoClient.withTimeout(anyLong(), any(TimeUnit.class))).willReturn(cluster);
+		MongoHealthIndicator healthIndicator = new MongoHealthIndicator(mongoClient);
+		Health health = healthIndicator.health(Duration.ofSeconds(1));
+		assertThat(health.getStatus()).isEqualTo(Status.DOWN);
+		assertThat((String) health.getDetails().get("error")).contains("no server");
+	}
+
+	private MongoCluster mockCluster(String databaseName) {
+		Document commandResult = mock(Document.class);
+		given(commandResult.getInteger("maxWireVersion")).willReturn(10);
+		MongoCluster cluster = mock(MongoCluster.class);
+		MongoIterable<String> databaseNames = mock();
+		willAnswer((invocation) -> {
+			invocation.<Consumer<String>>getArgument(0).accept(databaseName);
+			return null;
+		}).given(databaseNames).forEach(any());
+		given(cluster.listDatabaseNames()).willReturn(databaseNames);
+		MongoDatabase database = mock(MongoDatabase.class);
+		given(cluster.getDatabase(databaseName)).willReturn(database);
+		given(database.runCommand(Document.parse("{ hello: 1 }"))).willReturn(commandResult);
+		return cluster;
 	}
 
 }

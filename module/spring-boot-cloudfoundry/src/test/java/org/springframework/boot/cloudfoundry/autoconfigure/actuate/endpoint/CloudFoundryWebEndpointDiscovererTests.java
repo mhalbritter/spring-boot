@@ -42,11 +42,13 @@ import org.springframework.boot.actuate.endpoint.web.annotation.EndpointWebExten
 import org.springframework.boot.cloudfoundry.autoconfigure.actuate.endpoint.CloudFoundryWebEndpointDiscoverer.CloudFoundryWebEndpointDiscovererRuntimeHints;
 import org.springframework.boot.health.actuate.endpoint.HealthEndpoint;
 import org.springframework.boot.health.actuate.endpoint.HealthEndpointGroups;
+import org.springframework.boot.health.contributor.HealthIndicatorExecutor;
 import org.springframework.boot.health.registry.HealthContributorRegistry;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.support.DefaultConversionService;
+import org.springframework.core.env.Environment;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -126,10 +128,15 @@ class CloudFoundryWebEndpointDiscovererTests {
 		}
 
 		@Bean
-		HealthEndpoint healthEndpoint() {
+		HealthIndicatorExecutor healthIndicatorExecutor(Environment environment) {
+			return new HealthIndicatorExecutor(environment);
+		}
+
+		@Bean
+		HealthEndpoint healthEndpoint(HealthIndicatorExecutor healthIndicatorExecutor) {
 			HealthContributorRegistry registry = mock(HealthContributorRegistry.class);
 			HealthEndpointGroups groups = mock(HealthEndpointGroups.class);
-			return new HealthEndpoint(registry, null, groups, null);
+			return new HealthEndpoint(registry, null, groups, null, healthIndicatorExecutor);
 		}
 
 		@Bean

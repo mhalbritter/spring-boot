@@ -8,6 +8,11 @@
       "defaultValue": true
     },
     {
+      "name": "management.health.neo4j.timeout",
+      "type": "java.time.Duration",
+      "description": "Timeout for the Neo4j health check."
+    },
+    {
       "name": "spring.neo4j.pool.metrics-enabled",
       "type": "java.lang.Boolean",
       "deprecation": {

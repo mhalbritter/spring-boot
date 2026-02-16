@@ -16,11 +16,15 @@
 
 package org.springframework.boot.neo4j.health;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.jspecify.annotations.Nullable;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
+import org.neo4j.driver.TransactionConfig;
 import org.neo4j.driver.exceptions.SessionExpiredException;
 import org.neo4j.driver.reactivestreams.ReactiveResult;
 import org.neo4j.driver.reactivestreams.ReactiveSession;
@@ -29,9 +33,10 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
-import org.springframework.boot.health.contributor.AbstractReactiveHealthIndicator;
+import org.springframework.boot.health.contributor.AbstractTimeoutAwareReactiveHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.ReactiveHealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutEnforcement;
 import org.springframework.util.Assert;
 
 /**
@@ -41,9 +46,10 @@ import org.springframework.util.Assert;
  * @author Michael J. Simons
  * @author Stephane Nicoll
  * @author Phillip Webb
+ * @author Moritz Halbritter
  * @since 4.0.0
  */
-public final class Neo4jReactiveHealthIndicator extends AbstractReactiveHealthIndicator {
+public final class Neo4jReactiveHealthIndicator extends AbstractTimeoutAwareReactiveHealthIndicator {
 
 	private static final Log logger = LogFactory.getLog(Neo4jReactiveHealthIndicator.class);
 
@@ -52,13 +58,14 @@ public final class Neo4jReactiveHealthIndicator extends AbstractReactiveHealthIn
 	private final Neo4jHealthDetailsHandler healthDetailsHandler;
 
 	public Neo4jReactiveHealthIndicator(Driver driver) {
+		super(TimeoutEnforcement.FRAMEWORK);
 		this.driver = driver;
 		this.healthDetailsHandler = new Neo4jHealthDetailsHandler();
 	}
 
 	@Override
-	protected Mono<Health> doHealthCheck(Health.Builder builder) {
-		return runHealthCheckQuery()
+	protected Mono<Health> doHealthCheck(Health.Builder builder, @Nullable Duration timeout) {
+		return runHealthCheckQuery(createTransactionConfig(timeout))
 			.doOnError(SessionExpiredException.class, (ex) -> logger.warn(Neo4jHealthIndicator.MESSAGE_SESSION_EXPIRED))
 			.retryWhen(Retry.max(1).filter(SessionExpiredException.class::isInstance))
 			.map((healthDetails) -> {
@@ -67,16 +74,17 @@ public final class Neo4jReactiveHealthIndicator extends AbstractReactiveHealthIn
 			});
 	}
 
-	Mono<Neo4jHealthDetails> runHealthCheckQuery() {
-		return Mono.using(this::session, this::healthDetails, ReactiveSession::close);
+	Mono<Neo4jHealthDetails> runHealthCheckQuery(TransactionConfig transactionConfig) {
+		return Mono.usingWhen(Mono.fromSupplier(this::session), (session) -> healthDetails(session, transactionConfig),
+				(session) -> Mono.from(session.close()));
 	}
 
 	private ReactiveSession session() {
 		return this.driver.session(ReactiveSession.class, Neo4jHealthIndicator.DEFAULT_SESSION_CONFIG);
 	}
 
-	private Mono<Neo4jHealthDetails> healthDetails(ReactiveSession session) {
-		return Mono.from(session.run(Neo4jHealthIndicator.CYPHER)).flatMap(this::healthDetails);
+	private Mono<Neo4jHealthDetails> healthDetails(ReactiveSession session, TransactionConfig transactionConfig) {
+		return Mono.from(session.run(Neo4jHealthIndicator.CYPHER, transactionConfig)).flatMap(this::healthDetails);
 	}
 
 	private Mono<? extends Neo4jHealthDetails> healthDetails(ReactiveResult result) {
@@ -84,6 +92,15 @@ public final class Neo4jReactiveHealthIndicator extends AbstractReactiveHealthIn
 		Mono<ResultSummary> summary = Mono.from(result.consume());
 		Neo4jHealthDetailsBuilder builder = new Neo4jHealthDetailsBuilder();
 		return records.single().doOnNext(builder::record).then(summary).map(builder::build);
+	}
+
+	private TransactionConfig createTransactionConfig(@Nullable Duration timeout) {
+		if (timeout == null) {
+			return TransactionConfig.empty();
+		}
+		Duration truncated = timeout.truncatedTo(ChronoUnit.MILLIS);
+		Duration rounded = (truncated.equals(timeout)) ? timeout : truncated.plusMillis(1);
+		return TransactionConfig.builder().withTimeout(rounded).build();
 	}
 
 	/**

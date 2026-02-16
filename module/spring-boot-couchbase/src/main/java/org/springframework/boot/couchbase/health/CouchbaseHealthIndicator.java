@@ -16,12 +16,16 @@
 
 package org.springframework.boot.couchbase.health;
 
+import java.time.Duration;
+
 import com.couchbase.client.core.diagnostics.DiagnosticsResult;
 import com.couchbase.client.java.Cluster;
 
 import org.springframework.boot.health.contributor.AbstractHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutAwareHealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutEnforcement;
 import org.springframework.util.Assert;
 
 /**
@@ -29,9 +33,10 @@ import org.springframework.util.Assert;
  *
  * @author Eddú Meléndez
  * @author Stephane Nicoll
+ * @author Moritz Halbritter
  * @since 4.0.0
  */
-public class CouchbaseHealthIndicator extends AbstractHealthIndicator {
+public class CouchbaseHealthIndicator extends AbstractHealthIndicator implements TimeoutAwareHealthIndicator {
 
 	private final Cluster cluster;
 
@@ -46,9 +51,19 @@ public class CouchbaseHealthIndicator extends AbstractHealthIndicator {
 	}
 
 	@Override
-	protected void doHealthCheck(Health.Builder builder) throws Exception {
+	protected void doHealthCheck(Health.Builder builder) {
 		DiagnosticsResult diagnostics = this.cluster.diagnostics();
 		new CouchbaseHealth(diagnostics).applyTo(builder);
+	}
+
+	@Override
+	public TimeoutEnforcement getTimeoutEnforcement() {
+		return TimeoutEnforcement.INDICATOR;
+	}
+
+	@Override
+	public Health health(Duration timeout) {
+		return health();
 	}
 
 }

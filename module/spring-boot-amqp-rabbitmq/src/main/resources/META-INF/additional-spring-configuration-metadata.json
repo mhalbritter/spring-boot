@@ -1,0 +1,16 @@
+{
+  "groups": [],
+  "properties": [
+    {
+      "name": "management.health.rabbit.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether to enable RabbitMQ health check.",
+      "defaultValue": true
+    },
+    {
+      "name": "management.health.rabbit.timeout",
+      "type": "java.time.Duration",
+      "description": "Timeout for the RabbitMQ health check."
+    }
+  ]
+}

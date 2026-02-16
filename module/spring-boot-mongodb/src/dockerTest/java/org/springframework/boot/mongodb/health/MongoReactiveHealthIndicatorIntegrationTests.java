@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mongodb.MongoDBContainer;
+import reactor.core.publisher.Mono;
 
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.Status;
@@ -56,6 +57,12 @@ class MongoReactiveHealthIndicatorIntegrationTests {
 	}
 
 	@Test
+	void shouldUseStandardApiWhenTimeoutIsGiven() {
+		Health health = mongoHealth(null, Duration.ofSeconds(30));
+		assertHealth(health);
+	}
+
+	@Test
 	void strictV1Api() {
 		Health health = mongoHealth(ServerApi.builder().strict(true).version(ServerApiVersion.V1).build());
 		assertHealth(health);
@@ -66,6 +73,10 @@ class MongoReactiveHealthIndicatorIntegrationTests {
 	}
 
 	private Health mongoHealth(@Nullable ServerApi serverApi) {
+		return mongoHealth(serverApi, null);
+	}
+
+	private Health mongoHealth(@Nullable ServerApi serverApi, @Nullable Duration timeout) {
 		Builder settingsBuilder = MongoClientSettings.builder()
 			.applyConnectionString(new ConnectionString(mongo.getConnectionString()));
 		if (serverApi != null) {
@@ -74,7 +85,8 @@ class MongoReactiveHealthIndicatorIntegrationTests {
 		MongoClientSettings settings = settingsBuilder.build();
 		MongoClient mongoClient = MongoClients.create(settings);
 		MongoReactiveHealthIndicator healthIndicator = new MongoReactiveHealthIndicator(mongoClient);
-		Health health = healthIndicator.health(true).block(Duration.ofSeconds(30));
+		Mono<Health> result = (timeout != null) ? healthIndicator.health(timeout, true) : healthIndicator.health(true);
+		Health health = result.block(Duration.ofSeconds(30));
 		assertThat(health).isNotNull();
 		return health;
 	}

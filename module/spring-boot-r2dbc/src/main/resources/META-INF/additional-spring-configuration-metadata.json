@@ -1,0 +1,16 @@
+{
+  "groups": [],
+  "properties": [
+    {
+      "name": "management.health.r2dbc.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether to enable R2DBC health check.",
+      "defaultValue": true
+    },
+    {
+      "name": "management.health.r2dbc.timeout",
+      "type": "java.time.Duration",
+      "description": "Timeout for the R2DBC health check."
+    }
+  ]
+}

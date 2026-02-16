@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.SessionConfig;
+import org.neo4j.driver.TransactionConfig;
 import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.ServiceUnavailableException;
 import org.neo4j.driver.exceptions.SessionExpiredException;
@@ -32,6 +33,7 @@ import org.neo4j.driver.summary.ResultSummary;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
+import reactor.test.publisher.PublisherProbe;
 
 import org.springframework.boot.health.contributor.Status;
 
@@ -50,6 +52,7 @@ import static org.mockito.Mockito.times;
  * @author Michael J. Simons
  * @author Stephane Nicoll
  * @author Brian Clozel
+ * @author Moritz Halbritter
  */
 class Neo4jReactiveHealthIndicatorTests {
 
@@ -71,7 +74,8 @@ class Neo4jReactiveHealthIndicatorTests {
 		ReactiveSession session = mock(ReactiveSession.class);
 		ReactiveResult statementResult = mockStatementResult(resultSummary, "4711", "some edition");
 		AtomicInteger count = new AtomicInteger();
-		given(session.run(anyString())).will((invocation) -> {
+		given(session.close()).willReturn(Mono.empty());
+		given(session.run(anyString(), any(TransactionConfig.class))).will((invocation) -> {
 			if (count.compareAndSet(0, 1)) {
 				return Flux.error(new SessionExpiredException("Session expired"));
 			}
@@ -100,6 +104,88 @@ class Neo4jReactiveHealthIndicatorTests {
 		}).expectComplete().verify(Duration.ofSeconds(30));
 	}
 
+	@Test
+	void shouldCloseSessionWhenHealthCheckCompletes() {
+		ResultSummary resultSummary = ResultSummaryMock.createResultSummary("My Home", "test");
+		ReactiveSession session = mock(ReactiveSession.class);
+		ReactiveResult statementResult = mockStatementResult(resultSummary, "4711", "some edition");
+		given(session.run(anyString(), any(TransactionConfig.class))).willReturn(Mono.just(statementResult));
+		PublisherProbe<Object> close = PublisherProbe.empty();
+		given(session.close()).willReturn(close.mono());
+		Neo4jReactiveHealthIndicator healthIndicator = new Neo4jReactiveHealthIndicator(mockDriver(session));
+		healthIndicator.health()
+			.as(StepVerifier::create)
+			.assertNext((health) -> assertThat(health.getStatus()).isEqualTo(Status.UP))
+			.expectComplete()
+			.verify(Duration.ofSeconds(30));
+		close.assertWasSubscribed();
+	}
+
+	@Test
+	void shouldCloseSessionWhenHealthCheckIsCancelled() {
+		ReactiveSession session = mock(ReactiveSession.class);
+		PublisherProbe<ReactiveResult> run = PublisherProbe.of(Mono.never());
+		given(session.run(anyString(), any(TransactionConfig.class))).willReturn(run.mono());
+		PublisherProbe<Object> close = PublisherProbe.empty();
+		given(session.close()).willReturn(close.mono());
+		Neo4jReactiveHealthIndicator healthIndicator = new Neo4jReactiveHealthIndicator(mockDriver(session));
+		healthIndicator.health().subscribe().dispose();
+		run.assertWasCancelled();
+		close.assertWasSubscribed();
+	}
+
+	@Test
+	void shouldApplyTimeoutAsTransactionTimeout() {
+		ReactiveSession session = mockSession();
+		new Neo4jReactiveHealthIndicator(mockDriver(session)).health(Duration.ofSeconds(5))
+			.as(StepVerifier::create)
+			.assertNext((health) -> assertThat(health.getStatus()).isEqualTo(Status.UP))
+			.expectComplete()
+			.verify(Duration.ofSeconds(30));
+		then(session).should().run(Neo4jHealthIndicator.CYPHER, transactionConfig(Duration.ofSeconds(5)));
+	}
+
+	@Test
+	void shouldRoundTransactionTimeoutUpToWholeMilliseconds() {
+		ReactiveSession session = mockSession();
+		new Neo4jReactiveHealthIndicator(mockDriver(session)).health(Duration.ofNanos(1_500_000))
+			.as(StepVerifier::create)
+			.expectNextCount(1)
+			.expectComplete()
+			.verify(Duration.ofSeconds(30));
+		then(session).should().run(Neo4jHealthIndicator.CYPHER, transactionConfig(Duration.ofMillis(2)));
+	}
+
+	@Test
+	void shouldNotApplyTransactionTimeoutWithoutTimeout() {
+		ReactiveSession session = mockSession();
+		new Neo4jReactiveHealthIndicator(mockDriver(session)).health()
+			.as(StepVerifier::create)
+			.expectNextCount(1)
+			.expectComplete()
+			.verify(Duration.ofSeconds(30));
+		then(session).should().run(Neo4jHealthIndicator.CYPHER, TransactionConfig.empty());
+	}
+
+	private TransactionConfig transactionConfig(Duration timeout) {
+		return TransactionConfig.builder().withTimeout(timeout).build();
+	}
+
+	private ReactiveSession mockSession() {
+		ResultSummary resultSummary = ResultSummaryMock.createResultSummary("My Home", "test");
+		ReactiveResult statementResult = mockStatementResult(resultSummary, "4711", "some edition");
+		ReactiveSession session = mock(ReactiveSession.class);
+		given(session.run(anyString(), any(TransactionConfig.class))).willReturn(Mono.just(statementResult));
+		given(session.close()).willReturn(Mono.empty());
+		return session;
+	}
+
+	private Driver mockDriver(ReactiveSession session) {
+		Driver driver = mock(Driver.class);
+		given(driver.session(eq(ReactiveSession.class), any(SessionConfig.class))).willReturn(session);
+		return driver;
+	}
+
 	private ReactiveResult mockStatementResult(ResultSummary resultSummary, String version, String edition) {
 		Record record = mock(Record.class);
 		given(record.get("edition")).willReturn(Values.value(edition));
@@ -113,10 +199,9 @@ class Neo4jReactiveHealthIndicatorTests {
 	private Driver mockDriver(ResultSummary resultSummary, String version, String edition) {
 		ReactiveResult statementResult = mockStatementResult(resultSummary, version, edition);
 		ReactiveSession session = mock(ReactiveSession.class);
-		given(session.run(anyString())).willReturn(Mono.just(statementResult));
-		Driver driver = mock(Driver.class);
-		given(driver.session(eq(ReactiveSession.class), any(SessionConfig.class))).willReturn(session);
-		return driver;
+		given(session.run(anyString(), any(TransactionConfig.class))).willReturn(Mono.just(statementResult));
+		given(session.close()).willReturn(Mono.empty());
+		return mockDriver(session);
 	}
 
 }

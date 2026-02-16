@@ -20,20 +20,27 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import io.grpc.health.v1.HealthCheckResponse.ServingStatus;
 import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
+import org.springframework.boot.convert.ApplicationConversionService;
 import org.springframework.boot.health.contributor.CompositeHealthContributor;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthContributor;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.HealthIndicatorExecutor;
 import org.springframework.boot.health.contributor.ReactiveHealthIndicator;
 import org.springframework.boot.health.contributor.Status;
 import org.springframework.boot.health.registry.DefaultHealthContributorRegistry;
 import org.springframework.boot.health.registry.DefaultReactiveHealthContributorRegistry;
+import org.springframework.mock.env.MockEnvironment;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -56,17 +63,29 @@ class GrpcServerHealthTests {
 
 	private static final ReactiveHealthIndicator REACTIVE_DOWN = () -> Mono.just(Health.down().build());
 
+	private HealthIndicatorExecutor healthIndicatorExecutor;
+
+	@BeforeEach
+	void setUp() {
+		this.healthIndicatorExecutor = new HealthIndicatorExecutor(new MockEnvironment());
+	}
+
+	@AfterEach
+	void tearDown() throws Exception {
+		this.healthIndicatorExecutor.destroy();
+	}
+
 	@Test
 	@SuppressWarnings("NullAway") // Test null check
 	void createWhenRegistryIsNullThrowsException() {
-		assertThatIllegalArgumentException().isThrownBy(() -> new GrpcServerHealth(null, null, mock()))
+		assertThatIllegalArgumentException().isThrownBy(() -> new GrpcServerHealth(null, null, mock(), mock()))
 			.withMessage("'registry' must not be null");
 	}
 
 	@Test
 	@SuppressWarnings("NullAway") // Test null check
 	void createWhenComponentsIsNullThrowsException() {
-		assertThatIllegalArgumentException().isThrownBy(() -> new GrpcServerHealth(mock(), null, null))
+		assertThatIllegalArgumentException().isThrownBy(() -> new GrpcServerHealth(mock(), null, null, mock()))
 			.withMessage("'components' must not be null");
 	}
 
@@ -90,7 +109,7 @@ class GrpcServerHealthTests {
 		HealthCheckedGrpcComponents components = new TestHealthCheckedGrpcComponents(server, Collections.emptyMap());
 		DefaultHealthContributorRegistry registry = new DefaultHealthContributorRegistry();
 		registry.registerContributor(indicatorName, indicator);
-		GrpcServerHealth health = new GrpcServerHealth(registry, null, components);
+		GrpcServerHealth health = new GrpcServerHealth(registry, null, components, this.healthIndicatorExecutor);
 		Map<String, ServingStatus> result = new LinkedHashMap<>();
 		health.update(result::put);
 		return result;
@@ -105,7 +124,7 @@ class GrpcServerHealthTests {
 		DefaultHealthContributorRegistry registry = new DefaultHealthContributorRegistry();
 		registry.registerContributor("up", UP);
 		registry.registerContributor("down", DOWN);
-		GrpcServerHealth health = new GrpcServerHealth(registry, null, components);
+		GrpcServerHealth health = new GrpcServerHealth(registry, null, components, this.healthIndicatorExecutor);
 		Map<String, ServingStatus> result = new LinkedHashMap<>();
 		health.update(result::put);
 		assertThat(result).containsExactly(entry("one", ServingStatus.SERVING),
@@ -122,7 +141,7 @@ class GrpcServerHealthTests {
 		HealthIndicator contributor = mock();
 		given(contributor.health(false)).willReturn(Health.up().build(), Health.down().build());
 		registry.registerContributor("test", contributor);
-		GrpcServerHealth health = new GrpcServerHealth(registry, null, components);
+		GrpcServerHealth health = new GrpcServerHealth(registry, null, components, this.healthIndicatorExecutor);
 		Map<String, ServingStatus> result = new LinkedHashMap<>();
 		health.update(result::put);
 		assertThat(result).containsExactly(entry("one", ServingStatus.SERVING), entry("two", ServingStatus.SERVING));
@@ -136,7 +155,7 @@ class GrpcServerHealthTests {
 		HealthCheckedGrpcComponents components = new TestHealthCheckedGrpcComponents(null, services);
 		DefaultHealthContributorRegistry registry = new DefaultHealthContributorRegistry();
 		registry.registerContributor("up", UP);
-		GrpcServerHealth health = new GrpcServerHealth(registry, null, components);
+		GrpcServerHealth health = new GrpcServerHealth(registry, null, components, this.healthIndicatorExecutor);
 		Map<String, ServingStatus> result = new LinkedHashMap<>();
 		health.update(result::put);
 		assertThat(result).containsExactly(entry("one", ServingStatus.SERVING));
@@ -155,7 +174,8 @@ class GrpcServerHealthTests {
 		registry.registerContributor("2", UP);
 		fallbackRegistry.registerContributor("2", REACTIVE_DOWN);
 		fallbackRegistry.registerContributor("3", REACTIVE_DOWN);
-		GrpcServerHealth health = new GrpcServerHealth(registry, fallbackRegistry, components);
+		GrpcServerHealth health = new GrpcServerHealth(registry, fallbackRegistry, components,
+				this.healthIndicatorExecutor);
 		Map<String, ServingStatus> result = new LinkedHashMap<>();
 		health.update(result::put);
 		assertThat(result).containsExactly(entry("one", ServingStatus.SERVING), entry("two", ServingStatus.SERVING),
@@ -170,7 +190,7 @@ class GrpcServerHealthTests {
 		HealthContributor contributor = CompositeHealthContributor.fromMap(Map.of("db1", UP, "db2", DOWN));
 		DefaultHealthContributorRegistry registry = new DefaultHealthContributorRegistry();
 		registry.registerContributor("dbs", contributor);
-		GrpcServerHealth health = new GrpcServerHealth(registry, null, components);
+		GrpcServerHealth health = new GrpcServerHealth(registry, null, components, this.healthIndicatorExecutor);
 		Map<String, ServingStatus> result = new LinkedHashMap<>();
 		health.update(result::put);
 		assertThat(result).containsExactly(entry("one", ServingStatus.NOT_SERVING));
@@ -184,7 +204,7 @@ class GrpcServerHealthTests {
 		HealthContributor contributor = CompositeHealthContributor.fromMap(Map.of("db1", UP, "db2", DOWN));
 		DefaultHealthContributorRegistry registry = new DefaultHealthContributorRegistry();
 		registry.registerContributor("dbs", contributor);
-		GrpcServerHealth health = new GrpcServerHealth(registry, null, components);
+		GrpcServerHealth health = new GrpcServerHealth(registry, null, components, this.healthIndicatorExecutor);
 		Map<String, ServingStatus> result = new LinkedHashMap<>();
 		health.update(result::put);
 		assertThat(result).containsExactly(entry("one", ServingStatus.SERVING));
@@ -201,7 +221,7 @@ class GrpcServerHealthTests {
 		HealthCheckedGrpcComponents components = new TestHealthCheckedGrpcComponents(null, services);
 		DefaultHealthContributorRegistry registry = new DefaultHealthContributorRegistry();
 		registry.registerContributor("up", UP);
-		GrpcServerHealth health = new GrpcServerHealth(registry, null, components);
+		GrpcServerHealth health = new GrpcServerHealth(registry, null, components, this.healthIndicatorExecutor);
 		Map<String, ServingStatus> result = new LinkedHashMap<>();
 		health.update(result::put);
 		assertThat(result).containsExactly(entry("one", ServingStatus.NOT_SERVING));
@@ -218,11 +238,55 @@ class GrpcServerHealthTests {
 		HealthCheckedGrpcComponents components = new TestHealthCheckedGrpcComponents(null, services);
 		DefaultHealthContributorRegistry registry = new DefaultHealthContributorRegistry();
 		registry.registerContributor("up", UP);
-		GrpcServerHealth health = new GrpcServerHealth(registry, null, components);
+		GrpcServerHealth health = new GrpcServerHealth(registry, null, components, this.healthIndicatorExecutor);
 		Map<String, ServingStatus> result = new LinkedHashMap<>();
 		health.update(result::put);
 		assertThat(result).containsExactly(entry("one", ServingStatus.UNRECOGNIZED));
 		then(statusMapper).should().getServingStatus(Status.UP);
+	}
+
+	@Test
+	void shouldApplyTimeoutToCompositeMember() throws Exception {
+		HealthIndicatorExecutor healthIndicatorExecutor = executorWithTimeout("management.health.dbs.slow.timeout");
+		try {
+			Map<String, HealthCheckedGrpcComponent> services = new LinkedHashMap<>();
+			services.put("one", new TestHealthCheckedGrpcComponent(Set.of("dbs", "dbs/fast", "dbs/slow")));
+			HealthCheckedGrpcComponents components = new TestHealthCheckedGrpcComponents(null, services);
+			HealthContributor contributor = CompositeHealthContributor
+				.fromMap(Map.of("fast", UP, "slow", slowIndicator()));
+			DefaultHealthContributorRegistry registry = new DefaultHealthContributorRegistry();
+			registry.registerContributor("dbs", contributor);
+			GrpcServerHealth health = new GrpcServerHealth(registry, null, components, healthIndicatorExecutor);
+			Map<String, ServingStatus> result = new LinkedHashMap<>();
+			health.update(result::put);
+			assertThat(result).containsExactly(entry("one", ServingStatus.NOT_SERVING));
+		}
+		finally {
+			healthIndicatorExecutor.destroy();
+		}
+	}
+
+	private static HealthIndicatorExecutor executorWithTimeout(String timeoutProperty) {
+		MockEnvironment environment = new MockEnvironment();
+		environment.setConversionService(new ApplicationConversionService());
+		environment.setProperty(timeoutProperty, "50ms");
+		return new HealthIndicatorExecutor(environment);
+	}
+
+	// Blocks until the timeout interrupts it. Reports UP if no timeout applies, so a
+	// missing timeout fails the test instead of hanging it.
+	private static HealthIndicator slowIndicator() {
+		CountDownLatch neverReleased = new CountDownLatch(1);
+		return () -> {
+			try {
+				neverReleased.await(10, TimeUnit.SECONDS);
+			}
+			catch (InterruptedException ex) {
+				Thread.currentThread().interrupt();
+				throw new IllegalStateException(ex);
+			}
+			return Health.up().build();
+		};
 	}
 
 	static class TestHealthCheckedGrpcComponents implements HealthCheckedGrpcComponents {

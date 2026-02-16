@@ -24,8 +24,13 @@ import org.springframework.util.Assert;
 /**
  * Adapts a {@link HealthIndicator} to a {@link ReactiveHealthIndicator} so that it can be
  * safely invoked in a reactive environment.
+ * <p>
+ * {@link ReactiveHealthIndicatorExecutor} recognizes the adapter and runs the blocking
+ * indicator, including its timeout support, on a pool which caps how many threads it can
+ * occupy, instead of using a thread of the application's shared scheduler.
  *
  * @author Stephane Nicoll
+ * @author Moritz Halbritter
  * @see ReactiveHealthContributor#adapt(HealthContributor)
  */
 class HealthIndicatorAdapter implements ReactiveHealthIndicator {
@@ -37,9 +42,22 @@ class HealthIndicatorAdapter implements ReactiveHealthIndicator {
 		this.delegate = delegate;
 	}
 
+	/**
+	 * Returns the adapted blocking indicator.
+	 * @return the adapted indicator
+	 */
+	HealthIndicator getDelegate() {
+		return this.delegate;
+	}
+
 	@Override
 	public Mono<Health> health() {
 		return Mono.fromCallable(this.delegate::health).subscribeOn(Schedulers.boundedElastic());
+	}
+
+	@Override
+	public Mono<Health> health(boolean includeDetails) {
+		return Mono.fromCallable(() -> this.delegate.health(includeDetails)).subscribeOn(Schedulers.boundedElastic());
 	}
 
 }

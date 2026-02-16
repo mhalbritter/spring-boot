@@ -16,6 +16,7 @@
 
 package org.springframework.boot.health.application;
 
+import java.time.Duration;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -29,6 +30,8 @@ import org.springframework.boot.health.contributor.AbstractHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.boot.health.contributor.Status;
+import org.springframework.boot.health.contributor.TimeoutAwareHealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutEnforcement;
 import org.springframework.util.Assert;
 
 /**
@@ -37,9 +40,10 @@ import org.springframework.util.Assert;
  *
  * @author Phillip Webb
  * @author Brian Clozel
+ * @author Moritz Halbritter
  * @since 4.0.0
  */
-public class AvailabilityStateHealthIndicator extends AbstractHealthIndicator {
+public class AvailabilityStateHealthIndicator extends AbstractHealthIndicator implements TimeoutAwareHealthIndicator {
 
 	private final ApplicationAvailability applicationAvailability;
 
@@ -78,7 +82,7 @@ public class AvailabilityStateHealthIndicator extends AbstractHealthIndicator {
 	}
 
 	@Override
-	protected void doHealthCheck(Health.Builder builder) throws Exception {
+	protected void doHealthCheck(Health.Builder builder) {
 		AvailabilityState state = getState(this.applicationAvailability);
 		Status status = this.statusMappings.get(state);
 		if (status == null) {
@@ -86,6 +90,16 @@ public class AvailabilityStateHealthIndicator extends AbstractHealthIndicator {
 		}
 		Assert.state(status != null, () -> "No mapping provided for " + state);
 		builder.status(status);
+	}
+
+	@Override
+	public TimeoutEnforcement getTimeoutEnforcement() {
+		return TimeoutEnforcement.INDICATOR;
+	}
+
+	@Override
+	public Health health(Duration timeout) {
+		return health();
 	}
 
 	/**

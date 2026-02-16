@@ -25,67 +25,50 @@ import jakarta.jms.ConnectionFactory;
 import jakarta.jms.JMSException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.convert.DurationStyle;
-import org.springframework.boot.health.contributor.AbstractHealthIndicator;
+import org.springframework.boot.health.contributor.AbstractTimeoutAwareHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutEnforcement;
 import org.springframework.core.log.LogMessage;
-import org.springframework.util.Assert;
 
 /**
  * {@link HealthIndicator} for a JMS {@link ConnectionFactory}.
  *
  * @author Stephane Nicoll
  * @author Venkata Naga Sai Srikanth Gollapudi
+ * @author Moritz Halbritter
  * @since 4.0.0
  */
-public class JmsHealthIndicator extends AbstractHealthIndicator {
+public class JmsHealthIndicator extends AbstractTimeoutAwareHealthIndicator {
 
-	/**
-	 * Default timeout to use when starting a connection for the health check.
-	 */
-	public static final Duration DEFAULT_START_TIMEOUT = Duration.ofSeconds(5);
+	private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(5);
 
-	private final Log logger = LogFactory.getLog(JmsHealthIndicator.class);
+	private static final Log logger = LogFactory.getLog(JmsHealthIndicator.class);
 
 	private final ConnectionFactory connectionFactory;
 
-	private final Duration startTimeout;
-
 	/**
-	 * Create a new {@link JmsHealthIndicator} instance with a
-	 * {@linkplain #DEFAULT_START_TIMEOUT default} start timeout.
-	 * @param connectionFactory the connection factory to use
+	 * Create a new {@link JmsHealthIndicator} instance.
+	 * @param connectionFactory the connection factory to check
 	 */
 	public JmsHealthIndicator(ConnectionFactory connectionFactory) {
-		this(connectionFactory, DEFAULT_START_TIMEOUT);
-	}
-
-	/**
-	 * Create a new {@link JmsHealthIndicator} instance with the given
-	 * {@code startTimeout}.
-	 * @param connectionFactory the connection factory to use
-	 * @param startTimeout timeout to use when starting a connection for the health check
-	 * @since 4.2.0
-	 */
-	public JmsHealthIndicator(ConnectionFactory connectionFactory, Duration startTimeout) {
-		super("JMS health check failed");
-		Assert.notNull(startTimeout, "'startTimeout' must not be null");
-		Assert.isTrue(startTimeout.compareTo(Duration.ZERO) > 0, "'startTimeout' must be greater than 0");
+		super(TimeoutEnforcement.FRAMEWORK, "JMS health check failed");
 		this.connectionFactory = connectionFactory;
-		this.startTimeout = startTimeout;
 	}
 
 	@Override
-	protected void doHealthCheck(Health.Builder builder) throws Exception {
+	protected void doHealthCheck(Health.Builder builder, @Nullable Duration timeout) throws Exception {
+		Duration effectiveTimeout = (timeout != null) ? timeout : DEFAULT_TIMEOUT;
 		try (Connection connection = this.connectionFactory.createConnection()) {
-			new MonitoredConnection(connection).start();
-			builder.up().withDetail("provider", connection.getMetaData().getJMSProviderName());
+			String provider = new MonitoredConnection(connection).startAndGetProvider(effectiveTimeout);
+			builder.up().withDetail("provider", provider);
 		}
 	}
 
-	private final class MonitoredConnection {
+	private static final class MonitoredConnection {
 
 		private final CountDownLatch latch = new CountDownLatch(1);
 
@@ -95,14 +78,13 @@ public class JmsHealthIndicator extends AbstractHealthIndicator {
 			this.connection = connection;
 		}
 
-		void start() throws JMSException {
-			Thread watchdog = new Thread(() -> {
+		String startAndGetProvider(Duration timeout) throws JMSException {
+			Thread watchdogThread = new Thread(() -> {
 				try {
-					Duration startTimeout1 = JmsHealthIndicator.this.startTimeout;
-					if (!this.latch.await(startTimeout1.toNanos(), TimeUnit.NANOSECONDS)) {
-						JmsHealthIndicator.this.logger
-							.warn(LogMessage.format("Connection failed to start within %s and will be closed.",
-									DurationStyle.SIMPLE.print(startTimeout1)));
+					if (!this.latch.await(timeout.toNanos(), TimeUnit.NANOSECONDS)) {
+						logger.warn(LogMessage.format(
+								"Connection failed to start or provide its metadata within %s and will be closed.",
+								DurationStyle.SIMPLE.print(timeout)));
 						closeConnection();
 					}
 				}
@@ -110,10 +92,11 @@ public class JmsHealthIndicator extends AbstractHealthIndicator {
 					Thread.currentThread().interrupt();
 				}
 			}, "jms-health-indicator");
-			watchdog.setDaemon(true);
-			watchdog.start();
+			watchdogThread.setDaemon(true);
+			watchdogThread.start();
 			try {
 				this.connection.start();
+				return this.connection.getMetaData().getJMSProviderName();
 			}
 			finally {
 				this.latch.countDown();

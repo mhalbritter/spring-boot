@@ -25,9 +25,11 @@ import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthContributor;
 import org.springframework.boot.health.contributor.HealthContributors;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.HealthIndicatorExecutor;
 import org.springframework.boot.health.contributor.ReactiveHealthContributor;
 import org.springframework.boot.health.contributor.ReactiveHealthContributors;
 import org.springframework.boot.health.contributor.ReactiveHealthIndicator;
+import org.springframework.boot.health.contributor.ReactiveHealthIndicatorExecutor;
 import org.springframework.boot.health.registry.HealthContributorRegistry;
 import org.springframework.boot.health.registry.ReactiveHealthContributorRegistry;
 import org.springframework.util.StringUtils;
@@ -59,10 +61,11 @@ sealed interface Contributor<H, D> extends Iterable<Contributor.Child<H, D>> {
 	/**
 	 * Get the health. Must only be called if {@link #isComposite()} returns
 	 * {@code false}.
-	 * @param includeDetails if details are to be included.
+	 * @param indicatorName the name of the indicator
+	 * @param includeDetails if details are to be included
 	 * @return the health
 	 */
-	@Nullable D getDescriptor(boolean includeDetails);
+	@Nullable D getDescriptor(String indicatorName, boolean includeDetails);
 
 	/**
 	 * Return an identifier for logging purposes.
@@ -84,25 +87,33 @@ sealed interface Contributor<H, D> extends Iterable<Contributor.Child<H, D>> {
 	 * Factory method to create a blocking {@link Contributor} from the given registries.
 	 * @param registry the source registry
 	 * @param fallbackRegistry the fallback registry or {@code null}
+	 * @param healthIndicatorExecutor the {@link HealthIndicatorExecutor} to execute
+	 * indicators on
 	 * @return a new {@link Contributor}
 	 */
 	static Blocking blocking(HealthContributorRegistry registry,
-			@Nullable ReactiveHealthContributorRegistry fallbackRegistry) {
-		return new Blocking((fallbackRegistry != null)
-				? HealthContributors.of(registry, fallbackRegistry.asHealthContributors()) : registry);
+			@Nullable ReactiveHealthContributorRegistry fallbackRegistry,
+			HealthIndicatorExecutor healthIndicatorExecutor) {
+		Object contributor = (fallbackRegistry != null)
+				? HealthContributors.of(registry, fallbackRegistry.asHealthContributors()) : registry;
+		return new Blocking(contributor, healthIndicatorExecutor);
 	}
 
 	/**
 	 * Factory method to create a reactive {@link Contributor} from the given registries.
 	 * @param registry the registry
 	 * @param fallbackRegistry the fallback registry or {@code null}
+	 * @param reactiveHealthIndicatorExecutor the {@link ReactiveHealthIndicatorExecutor}
+	 * to execute indicators on
 	 * @return a new {@link Contributor}
 	 */
 	static Reactive reactive(ReactiveHealthContributorRegistry registry,
-			@Nullable HealthContributorRegistry fallbackRegistry) {
-		return new Reactive((fallbackRegistry != null)
+			@Nullable HealthContributorRegistry fallbackRegistry,
+			ReactiveHealthIndicatorExecutor reactiveHealthIndicatorExecutor) {
+		Object contributor = (fallbackRegistry != null)
 				? ReactiveHealthContributors.of(registry, ReactiveHealthContributors.adapt(fallbackRegistry))
-				: registry);
+				: registry;
+		return new Reactive(contributor, reactiveHealthIndicatorExecutor);
 	}
 
 	/**
@@ -122,8 +133,11 @@ sealed interface Contributor<H, D> extends Iterable<Contributor.Child<H, D>> {
 	 * {@link HealthContributors} types.
 	 *
 	 * @param contributor the underlying contributor
+	 * @param healthIndicatorExecutor the {@link HealthIndicatorExecutor} to execute
+	 * indicators on
 	 */
-	record Blocking(Object contributor) implements Contributor<Health, HealthDescriptor> {
+	record Blocking(Object contributor,
+			HealthIndicatorExecutor healthIndicatorExecutor) implements Contributor<Health, HealthDescriptor> {
 
 		@Override
 		public boolean isComposite() {
@@ -133,19 +147,21 @@ sealed interface Contributor<H, D> extends Iterable<Contributor.Child<H, D>> {
 		@Override
 		public @Nullable Blocking getChild(String name) {
 			HealthContributor child = ((HealthContributors) contributor()).getContributor(name);
-			return (child != null) ? new Blocking(child) : null;
+			return (child != null) ? new Blocking(child, this.healthIndicatorExecutor) : null;
 		}
 
 		@Override
 		public Iterator<Child<Health, HealthDescriptor>> iterator() {
 			return ((HealthContributors) contributor()).stream()
-				.map((entry) -> new Child<>(entry.name(), new Blocking(entry.contributor())))
+				.map((entry) -> new Child<>(entry.name(),
+						new Blocking(entry.contributor(), this.healthIndicatorExecutor)))
 				.iterator();
 		}
 
 		@Override
-		public @Nullable HealthDescriptor getDescriptor(boolean includeDetails) {
-			Health health = ((HealthIndicator) contributor()).health(includeDetails);
+		public @Nullable HealthDescriptor getDescriptor(String indicatorName, boolean includeDetails) {
+			HealthIndicator healthIndicator = (HealthIndicator) contributor();
+			Health health = this.healthIndicatorExecutor.execute(healthIndicator, indicatorName, includeDetails).join();
 			return (health != null) ? new IndicatedHealthDescriptor(health) : null;
 		}
 
@@ -161,9 +177,12 @@ sealed interface Contributor<H, D> extends Iterable<Contributor.Child<H, D>> {
 	 * {@link ReactiveHealthContributors} types.
 	 *
 	 * @param contributor the underlying contributor
+	 * @param reactiveHealthIndicatorExecutor the {@link ReactiveHealthIndicatorExecutor}
+	 * to execute indicators on
 	 */
-	record Reactive(
-			Object contributor) implements Contributor<Mono<? extends Health>, Mono<? extends HealthDescriptor>> {
+	record Reactive(Object contributor, ReactiveHealthIndicatorExecutor reactiveHealthIndicatorExecutor)
+			implements
+				Contributor<Mono<? extends Health>, Mono<? extends HealthDescriptor>> {
 
 		@Override
 		public boolean isComposite() {
@@ -173,19 +192,22 @@ sealed interface Contributor<H, D> extends Iterable<Contributor.Child<H, D>> {
 		@Override
 		public @Nullable Reactive getChild(String name) {
 			ReactiveHealthContributor child = ((ReactiveHealthContributors) contributor()).getContributor(name);
-			return (child != null) ? new Reactive(child) : null;
+			return (child != null) ? new Reactive(child, this.reactiveHealthIndicatorExecutor) : null;
 		}
 
 		@Override
 		public Iterator<Child<Mono<? extends Health>, Mono<? extends HealthDescriptor>>> iterator() {
 			return ((ReactiveHealthContributors) contributor()).stream()
-				.map((entry) -> new Child<>(entry.name(), new Reactive(entry.contributor())))
+				.map((entry) -> new Child<>(entry.name(),
+						new Reactive(entry.contributor(), this.reactiveHealthIndicatorExecutor)))
 				.iterator();
 		}
 
 		@Override
-		public Mono<? extends HealthDescriptor> getDescriptor(boolean includeDetails) {
-			Mono<Health> health = ((ReactiveHealthIndicator) this.contributor).health(includeDetails);
+		public Mono<? extends HealthDescriptor> getDescriptor(String indicatorName, boolean includeDetails) {
+			ReactiveHealthIndicator healthIndicator = (ReactiveHealthIndicator) this.contributor;
+			Mono<Health> health = this.reactiveHealthIndicatorExecutor.execute(healthIndicator, indicatorName,
+					includeDetails);
 			return health.map(IndicatedHealthDescriptor::new);
 		}
 

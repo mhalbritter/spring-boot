@@ -18,18 +18,22 @@ package org.springframework.boot.health.contributor;
 
 import org.jspecify.annotations.Nullable;
 
+import org.springframework.util.Assert;
+
 /**
  * Adapts a {@link ReactiveHealthIndicator} to a {@link HealthIndicator}.
  *
  * @author Phillip Webb
  * @see ReactiveHealthIndicator#asHealthContributor()
+ * @see TimeoutAwareReactiveHealthIndicatorAdapter
  */
 class ReactiveHealthIndicatorAdapter implements HealthIndicator {
 
 	private final ReactiveHealthIndicator delegate;
 
-	ReactiveHealthIndicatorAdapter(ReactiveHealthIndicator indicator) {
-		this.delegate = indicator;
+	ReactiveHealthIndicatorAdapter(ReactiveHealthIndicator delegate) {
+		Assert.notNull(delegate, "'delegate' must not be null");
+		this.delegate = delegate;
 	}
 
 	@Override

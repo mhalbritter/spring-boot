@@ -16,6 +16,7 @@
 
 package org.springframework.boot.neo4j.health;
 
+import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
@@ -24,6 +25,7 @@ import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.SessionConfig;
+import org.neo4j.driver.TransactionConfig;
 import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.ServiceUnavailableException;
 import org.neo4j.driver.exceptions.SessionExpiredException;
@@ -46,6 +48,7 @@ import static org.mockito.Mockito.times;
  * @author Eric Spiegelberg
  * @author Stephane Nicoll
  * @author Michael Simons
+ * @author Moritz Halbritter
  */
 class Neo4jHealthIndicatorTests {
 
@@ -88,7 +91,7 @@ class Neo4jHealthIndicatorTests {
 		Session session = mock(Session.class);
 		Result statementResult = mockStatementResult(resultSummary, "4711", "some edition");
 		AtomicInteger count = new AtomicInteger();
-		given(session.run(anyString())).will((invocation) -> {
+		given(session.run(anyString(), any(TransactionConfig.class))).will((invocation) -> {
 			if (count.compareAndSet(0, 1)) {
 				throw new SessionExpiredException("Session expired");
 			}
@@ -112,6 +115,47 @@ class Neo4jHealthIndicatorTests {
 		assertThat(health.getDetails()).containsKeys("error");
 	}
 
+	@Test
+	void shouldApplyTimeoutAsTransactionTimeout() throws Exception {
+		Session session = mockSession();
+		Health health = new Neo4jHealthIndicator(mockDriver(session)).health(Duration.ofSeconds(5));
+		assertThat(health).isNotNull();
+		assertThat(health.getStatus()).isEqualTo(Status.UP);
+		then(session).should().run(Neo4jHealthIndicator.CYPHER, transactionConfig(Duration.ofSeconds(5)));
+	}
+
+	@Test
+	void shouldRoundTransactionTimeoutUpToWholeMilliseconds() throws Exception {
+		Session session = mockSession();
+		new Neo4jHealthIndicator(mockDriver(session)).health(Duration.ofNanos(1_500_000));
+		then(session).should().run(Neo4jHealthIndicator.CYPHER, transactionConfig(Duration.ofMillis(2)));
+	}
+
+	@Test
+	void shouldNotApplyTransactionTimeoutWithoutTimeout() {
+		Session session = mockSession();
+		new Neo4jHealthIndicator(mockDriver(session)).health();
+		then(session).should().run(Neo4jHealthIndicator.CYPHER, TransactionConfig.empty());
+	}
+
+	private TransactionConfig transactionConfig(Duration timeout) {
+		return TransactionConfig.builder().withTimeout(timeout).build();
+	}
+
+	private Session mockSession() {
+		ResultSummary resultSummary = ResultSummaryMock.createResultSummary("My Home", "test");
+		Result statementResult = mockStatementResult(resultSummary, "4711", "some edition");
+		Session session = mock(Session.class);
+		given(session.run(anyString(), any(TransactionConfig.class))).willReturn(statementResult);
+		return session;
+	}
+
+	private Driver mockDriver(Session session) {
+		Driver driver = mock(Driver.class);
+		given(driver.session(any(SessionConfig.class))).willReturn(session);
+		return driver;
+	}
+
 	private Result mockStatementResult(ResultSummary resultSummary, String version, String edition) {
 		Record record = mock(Record.class);
 		given(record.get("edition")).willReturn(Values.value(edition));
@@ -125,7 +169,7 @@ class Neo4jHealthIndicatorTests {
 	private Driver mockDriver(ResultSummary resultSummary, String version, String edition) {
 		Result statementResult = mockStatementResult(resultSummary, version, edition);
 		Session session = mock(Session.class);
-		given(session.run(anyString())).willReturn(statementResult);
+		given(session.run(anyString(), any(TransactionConfig.class))).willReturn(statementResult);
 		Driver driver = mock(Driver.class);
 		given(driver.session(any(SessionConfig.class))).willReturn(session);
 		return driver;

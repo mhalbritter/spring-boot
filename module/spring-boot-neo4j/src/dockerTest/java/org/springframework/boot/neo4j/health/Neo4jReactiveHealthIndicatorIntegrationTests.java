@@ -41,6 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Integration tests for {@link Neo4jReactiveHealthIndicator}.
  *
  * @author Phillip Webb
+ * @author Moritz Halbritter
  */
 @SpringBootTest
 @Testcontainers(disabledWithoutDocker = true)
@@ -64,6 +65,14 @@ class Neo4jReactiveHealthIndicatorIntegrationTests {
 	@Test
 	void health() {
 		Health health = this.healthIndicator.health(true).block(Duration.ofSeconds(20));
+		assertThat(health).isNotNull();
+		assertThat(health.getStatus()).isEqualTo(Status.UP);
+		assertThat(health.getDetails()).containsEntry("edition", "community");
+	}
+
+	@Test
+	void shouldBeUpWhenTimeoutIsConfigured() {
+		Health health = this.healthIndicator.health(Duration.ofSeconds(5), true).block(Duration.ofSeconds(20));
 		assertThat(health).isNotNull();
 		assertThat(health.getStatus()).isEqualTo(Status.UP);
 		assertThat(health.getDetails()).containsEntry("edition", "community");

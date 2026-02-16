@@ -16,21 +16,27 @@
 
 package org.springframework.boot.couchbase.health;
 
+import java.time.Duration;
+
 import com.couchbase.client.java.Cluster;
 import reactor.core.publisher.Mono;
 
 import org.springframework.boot.health.contributor.AbstractReactiveHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.ReactiveHealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutAwareReactiveHealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutEnforcement;
 
 /**
  * A {@link ReactiveHealthIndicator} for Couchbase.
  *
  * @author Mikalai Lushchytski
  * @author Stephane Nicoll
+ * @author Moritz Halbritter
  * @since 4.0.0
  */
-public class CouchbaseReactiveHealthIndicator extends AbstractReactiveHealthIndicator {
+public class CouchbaseReactiveHealthIndicator extends AbstractReactiveHealthIndicator
+		implements TimeoutAwareReactiveHealthIndicator {
 
 	private final Cluster cluster;
 
@@ -49,6 +55,16 @@ public class CouchbaseReactiveHealthIndicator extends AbstractReactiveHealthIndi
 			new CouchbaseHealth(diagnostics).applyTo(builder);
 			return builder.build();
 		});
+	}
+
+	@Override
+	public TimeoutEnforcement getTimeoutEnforcement() {
+		return TimeoutEnforcement.INDICATOR;
+	}
+
+	@Override
+	public Mono<Health> health(Duration timeout) {
+		return health();
 	}
 
 }

@@ -16,15 +16,20 @@
 
 package org.springframework.boot.health.autoconfigure.registry;
 
+import java.util.Map;
+
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.convert.ApplicationConversionService;
 import org.springframework.boot.health.autoconfigure.contributor.HealthContributorAutoConfiguration;
+import org.springframework.boot.health.contributor.CompositeHealthContributor;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthContributors;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.HealthIndicatorExecutor;
 import org.springframework.boot.health.contributor.ReactiveHealthContributors;
 import org.springframework.boot.health.contributor.ReactiveHealthIndicator;
 import org.springframework.boot.health.registry.DefaultHealthContributorRegistry;
@@ -115,6 +120,79 @@ class HealthContributorRegistryAutoConfigurationTests {
 				}));
 	}
 
+	@Test
+	void shouldFailToStartWhenTimeoutIsNotADuration() {
+		timeoutContextRunner().withPropertyValues("management.health.simple.timeout=nonsense")
+			.run((context) -> assertThat(context).hasFailed()
+				.getFailure()
+				.hasMessageContaining("Invalid timeout configured for health indicator 'simple'"));
+	}
+
+	@Test
+	void shouldFailToStartWhenTimeoutIsNotPositive() {
+		timeoutContextRunner().withPropertyValues("management.health.reactive.timeout=0s")
+			.run((context) -> assertThat(context).hasFailed()
+				.getFailure()
+				.hasMessageContaining("Invalid timeout configured for health indicator 'reactive'"));
+	}
+
+	@Test
+	void shouldStartWhenTimeoutsAreValid() {
+		timeoutContextRunner()
+			.withPropertyValues("management.health.simple.timeout=5s", "management.health.defaults.timeout=10s")
+			.run((context) -> assertThat(context).hasNotFailed());
+	}
+
+	@Test
+	void shouldFailToStartWhenTimeoutOfCompositeLeafIsInvalid() {
+		timeoutContextRunner().withUserConfiguration(CompositeHealthIndicatorConfiguration.class)
+			.withPropertyValues("management.health.composite.leaf.timeout=nonsense")
+			.run((context) -> assertThat(context).hasFailed()
+				.getFailure()
+				.hasMessageContaining("Invalid timeout configured for health indicator 'composite/leaf'"));
+	}
+
+	@Test
+	void shouldUseDefaultConcurrencyLimits() {
+		this.contextRunner
+			.run((context) -> assertThat(context.getBean(HealthIndicatorExecutor.class)).extracting("concurrencyLimits")
+				.hasFieldOrPropertyWithValue("detailed", 4)
+				.hasFieldOrPropertyWithValue("summary", 4));
+	}
+
+	@Test
+	void shouldApplyConfiguredConcurrencyLimits() {
+		this.contextRunner
+			.withPropertyValues("management.health.concurrency-limit.detailed=2",
+					"management.health.concurrency-limit.summary=3")
+			.run((context) -> assertThat(context.getBean(HealthIndicatorExecutor.class)).extracting("concurrencyLimits")
+				.hasFieldOrPropertyWithValue("detailed", 2)
+				.hasFieldOrPropertyWithValue("summary", 3));
+	}
+
+	@Test
+	void shouldFailToStartWhenConcurrencyLimitIsBelowOne() {
+		this.contextRunner.withPropertyValues("management.health.concurrency-limit.summary=0")
+			.run((context) -> assertThat(context).hasFailed()
+				.getFailure()
+				.rootCause()
+				.hasMessage("'summaryConcurrencyLimit' must be at least 1, but was 0"));
+	}
+
+	@Test
+	void shouldFailToStartWhenConcurrencyLimitIsNotANumber() {
+		this.contextRunner.withPropertyValues("management.health.concurrency-limit.detailed=many")
+			.run((context) -> assertThat(context).hasFailed()
+				.getFailure()
+				.hasStackTraceContaining(
+						"Failed to bind properties under 'management.health.concurrency-limit.detailed'"));
+	}
+
+	private ApplicationContextRunner timeoutContextRunner() {
+		return this.contextRunner.withInitializer(
+				(context) -> context.getEnvironment().setConversionService(new ApplicationConversionService()));
+	}
+
 	@Configuration(proxyBeanMethods = false)
 	static class HealthIndicatorsConfiguration {
 
@@ -131,6 +209,17 @@ class HealthContributorRegistryAutoConfigurationTests {
 		@Bean
 		ReactiveHealthIndicator reactiveHealthIndicator() {
 			return () -> Mono.just(Health.up().build());
+		}
+
+	}
+
+	@Configuration(proxyBeanMethods = false)
+	static class CompositeHealthIndicatorConfiguration {
+
+		@Bean
+		CompositeHealthContributor compositeHealthContributor() {
+			HealthIndicator leaf = () -> Health.up().build();
+			return CompositeHealthContributor.fromMap(Map.of("leaf", leaf));
 		}
 
 	}

@@ -16,11 +16,20 @@
 
 package org.springframework.boot.hazelcast.health;
 
-import com.hazelcast.core.HazelcastInstance;
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
-import org.springframework.boot.health.contributor.AbstractHealthIndicator;
+import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.transaction.TransactionOptions;
+import com.hazelcast.transaction.TransactionTimedOutException;
+import com.hazelcast.transaction.TransactionalTask;
+import org.jspecify.annotations.Nullable;
+
+import org.springframework.boot.health.contributor.AbstractTimeoutAwareHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutEnforcement;
 import org.springframework.util.Assert;
 
 /**
@@ -29,29 +38,54 @@ import org.springframework.util.Assert;
  * @author Dmytro Nosan
  * @author Stephane Nicoll
  * @author Tommy Karlsson
+ * @author Moritz Halbritter
  * @since 4.0.0
  */
-public class HazelcastHealthIndicator extends AbstractHealthIndicator {
+public class HazelcastHealthIndicator extends AbstractTimeoutAwareHealthIndicator {
 
 	private final HazelcastInstance hazelcast;
 
 	public HazelcastHealthIndicator(HazelcastInstance hazelcast) {
-		super("Hazelcast health check failed");
+		super(TimeoutEnforcement.FRAMEWORK, "Hazelcast health check failed");
 		Assert.notNull(hazelcast, "'hazelcast' must not be null");
 		this.hazelcast = hazelcast;
 	}
 
 	@Override
-	protected void doHealthCheck(Health.Builder builder) {
+	protected void doHealthCheck(Health.Builder builder, @Nullable Duration timeout) throws Exception {
 		if (!this.hazelcast.getLifecycleService().isRunning()) {
 			builder.down();
 			return;
 		}
-		this.hazelcast.executeTransaction((context) -> {
-			String uuid = this.hazelcast.getLocalEndpoint().getUuid().toString();
-			builder.up().withDetail("name", this.hazelcast.getName()).withDetail("uuid", uuid);
+		TransactionalTask<@Nullable Void> probe = (context) -> {
+			addDetails(builder);
 			return null;
-		});
+		};
+		if (timeout == null) {
+			this.hazelcast.executeTransaction(probe);
+			return;
+		}
+		TransactionOptions options = new TransactionOptions();
+		options.setTimeout(toTransactionTimeoutMillis(timeout), TimeUnit.MILLISECONDS);
+		try {
+			this.hazelcast.executeTransaction(options, probe);
+		}
+		catch (TransactionTimedOutException ex) {
+			TimeoutException timeoutException = new TimeoutException(ex.getMessage());
+			timeoutException.initCause(ex);
+			throw timeoutException;
+		}
+	}
+
+	private void addDetails(Health.Builder builder) {
+		String uuid = this.hazelcast.getLocalEndpoint().getUuid().toString();
+		builder.up().withDetail("name", this.hazelcast.getName()).withDetail("uuid", uuid);
+	}
+
+	private long toTransactionTimeoutMillis(Duration timeout) {
+		// A sub-millisecond timeout must not round down to 0, which Hazelcast reads as
+		// 'use the default timeout' of two minutes
+		return Math.max(1, timeout.toMillis());
 	}
 
 }

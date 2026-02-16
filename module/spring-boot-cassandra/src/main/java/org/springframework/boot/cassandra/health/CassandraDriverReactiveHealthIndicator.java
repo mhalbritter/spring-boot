@@ -16,6 +16,7 @@
 
 package org.springframework.boot.cassandra.health;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Optional;
 
@@ -28,6 +29,8 @@ import org.springframework.boot.health.contributor.AbstractReactiveHealthIndicat
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.ReactiveHealthIndicator;
 import org.springframework.boot.health.contributor.Status;
+import org.springframework.boot.health.contributor.TimeoutAwareReactiveHealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutEnforcement;
 import org.springframework.util.Assert;
 
 /**
@@ -36,9 +39,11 @@ import org.springframework.util.Assert;
  *
  * @author Alexandre Dutra
  * @author Tomasz Lelek
+ * @author Moritz Halbritter
  * @since 4.0.0
  */
-public class CassandraDriverReactiveHealthIndicator extends AbstractReactiveHealthIndicator {
+public class CassandraDriverReactiveHealthIndicator extends AbstractReactiveHealthIndicator
+		implements TimeoutAwareReactiveHealthIndicator {
 
 	private final CqlSession session;
 
@@ -61,6 +66,16 @@ public class CassandraDriverReactiveHealthIndicator extends AbstractReactiveHeal
 			nodeUp.map(Node::getCassandraVersion).ifPresent((version) -> builder.withDetail("version", version));
 			return builder.build();
 		});
+	}
+
+	@Override
+	public TimeoutEnforcement getTimeoutEnforcement() {
+		return TimeoutEnforcement.INDICATOR;
+	}
+
+	@Override
+	public Mono<Health> health(Duration timeout) {
+		return health();
 	}
 
 }

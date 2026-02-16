@@ -16,16 +16,24 @@
 
 package org.springframework.boot.mongodb.health;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 
+import com.mongodb.MongoOperationTimeoutException;
 import com.mongodb.reactivestreams.client.MongoClient;
+import com.mongodb.reactivestreams.client.MongoCluster;
 import org.bson.Document;
+import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import org.springframework.boot.health.contributor.AbstractReactiveHealthIndicator;
+import org.springframework.boot.health.contributor.AbstractTimeoutAwareReactiveHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.ReactiveHealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutEnforcement;
 import org.springframework.util.Assert;
 
 /**
@@ -33,9 +41,10 @@ import org.springframework.util.Assert;
  *
  * @author Yulin Qin
  * @author Seonwoo Jung
+ * @author Moritz Halbritter
  * @since 4.0.0
  */
-public class MongoReactiveHealthIndicator extends AbstractReactiveHealthIndicator {
+public class MongoReactiveHealthIndicator extends AbstractTimeoutAwareReactiveHealthIndicator {
 
 	private static final String ADMIN_DATABASE = "admin";
 
@@ -44,16 +53,26 @@ public class MongoReactiveHealthIndicator extends AbstractReactiveHealthIndicato
 	private final MongoClient mongoClient;
 
 	public MongoReactiveHealthIndicator(MongoClient mongoClient) {
-		super("Mongo health check failed");
+		super(TimeoutEnforcement.INDICATOR, "Mongo health check failed");
 		Assert.notNull(mongoClient, "'mongoClient' must not be null");
 		this.mongoClient = mongoClient;
 	}
 
 	@Override
-	protected Mono<Health> doHealthCheck(Health.Builder builder) {
-		Mono<List<String>> databases = Flux.from(this.mongoClient.listDatabaseNames()).collectList();
+	protected Mono<Health> doHealthCheck(Health.Builder builder, @Nullable Duration timeout) {
+		if (timeout == null) {
+			return performHealthCheck(builder, () -> this.mongoClient);
+		}
+		return Mono.defer(() -> {
+			long deadline = System.nanoTime() + timeout.toNanos();
+			return performHealthCheck(builder, () -> withRemainingTimeout(deadline));
+		}).onErrorMap(MongoOperationTimeoutException.class, this::asTimeoutException);
+	}
+
+	private Mono<Health> performHealthCheck(Health.Builder builder, Supplier<MongoCluster> cluster) {
+		Mono<List<String>> databases = Flux.from(cluster.get().listDatabaseNames()).collectList();
 		return databases.flatMap((databaseNames) -> Mono
-			.from(this.mongoClient.getDatabase(getDatabaseName(databaseNames)).runCommand(HELLO_COMMAND))
+			.from(cluster.get().getDatabase(getDatabaseName(databaseNames)).runCommand(HELLO_COMMAND))
 			.map((result) -> builder.up()
 				.withDetail("databases", databaseNames)
 				.withDetail("maxWireVersion", result.getInteger("maxWireVersion"))
@@ -65,6 +84,17 @@ public class MongoReactiveHealthIndicator extends AbstractReactiveHealthIndicato
 			return ADMIN_DATABASE;
 		}
 		return (!databases.isEmpty()) ? databases.get(0) : ADMIN_DATABASE;
+	}
+
+	private MongoCluster withRemainingTimeout(long deadline) {
+		long remaining = TimeUnit.NANOSECONDS.toMillis(deadline - System.nanoTime());
+		return this.mongoClient.withTimeout(Math.max(1, remaining), TimeUnit.MILLISECONDS);
+	}
+
+	private TimeoutException asTimeoutException(MongoOperationTimeoutException ex) {
+		TimeoutException timeoutException = new TimeoutException(ex.getMessage());
+		timeoutException.initCause(ex);
+		return timeoutException;
 	}
 
 }

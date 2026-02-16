@@ -20,10 +20,13 @@ import java.time.Duration;
 import java.util.Properties;
 
 import io.lettuce.core.RedisConnectionException;
+import org.awaitility.Awaitility;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
+import reactor.test.publisher.PublisherProbe;
 
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.Status;
@@ -136,6 +139,20 @@ class DataRedisReactiveHealthIndicatorTests {
 			.consumeNextWith((h) -> assertThat(h.getStatus()).isEqualTo(Status.DOWN))
 			.expectComplete()
 			.verify(Duration.ofSeconds(30));
+		then(redisConnection).should().closeLater();
+	}
+
+	@Test
+	void shouldCloseConnectionWhenCancelled() {
+		ReactiveRedisConnection redisConnection = mock(ReactiveRedisConnection.class);
+		given(redisConnection.closeLater()).willReturn(Mono.empty());
+		ReactiveServerCommands commands = mock(ReactiveServerCommands.class);
+		PublisherProbe<Properties> info = PublisherProbe.of(Mono.never());
+		given(commands.info("server")).willReturn(info.mono());
+		DataRedisReactiveHealthIndicator healthIndicator = createHealthIndicator(redisConnection, commands);
+		Disposable subscription = healthIndicator.health().subscribe();
+		Awaitility.await().atMost(Duration.ofSeconds(30)).until(info::wasSubscribed);
+		subscription.dispose();
 		then(redisConnection).should().closeLater();
 	}
 

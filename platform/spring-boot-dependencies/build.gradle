@@ -253,6 +253,9 @@ bom {
 				"java-driver-core"
 			]
 		}
+		links {
+			javadoc(version -> "https://apache.github.io/cassandra-java-driver/%s.%s.0/api".formatted(version.major(), version.minor()), "com.datastax.oss.driver")
+		}
 	}
 	library("Classmate", "1.7.3") {
 		group("com.fasterxml") {
@@ -2226,6 +2229,7 @@ bom {
 		}
 		links {
 			site("https://projectreactor.io")
+			javadoc("https://javadoc.io/doc/io.projectreactor/reactor-core/{version}", "reactor.core")
 			releaseNotes("https://github.com/reactor/reactor/releases/tag/{version}")
 			module("reactor-netty", ["reactor-netty", "reactor-netty", "reactor-netty-core", "reactor-netty-http"]) {
 				javadoc("https://projectreactor.io/docs/netty/{version}/api", "reactor.netty")

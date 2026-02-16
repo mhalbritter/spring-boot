@@ -16,6 +16,7 @@
 
 package org.springframework.boot.cassandra.health;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Optional;
 
@@ -27,6 +28,8 @@ import org.springframework.boot.health.contributor.AbstractHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.boot.health.contributor.Status;
+import org.springframework.boot.health.contributor.TimeoutAwareHealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutEnforcement;
 import org.springframework.util.Assert;
 
 /**
@@ -35,9 +38,10 @@ import org.springframework.util.Assert;
  *
  * @author Alexandre Dutra
  * @author Tomasz Lelek
+ * @author Moritz Halbritter
  * @since 4.0.0
  */
-public class CassandraDriverHealthIndicator extends AbstractHealthIndicator {
+public class CassandraDriverHealthIndicator extends AbstractHealthIndicator implements TimeoutAwareHealthIndicator {
 
 	private final CqlSession session;
 
@@ -52,11 +56,21 @@ public class CassandraDriverHealthIndicator extends AbstractHealthIndicator {
 	}
 
 	@Override
-	protected void doHealthCheck(Health.Builder builder) throws Exception {
+	protected void doHealthCheck(Health.Builder builder) {
 		Collection<Node> nodes = this.session.getMetadata().getNodes().values();
 		Optional<Node> nodeUp = nodes.stream().filter((node) -> node.getState() == NodeState.UP).findAny();
 		builder.status(nodeUp.isPresent() ? Status.UP : Status.DOWN);
 		nodeUp.map(Node::getCassandraVersion).ifPresent((version) -> builder.withDetail("version", version));
+	}
+
+	@Override
+	public TimeoutEnforcement getTimeoutEnforcement() {
+		return TimeoutEnforcement.INDICATOR;
+	}
+
+	@Override
+	public Health health(Duration timeout) {
+		return health();
 	}
 
 }

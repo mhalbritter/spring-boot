@@ -16,19 +16,29 @@
 
 package org.springframework.boot.elasticsearch.health;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
+import co.elastic.clients.transport.rest5_client.low_level.Cancellable;
 import co.elastic.clients.transport.rest5_client.low_level.Request;
 import co.elastic.clients.transport.rest5_client.low_level.Response;
+import co.elastic.clients.transport.rest5_client.low_level.ResponseListener;
 import co.elastic.clients.transport.rest5_client.low_level.Rest5Client;
 import org.apache.hc.core5.http.HttpStatus;
+import org.jspecify.annotations.Nullable;
 
-import org.springframework.boot.health.contributor.AbstractHealthIndicator;
+import org.springframework.boot.health.contributor.AbstractTimeoutAwareHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.boot.health.contributor.Status;
+import org.springframework.boot.health.contributor.TimeoutEnforcement;
 import org.springframework.boot.json.JsonParser;
 import org.springframework.boot.json.JsonParserFactory;
 import org.springframework.util.StreamUtils;
@@ -39,9 +49,14 @@ import org.springframework.util.StreamUtils;
  * @author Artsiom Yudovin
  * @author Brian Clozel
  * @author Filip Hrisafov
+ * @author Moritz Halbritter
  * @since 4.0.0
  */
-public class ElasticsearchRestClientHealthIndicator extends AbstractHealthIndicator {
+public class ElasticsearchRestClientHealthIndicator extends AbstractTimeoutAwareHealthIndicator {
+
+	private static final String CLUSTER_HEALTH_ENDPOINT = "/_cluster/health/";
+
+	private static final String STATUS_FIELD = "status";
 
 	private static final String RED_STATUS = "red";
 
@@ -50,28 +65,66 @@ public class ElasticsearchRestClientHealthIndicator extends AbstractHealthIndica
 	private final JsonParser jsonParser;
 
 	public ElasticsearchRestClientHealthIndicator(Rest5Client client) {
-		super("Elasticsearch health check failed");
+		super(TimeoutEnforcement.INDICATOR, "Elasticsearch health check failed");
 		this.client = client;
 		this.jsonParser = JsonParserFactory.getJsonParser();
 	}
 
 	@Override
-	protected void doHealthCheck(Health.Builder builder) throws Exception {
-		Response response = this.client.performRequest(new Request("GET", "/_cluster/health/"));
+	protected void doHealthCheck(Health.Builder builder, @Nullable Duration timeout) throws Exception {
+		Request request = new Request("GET", CLUSTER_HEALTH_ENDPOINT);
+		Response response = (timeout != null) ? performAsyncRequest(request, timeout)
+				: this.client.performRequest(request);
+		handleResponse(builder, response);
+	}
+
+	private Response performAsyncRequest(Request request, Duration timeout) throws Exception {
+		CompletableFuture<Response> result = new CompletableFuture<>();
+		Cancellable cancellable = this.client.performRequestAsync(request, new ResponseListener() {
+
+			@Override
+			public void onSuccess(Response response) {
+				result.complete(response);
+			}
+
+			@Override
+			public void onFailure(Exception ex) {
+				result.completeExceptionally(ex);
+			}
+
+		});
+		try {
+			return result.get(timeout.toNanos(), TimeUnit.NANOSECONDS);
+		}
+		catch (TimeoutException | InterruptedException ex) {
+			cancellable.cancel();
+			if (ex instanceof InterruptedException) {
+				Thread.currentThread().interrupt();
+			}
+			throw ex;
+		}
+		catch (ExecutionException ex) {
+			throw (ex.getCause() instanceof Exception cause) ? cause : ex;
+		}
+	}
+
+	private void handleResponse(Health.Builder builder, Response response) throws IOException {
 		if (response.getStatusCode() != HttpStatus.SC_OK) {
 			builder.down();
 			builder.withDetail("statusCode", response.getStatusCode());
 			builder.withDetail("warnings", response.getWarnings());
 			return;
 		}
+		// Safe to read after the deadline has passed: the asynchronous response consumer
+		// hands over a fully buffered entity, so getContent() does no I/O
 		try (InputStream inputStream = response.getEntity().getContent()) {
-			doHealthCheck(builder, StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8));
+			parseClusterHealth(builder, StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8));
 		}
 	}
 
-	private void doHealthCheck(Health.Builder builder, String json) {
+	private void parseClusterHealth(Health.Builder builder, String json) {
 		Map<String, Object> response = this.jsonParser.parseMap(json);
-		String status = (String) response.get("status");
+		String status = (String) response.get(STATUS_FIELD);
 		builder.status((RED_STATUS.equals(status)) ? Status.OUT_OF_SERVICE : Status.UP);
 		builder.withDetails(response);
 	}

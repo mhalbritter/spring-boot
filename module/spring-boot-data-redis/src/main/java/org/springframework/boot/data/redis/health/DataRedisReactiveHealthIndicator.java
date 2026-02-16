@@ -36,6 +36,7 @@ import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
  * @author Mark Paluch
  * @author Artsiom Yudovin
  * @author Scott Frederick
+ * @author Moritz Halbritter
  * @since 4.0.0
  */
 public class DataRedisReactiveHealthIndicator extends AbstractReactiveHealthIndicator {
@@ -49,7 +50,8 @@ public class DataRedisReactiveHealthIndicator extends AbstractReactiveHealthIndi
 
 	@Override
 	protected Mono<Health> doHealthCheck(Health.Builder builder) {
-		return getConnection().flatMap((connection) -> doHealthCheck(builder, connection));
+		return Mono.usingWhen(getConnection(), (connection) -> doHealthCheck(builder, connection),
+				ReactiveRedisConnection::closeLater);
 	}
 
 	private Mono<ReactiveRedisConnection> getConnection() {
@@ -58,8 +60,7 @@ public class DataRedisReactiveHealthIndicator extends AbstractReactiveHealthIndi
 	}
 
 	private Mono<Health> doHealthCheck(Health.Builder builder, ReactiveRedisConnection connection) {
-		return getHealth(builder, connection).onErrorResume((ex) -> Mono.just(builder.down(ex).build()))
-			.flatMap((health) -> connection.closeLater().thenReturn(health));
+		return getHealth(builder, connection).onErrorResume((ex) -> Mono.just(builder.down(ex).build()));
 	}
 
 	private Mono<Health> getHealth(Health.Builder builder, ReactiveRedisConnection connection) {

@@ -16,19 +16,32 @@
 
 package org.springframework.boot.health.contributor;
 
+import java.time.Duration;
+
 /**
  * Auto-configured {@link HealthIndicator} that always returns {@link Status#UP}.
  *
  * @author Dave Syer
  * @author Christian Dupuis
+ * @author Moritz Halbritter
  * @since 4.0.0
  * @see Status#UP
  */
-public class PingHealthIndicator extends AbstractHealthIndicator {
+public class PingHealthIndicator extends AbstractHealthIndicator implements TimeoutAwareHealthIndicator {
 
 	@Override
-	protected void doHealthCheck(Health.Builder builder) throws Exception {
+	protected void doHealthCheck(Health.Builder builder) {
 		builder.up();
+	}
+
+	@Override
+	public TimeoutEnforcement getTimeoutEnforcement() {
+		return TimeoutEnforcement.INDICATOR;
+	}
+
+	@Override
+	public Health health(Duration timeout) {
+		return health();
 	}
 
 }
