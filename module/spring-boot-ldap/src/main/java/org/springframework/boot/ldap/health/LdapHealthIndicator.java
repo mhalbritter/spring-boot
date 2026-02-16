@@ -21,12 +21,19 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.boot.health.contributor.AbstractHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutEnforcement;
 import org.springframework.ldap.core.ContextExecutor;
 import org.springframework.ldap.core.LdapOperations;
 import org.springframework.util.Assert;
 
 /**
  * {@link HealthIndicator} for configured LDAP server(s).
+ * <p>
+ * A configured health timeout is capped by Spring Boot
+ * ({@link TimeoutEnforcement#FRAMEWORK}), which can only interrupt the check. Limit the
+ * blocking LDAP work itself with your {@link LdapOperations} / context source and JNDI
+ * environment (for example, {@code com.sun.jndi.ldap.connect.timeout} and
+ * {@code com.sun.jndi.ldap.read.timeout} when using the JDK LDAP provider).
  *
  * @author Eddú Meléndez
  * @author Stephane Nicoll

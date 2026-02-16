@@ -7,6 +7,11 @@
       "defaultValue": true
     },
     {
+      "name": "management.health.db.timeout",
+      "type": "java.time.Duration",
+      "description": "Timeout for the database health check."
+    },
+    {
       "name": "spring.datasource.connection-fetch",
       "type": "java.lang.String",
       "description": "Whether the auto-configured DataSource should be wrapped in a proxy that fetches JDBC connections as late as possible.",

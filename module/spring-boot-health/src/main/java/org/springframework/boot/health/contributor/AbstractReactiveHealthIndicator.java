@@ -29,6 +29,9 @@ import org.springframework.util.StringUtils;
 /**
  * Base {@link ReactiveHealthIndicator} implementations that encapsulates creation of
  * {@link Health} instance and error handling.
+ * <p>
+ * To bound the check with the client's own timeout, extend
+ * {@link AbstractTimeoutEnforcingReactiveHealthIndicator} instead.
  *
  * @author Stephane Nicoll
  * @author Nikolay Rybak
@@ -84,14 +87,14 @@ public abstract class AbstractReactiveHealthIndicator implements ReactiveHealthI
 		}
 	}
 
-	private void logExceptionIfPresent(@Nullable Throwable ex) {
+	void logExceptionIfPresent(@Nullable Throwable ex) {
 		if (ex != null && this.logger.isWarnEnabled()) {
 			String message = (ex instanceof Exception) ? this.healthCheckFailedMessage.apply(ex) : null;
 			this.logger.warn(StringUtils.hasText(message) ? message : DEFAULT_MESSAGE, ex);
 		}
 	}
 
-	private Mono<Health> handleFailure(Throwable ex) {
+	Mono<Health> handleFailure(Throwable ex) {
 		logExceptionIfPresent(ex);
 		return Mono.just(new Health.Builder().down(ex).build());
 	}

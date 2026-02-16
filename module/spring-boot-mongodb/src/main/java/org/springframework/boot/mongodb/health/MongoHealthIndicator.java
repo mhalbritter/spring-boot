@@ -16,13 +16,21 @@
 
 package org.springframework.boot.mongodb.health;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
+import com.mongodb.MongoExecutionTimeoutException;
+import com.mongodb.MongoTimeoutException;
+import com.mongodb.client.ListDatabasesIterable;
 import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
+import org.jspecify.annotations.Nullable;
 
-import org.springframework.boot.health.contributor.AbstractHealthIndicator;
+import org.springframework.boot.health.contributor.AbstractTimeoutEnforcingHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.util.Assert;
@@ -33,9 +41,10 @@ import org.springframework.util.Assert;
  *
  * @author Christian Dupuis
  * @author Seonwoo Jung
+ * @author Moritz Halbritter
  * @since 4.0.0
  */
-public class MongoHealthIndicator extends AbstractHealthIndicator {
+public class MongoHealthIndicator extends AbstractTimeoutEnforcingHealthIndicator {
 
 	private static final String ADMIN_DATABASE = "admin";
 
@@ -50,10 +59,29 @@ public class MongoHealthIndicator extends AbstractHealthIndicator {
 	}
 
 	@Override
-	protected void doHealthCheck(Health.Builder builder) throws Exception {
+	protected void doHealthCheck(Health.Builder builder, @Nullable Duration timeout) throws Exception {
+		try {
+			performHealthCheck(builder, timeout);
+		}
+		catch (MongoTimeoutException | MongoExecutionTimeoutException ex) {
+			TimeoutException timeoutException = new TimeoutException(ex.getMessage());
+			timeoutException.initCause(ex);
+			throw timeoutException;
+		}
+	}
+
+	private void performHealthCheck(Health.Builder builder, @Nullable Duration timeout) {
 		List<String> databases = new ArrayList<>();
-		this.mongoClient.listDatabaseNames().forEach(databases::add);
-		Document result = this.mongoClient.getDatabase(getDatabaseName(databases)).runCommand(HELLO_COMMAND);
+		ListDatabasesIterable<Document> listDatabases = this.mongoClient.listDatabases();
+		if (timeout != null) {
+			listDatabases = listDatabases.maxTime(toMaxTimeMillis(timeout), TimeUnit.MILLISECONDS);
+		}
+		listDatabases.forEach((database) -> databases.add(database.getString("name")));
+		MongoDatabase mongoDatabase = this.mongoClient.getDatabase(getDatabaseName(databases));
+		if (timeout != null) {
+			mongoDatabase = mongoDatabase.withTimeout(toMaxTimeMillis(timeout), TimeUnit.MILLISECONDS);
+		}
+		Document result = mongoDatabase.runCommand(HELLO_COMMAND);
 		builder.up()
 			.withDetail("databases", databases)
 			.withDetail("maxWireVersion", result.getInteger("maxWireVersion"));
@@ -64,6 +92,17 @@ public class MongoHealthIndicator extends AbstractHealthIndicator {
 			return ADMIN_DATABASE;
 		}
 		return (!databases.isEmpty()) ? databases.get(0) : ADMIN_DATABASE;
+	}
+
+	/**
+	 * Converts a {@link Duration} to a positive {@code maxTime} / client operation
+	 * timeout in whole milliseconds (minimum {@code 1}).
+	 * @param timeout the timeout
+	 * @return timeout in milliseconds
+	 */
+	private long toMaxTimeMillis(Duration timeout) {
+		long millis = timeout.toMillis();
+		return Math.max(1, millis);
 	}
 
 }

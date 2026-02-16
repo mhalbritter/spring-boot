@@ -1,0 +1,212 @@
+/*
+ * Copyright 2012-present the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.springframework.boot.health.contributor;
+
+import java.time.Duration;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
+import reactor.util.context.Context;
+
+import org.springframework.boot.health.contributor.HealthIndicatorTimeouts.InvalidTimeoutException;
+import org.springframework.boot.health.contributor.InFlightExecutions.Check;
+import org.springframework.boot.health.contributor.InFlightExecutions.Execution;
+import org.springframework.boot.health.contributor.InFlightExecutions.Key;
+import org.springframework.boot.health.contributor.InFlightExecutions.TooManyChecksInFlightException;
+import org.springframework.util.Assert;
+
+/**
+ * Allows to execute {@link ReactiveHealthIndicator ReactiveHealthIndicators} with a
+ * timeout.
+ *
+ * @author Moritz Halbritter
+ * @since 4.2.0
+ */
+public class ReactiveHealthIndicatorExecutor {
+
+	private static final Log logger = LogFactory.getLog(ReactiveHealthIndicatorExecutor.class);
+
+	private final InFlightExecutions<SharedCheck> inFlight = new InFlightExecutions<>();
+
+	private final HealthIndicatorTimeouts timeouts;
+
+	private final HealthIndicatorExecutor blockingExecutor;
+
+	/**
+	 * Creates a new instance.
+	 * @param blockingExecutor the executor to run adapted blocking indicators on, and the
+	 * source of the configured timeouts
+	 */
+	public ReactiveHealthIndicatorExecutor(HealthIndicatorExecutor blockingExecutor) {
+		Assert.notNull(blockingExecutor, "'blockingExecutor' must not be null");
+		this.blockingExecutor = blockingExecutor;
+		this.timeouts = blockingExecutor.getTimeouts();
+	}
+
+	/**
+	 * Executes a {@link ReactiveHealthIndicator} with a timeout if necessary. Never
+	 * throws and never signals an error: a timeout, an invalid timeout configuration or
+	 * any other failure of the indicator is turned into {@link Health#down()} with a
+	 * {@code reason} detail.
+	 * <p>
+	 * The {@code reason} and the exception are details, so a caller which does not ask
+	 * for details is told no more than {@link Health#down()}.
+	 * @param reactiveHealthIndicator the indicator to execute
+	 * @param indicatorName the name of the indicator
+	 * @param includeDetails whether to include details
+	 * @return the health
+	 */
+	public Mono<Health> execute(ReactiveHealthIndicator reactiveHealthIndicator, String indicatorName,
+			boolean includeDetails) {
+		Mono<Health> health = Mono.defer(() -> doExecute(reactiveHealthIndicator, indicatorName, includeDetails));
+		return safeguard(health, indicatorName, includeDetails);
+	}
+
+	private Mono<Health> doExecute(ReactiveHealthIndicator reactiveHealthIndicator, String indicatorName,
+			boolean includeDetails) {
+		if (reactiveHealthIndicator instanceof HealthIndicatorAdapter adapted) {
+			return executeBlocking(adapted, indicatorName, includeDetails);
+		}
+		Duration timeout = this.timeouts.get(indicatorName);
+		if (timeout == null) {
+			return reactiveHealthIndicator.health(includeDetails);
+		}
+		return switch (reactiveHealthIndicator.getTimeoutEnforcement()) {
+			case INDICATOR -> reactiveHealthIndicator.health(timeout, includeDetails);
+			case FRAMEWORK -> joinOrStart(reactiveHealthIndicator, indicatorName, timeout, includeDetails);
+		};
+	}
+
+	/**
+	 * Shares a single check between all callers of the same indicator, bounded by a
+	 * timeout the framework applies: the indicator is not told about it and is asked for
+	 * its health as if none was configured.
+	 * @param indicator the indicator to execute
+	 * @param indicatorName the name of the indicator
+	 * @param timeout the timeout
+	 * @param includeDetails whether to include details
+	 * @return the shared health, or a {@code concurrency-limit} {@link Health#down()} if
+	 * the indicator has too many checks in flight
+	 */
+	private Mono<Health> joinOrStart(ReactiveHealthIndicator indicator, String indicatorName, Duration timeout,
+			boolean includeDetails) {
+		Key key = new Key(indicatorName, includeDetails);
+		return Mono.defer(() -> {
+			Execution<SharedCheck> execution;
+			try {
+				execution = this.inFlight.join(key, timeout,
+						() -> new SharedCheck(() -> indicator.health(includeDetails), timeout,
+								() -> this.inFlight.finished(key)));
+			}
+			catch (TooManyChecksInFlightException ex) {
+				return Mono.just(DownHealth.of(ex, DownReason.CONCURRENCY_LIMIT, includeDetails));
+			}
+			// The check is bounded by its own deadline, so a caller only subscribes to
+			// the shared result: all callers of a check report the same health at the
+			// same moment.
+			return execution.check().health();
+		});
+	}
+
+	/**
+	 * Runs an adapted blocking indicator on the blocking executor, timeout included.
+	 * @param adapted the adapted indicator
+	 * @param indicatorName the name of the indicator
+	 * @param includeDetails whether to include details
+	 * @return the health
+	 */
+	// The pool of the blocking executor caps how many threads an indicator can occupy,
+	// whereas the adapter subscribes on Schedulers.boundedElastic(), where a check which
+	// blocks forever takes a thread of the scheduler the whole application shares, on
+	// every probe. Delegating also makes an indicator answer the same way in a servlet
+	// and in a reactive application.
+	private Mono<Health> executeBlocking(HealthIndicatorAdapter adapted, String indicatorName, boolean includeDetails) {
+		return Mono.fromFuture(() -> this.blockingExecutor.execute(adapted.getDelegate(), indicatorName, includeDetails,
+				ThreadingMode.POOL));
+	}
+
+	private Mono<Health> safeguard(Mono<Health> health, String indicatorName, boolean includeDetails) {
+		return health.onErrorResume((ex) -> Mono.just(toDownHealth(ex, indicatorName, includeDetails)));
+	}
+
+	private Health toDownHealth(Throwable ex, String indicatorName, boolean includeDetails) {
+		TimeoutException timeout = HealthIndicatorExecutor.asTimeout(ex);
+		if (timeout != null) {
+			return DownHealth.of(timeout, DownReason.TIMEOUT, includeDetails);
+		}
+		if (ex instanceof InvalidTimeoutException) {
+			return DownHealth.logged(logger, ex, DownReason.INVALID_TIMEOUT, indicatorName, includeDetails);
+		}
+		return DownHealth.logged(logger, ex, DownReason.EXECUTION_FAILED, indicatorName, includeDetails);
+	}
+
+	/**
+	 * A check which is subscribed to once, when it is created, and whose result is
+	 * replayed to every caller joined to it.
+	 * <p>
+	 * The check runs with an empty {@link Context}: it is shared between callers, so
+	 * handing it the context of whichever caller happened to start it would report one
+	 * caller's result to another. A blocking check runs on a pool thread and carries
+	 * nothing of its caller either.
+	 */
+	private static final class SharedCheck implements Check {
+
+		private final Sinks.One<Health> result = Sinks.one();
+
+		private final AtomicBoolean ended = new AtomicBoolean();
+
+		private final Supplier<Mono<Health>> source;
+
+		private final Duration timeout;
+
+		private final Runnable onEnd;
+
+		private SharedCheck(Supplier<Mono<Health>> source, Duration timeout, Runnable onEnd) {
+			this.source = source;
+			this.timeout = timeout;
+			this.onEnd = onEnd;
+		}
+
+		@Override
+		public void start() {
+			this.source.get().timeout(this.timeout).doFinally((signal) -> {
+				this.ended.set(true);
+				this.onEnd.run();
+			}).subscribe(this.result::tryEmitValue, this.result::tryEmitError, this.result::tryEmitEmpty);
+		}
+
+		/**
+		 * Returns the result of the check.
+		 * @return the result
+		 */
+		private Mono<Health> health() {
+			return this.result.asMono();
+		}
+
+		@Override
+		public boolean hasEnded() {
+			return this.ended.get();
+		}
+
+	}
+
+}

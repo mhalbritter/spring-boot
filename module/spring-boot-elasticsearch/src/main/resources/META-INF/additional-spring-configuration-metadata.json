@@ -26,6 +26,11 @@
       }
     },
     {
+      "name": "management.health.elasticsearch.timeout",
+      "type": "java.time.Duration",
+      "description": "Timeout for the Elasticsearch health check."
+    },
+    {
       "name": "spring.elasticsearch.jest.connection-timeout",
       "type": "java.time.Duration",
       "description": "Connection timeout.",

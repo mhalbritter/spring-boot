@@ -16,14 +16,18 @@
 
 package org.springframework.boot.health.contributor;
 
+import java.time.Duration;
+
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * Tests for {@link HealthIndicator}.
  *
  * @author Phillip Webb
+ * @author Moritz Halbritter
  */
 class HealthIndicatorTests {
 
@@ -43,6 +47,20 @@ class HealthIndicatorTests {
 		assertThat(health).isNotNull();
 		assertThat(health.getStatus()).isEqualTo(Status.UP);
 		assertThat(health.getDetails()).isEmpty();
+	}
+
+	@Test
+	void getTimeoutEnforcementDefaultsToFramework() {
+		assertThat(this.indicator.getTimeoutEnforcement()).isEqualTo(TimeoutEnforcement.FRAMEWORK);
+	}
+
+	@Test
+	void getHealthWithTimeoutThrowsWhenNotOverridden() {
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+			.isThrownBy(() -> this.indicator.health(Duration.ofSeconds(1)))
+			.withMessageContaining("doesn't override health(Duration)");
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+			.isThrownBy(() -> this.indicator.health(Duration.ofSeconds(1), true));
 	}
 
 }

@@ -26,6 +26,8 @@ import org.springframework.util.Assert;
 
 /**
  * {@link HealthIndicator} for Couchbase.
+ * <p>
+ * The check uses {@link Cluster#diagnostics() passive diagnostics} only.
  *
  * @author Eddú Meléndez
  * @author Stephane Nicoll
@@ -46,7 +48,7 @@ public class CouchbaseHealthIndicator extends AbstractHealthIndicator {
 	}
 
 	@Override
-	protected void doHealthCheck(Health.Builder builder) throws Exception {
+	protected void doHealthCheck(Health.Builder builder) {
 		DiagnosticsResult diagnostics = this.cluster.diagnostics();
 		new CouchbaseHealth(diagnostics).applyTo(builder);
 	}

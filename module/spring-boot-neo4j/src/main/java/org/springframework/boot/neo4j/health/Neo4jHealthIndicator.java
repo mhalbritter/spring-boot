@@ -16,31 +16,43 @@
 
 package org.springframework.boot.neo4j.health;
 
+import java.time.Duration;
+import java.util.concurrent.TimeoutException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.SessionConfig;
+import org.neo4j.driver.TransactionConfig;
+import org.neo4j.driver.exceptions.ConnectionReadTimeoutException;
 import org.neo4j.driver.exceptions.SessionExpiredException;
+import org.neo4j.driver.exceptions.TransactionTerminatedException;
 import org.neo4j.driver.summary.ResultSummary;
 
-import org.springframework.boot.health.contributor.AbstractHealthIndicator;
+import org.springframework.boot.health.contributor.AbstractTimeoutEnforcingHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
-import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutEnforcement;
 
 /**
- * {@link HealthIndicator} that tests the status of a Neo4j by executing a Cypher
- * statement and extracting server and database information.
+ * {@link org.springframework.boot.health.contributor.HealthIndicator} that tests the
+ * status of a Neo4j by executing a Cypher statement and extracting server and database
+ * information.
+ * <p>
+ * This indicator uses {@link TimeoutEnforcement#INDICATOR}: when a health timeout is
+ * configured, it is applied to the Cypher health check with
+ * {@link TransactionConfig#timeout()}.
  *
  * @author Eric Spiegelberg
  * @author Stephane Nicoll
  * @author Michael J. Simons
  * @since 4.0.0
  */
-public class Neo4jHealthIndicator extends AbstractHealthIndicator {
+public class Neo4jHealthIndicator extends AbstractTimeoutEnforcingHealthIndicator {
 
 	private static final Log logger = LogFactory.getLog(Neo4jHealthIndicator.class);
 
@@ -72,31 +84,50 @@ public class Neo4jHealthIndicator extends AbstractHealthIndicator {
 	}
 
 	@Override
-	protected void doHealthCheck(Health.Builder builder) {
+	protected void doHealthCheck(Health.Builder builder, @Nullable Duration timeout) throws Exception {
 		try {
-			try {
-				runHealthCheckQuery(builder);
-			}
-			catch (SessionExpiredException ex) {
-				// Retry one time when the session has been expired
-				logger.warn(MESSAGE_SESSION_EXPIRED);
-				runHealthCheckQuery(builder);
-			}
+			executeWithSessionRetry(builder, timeout);
 		}
-		catch (Exception ex) {
-			builder.down().withException(ex);
+		catch (TransactionTerminatedException | ConnectionReadTimeoutException ex) {
+			TimeoutException timeoutException = new TimeoutException(ex.getMessage());
+			timeoutException.initCause(ex);
+			throw timeoutException;
 		}
 	}
 
-	private void runHealthCheckQuery(Health.Builder builder) {
+	private void executeWithSessionRetry(Health.Builder builder, @Nullable Duration timeout) {
+		try {
+			runHealthCheckQuery(builder, timeout);
+		}
+		catch (SessionExpiredException ex) {
+			// Retry one time when the session has been expired
+			logger.warn(MESSAGE_SESSION_EXPIRED);
+			runHealthCheckQuery(builder, timeout);
+		}
+	}
+
+	private void runHealthCheckQuery(Health.Builder builder, @Nullable Duration timeout) {
 		// We use WRITE here to make sure UP is returned for a server that supports
 		// all possible workloads
 		try (Session session = this.driver.session(DEFAULT_SESSION_CONFIG)) {
-			Result result = session.run(CYPHER);
+			TransactionConfig transactionConfig = transactionConfigForHealth(timeout);
+			Result result = session.run(CYPHER, transactionConfig);
 			Record record = result.single();
 			ResultSummary resultSummary = result.consume();
 			this.healthDetailsHandler.addHealthDetails(builder, new Neo4jHealthDetails(record, resultSummary));
 		}
+	}
+
+	private TransactionConfig transactionConfigForHealth(@Nullable Duration timeout) {
+		if (timeout == null) {
+			return TransactionConfig.empty();
+		}
+		return TransactionConfig.builder().withTimeout(minimumTransactionTimeout(timeout)).build();
+	}
+
+	private Duration minimumTransactionTimeout(Duration timeout) {
+		Duration minimum = Duration.ofMillis(1);
+		return (timeout.compareTo(minimum) < 0) ? minimum : timeout;
 	}
 
 }

@@ -19,11 +19,18 @@ package org.springframework.boot.mail.health;
 import org.springframework.boot.health.contributor.AbstractHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutEnforcement;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.util.StringUtils;
 
 /**
  * {@link HealthIndicator} for configured smtp server(s).
+ * <p>
+ * A configured health timeout is capped by Spring Boot
+ * ({@link TimeoutEnforcement#FRAMEWORK}), which can only interrupt the check. Limit the
+ * blocking mail operation itself with Jakarta Mail settings on the
+ * {@link JavaMailSenderImpl} (for example, {@code mail.smtp.connectiontimeout} and
+ * {@code mail.smtp.timeout} in {@code spring.mail.properties}).
  *
  * @author Johannes Edmeier
  * @author Scott Frederick

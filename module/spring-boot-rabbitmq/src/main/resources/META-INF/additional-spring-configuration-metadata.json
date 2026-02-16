@@ -8,6 +8,11 @@
       "defaultValue": true
     },
     {
+      "name": "management.health.rabbit.timeout",
+      "type": "java.time.Duration",
+      "description": "Not used by the RabbitMQ health indicator."
+    },
+    {
       "name": "spring.rabbitmq.dynamic",
       "type": "java.lang.Boolean",
       "description": "Whether to create an AmqpAdmin bean.",

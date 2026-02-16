@@ -16,6 +16,9 @@
 
 package org.springframework.boot.health.contributor;
 
+import java.time.Duration;
+import java.util.concurrent.TimeoutException;
+
 import reactor.core.publisher.Mono;
 
 /**
@@ -24,10 +27,17 @@ import reactor.core.publisher.Mono;
  * <p>
  * This is non-blocking contract that is meant to be used in a reactive application. See
  * {@link HealthIndicator} for the traditional contract.
+ * <p>
+ * A configured execution timeout is capped by Spring Boot by default. An implementation
+ * which can bound the check with its own client-level timeout should override
+ * {@link #getTimeoutEnforcement()} to return {@link TimeoutEnforcement#INDICATOR} and
+ * {@link #health(Duration)} to apply it.
  *
  * @author Stephane Nicoll
+ * @author Moritz Halbritter
  * @since 4.0.0
  * @see HealthIndicator
+ * @see TimeoutEnforcement
  */
 @FunctionalInterface
 public non-sealed interface ReactiveHealthIndicator extends ReactiveHealthContributor {
@@ -52,5 +62,47 @@ public non-sealed interface ReactiveHealthIndicator extends ReactiveHealthContri
 	 * @return a {@link Mono} that provides the {@link Health}
 	 */
 	Mono<Health> health();
+
+	/**
+	 * Returns who caps a configured timeout for this indicator. Must return the same
+	 * value for the lifetime of the instance.
+	 * @return the timeout enforcement of this indicator
+	 * @since 4.2.0
+	 */
+	default TimeoutEnforcement getTimeoutEnforcement() {
+		return TimeoutEnforcement.FRAMEWORK;
+	}
+
+	/**
+	 * Provide the indicator of health, bounded by the given timeout. Only called when
+	 * {@link #getTimeoutEnforcement()} returns {@link TimeoutEnforcement#INDICATOR},
+	 * which requires this method to be overridden. The effective limit may be rounded up
+	 * to the client's granularity, but must never be shorter than requested.
+	 * @param timeout the timeout
+	 * @return a {@link Mono} that provides the {@link Health}, or signals a
+	 * {@link TimeoutException} if the timeout expired. Implementations must translate a
+	 * driver-specific timeout exception into a {@link TimeoutException}: it is the only
+	 * exception mapped to {@link Status#DOWN} with a {@code reason: "timeout"} detail,
+	 * any other maps to an ordinary {@link Status#DOWN}.
+	 * @since 4.2.0
+	 */
+	default Mono<Health> health(Duration timeout) {
+		throw new UnsupportedOperationException(
+				"'%s' declares TimeoutEnforcement.INDICATOR but doesn't override health(Duration)"
+					.formatted(getClass().getName()));
+	}
+
+	/**
+	 * Provide the indicator of health, bounded by the given timeout.
+	 * @param timeout the timeout
+	 * @param includeDetails if details should be included or removed
+	 * @return a {@link Mono} that provides the {@link Health}, see
+	 * {@link #health(Duration)}
+	 * @since 4.2.0
+	 */
+	default Mono<Health> health(Duration timeout, boolean includeDetails) {
+		Mono<Health> health = health(timeout);
+		return includeDetails ? health : health.map(Health::withoutDetails);
+	}
 
 }

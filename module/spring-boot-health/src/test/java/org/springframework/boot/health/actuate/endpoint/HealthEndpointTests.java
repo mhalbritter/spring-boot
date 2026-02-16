@@ -31,11 +31,13 @@ import org.springframework.boot.health.contributor.CompositeHealthContributor;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthContributor;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.HealthIndicatorExecutor;
 import org.springframework.boot.health.contributor.Status;
 import org.springframework.boot.health.registry.DefaultHealthContributorRegistry;
 import org.springframework.boot.health.registry.HealthContributorRegistry;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.mock.env.MockEnvironment;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -45,6 +47,7 @@ import static org.mockito.Mockito.mock;
  *
  * @author Phillip Webb
  * @author Scott Frederick
+ * @author Moritz Halbritter
  */
 @ExtendWith(OutputCaptureExtension.class)
 class HealthEndpointTests extends
@@ -105,10 +108,25 @@ class HealthEndpointTests extends
 		assertThat(output).contains("to respond");
 	}
 
+	@Test
+	@SuppressWarnings("removal")
+	void healthWithDeprecatedConstructorIgnoresTimeoutsFromSystemProperties() {
+		System.setProperty("management.health.test.timeout", "not-a-duration");
+		try {
+			HealthContributorRegistry registry = createRegistry("test", createContributor(this.up));
+			HealthEndpoint endpoint = new HealthEndpoint(registry, null, this.groups, null);
+			assertThat(endpoint.health().getStatus()).isEqualTo(Status.UP);
+		}
+		finally {
+			System.clearProperty("management.health.test.timeout");
+		}
+	}
+
 	@Override
 	protected HealthEndpoint create(HealthContributorRegistry registry, HealthEndpointGroups groups,
 			@Nullable Duration slowContributorLoggingThreshold) {
-		return new HealthEndpoint(registry, null, groups, slowContributorLoggingThreshold);
+		return new HealthEndpoint(registry, null, groups, slowContributorLoggingThreshold,
+				new HealthIndicatorExecutor(new MockEnvironment()));
 	}
 
 	@Override

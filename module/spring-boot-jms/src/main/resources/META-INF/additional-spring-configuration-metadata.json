@@ -8,6 +8,11 @@
       "defaultValue": true
     },
     {
+      "name": "management.health.jms.timeout",
+      "type": "java.time.Duration",
+      "description": "Timeout for the JMS health check."
+    },
+    {
       "name": "spring.jms.listener.acknowledge-mode",
       "deprecation": {
         "replacement": "spring.jms.listener.session.acknowledge-mode",

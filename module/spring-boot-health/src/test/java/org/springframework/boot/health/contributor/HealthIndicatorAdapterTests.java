@@ -21,44 +21,104 @@ import java.time.Duration;
 import org.junit.jupiter.api.Test;
 import reactor.test.StepVerifier;
 
+import org.springframework.boot.health.contributor.ExecutorTestSupport.TimeoutEnforcingIndicator;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
 
 /**
  * Tests for {@link HealthIndicatorAdapter}.
  *
  * @author Stephane Nicoll
+ * @author Moritz Halbritter
  */
 class HealthIndicatorAdapterTests {
 
+	private static final Duration TIMEOUT = Duration.ofSeconds(5);
+
+	private static final Duration VERIFY_TIMEOUT = Duration.ofSeconds(30);
+
+	private final HealthIndicator delegate = mock(HealthIndicator.class);
+
+	private final HealthIndicatorAdapter adapter = new HealthIndicatorAdapter(this.delegate);
+
 	@Test
 	void delegateReturnsHealth() {
-		HealthIndicator delegate = mock(HealthIndicator.class);
-		HealthIndicatorAdapter adapter = new HealthIndicatorAdapter(delegate);
 		Health status = Health.up().build();
-		given(delegate.health()).willReturn(status);
-		StepVerifier.create(adapter.health()).expectNext(status).expectComplete().verify(Duration.ofSeconds(30));
+		given(this.delegate.health()).willReturn(status);
+		StepVerifier.create(this.adapter.health()).expectNext(status).expectComplete().verify(VERIFY_TIMEOUT);
 	}
 
 	@Test
 	void delegateThrowError() {
-		HealthIndicator delegate = mock(HealthIndicator.class);
-		HealthIndicatorAdapter adapter = new HealthIndicatorAdapter(delegate);
-		given(delegate.health()).willThrow(new IllegalStateException("Expected"));
-		StepVerifier.create(adapter.health()).expectError(IllegalStateException.class).verify(Duration.ofSeconds(10));
+		given(this.delegate.health()).willThrow(new IllegalStateException("Expected"));
+		StepVerifier.create(this.adapter.health()).expectError(IllegalStateException.class).verify(VERIFY_TIMEOUT);
+	}
+
+	@Test
+	void shouldReturnDelegateTimeoutEnforcement() {
+		for (TimeoutEnforcement value : TimeoutEnforcement.values()) {
+			given(this.delegate.getTimeoutEnforcement()).willReturn(value);
+			assertThat(this.adapter.getTimeoutEnforcement()).isEqualTo(value);
+		}
+	}
+
+	@Test
+	void shouldDelegateHealthWithTimeout() throws Exception {
+		Health status = Health.up().build();
+		given(this.delegate.health(TIMEOUT)).willReturn(status);
+		StepVerifier.create(this.adapter.health(TIMEOUT)).expectNext(status).expectComplete().verify(VERIFY_TIMEOUT);
+		then(this.delegate).should().health(TIMEOUT);
+	}
+
+	@Test
+	void shouldDelegateHealthWithTimeoutAndDetails() throws Exception {
+		Health status = Health.up().build();
+		given(this.delegate.health(TIMEOUT, true)).willReturn(status);
+		StepVerifier.create(this.adapter.health(TIMEOUT, true))
+			.expectNext(status)
+			.expectComplete()
+			.verify(VERIFY_TIMEOUT);
+		then(this.delegate).should().health(TIMEOUT, true);
+	}
+
+	@Test
+	void shouldReturnDelegate() {
+		assertThat(this.adapter.getDelegate()).isSameAs(this.delegate);
+	}
+
+	@Test
+	void shouldStripDetailsWhenTheyAreNotIncluded() {
+		HealthIndicatorAdapter adapter = new HealthIndicatorAdapter(
+				() -> Health.up().withDetail("test", "test").build());
+		StepVerifier.create(adapter.health(false)).assertNext((health) -> {
+			assertThat(health.getStatus()).isEqualTo(Status.UP);
+			assertThat(health.getDetails()).isEmpty();
+		}).expectComplete().verify(VERIFY_TIMEOUT);
+	}
+
+	@Test
+	void shouldStripDetailsWhenTheyAreNotIncludedWithTimeout() {
+		HealthIndicatorAdapter adapter = new HealthIndicatorAdapter(
+				new TimeoutEnforcingIndicator(() -> Health.up().withDetail("test", "test").build()));
+		StepVerifier.create(adapter.health(TIMEOUT, false)).assertNext((health) -> {
+			assertThat(health.getStatus()).isEqualTo(Status.UP);
+			assertThat(health.getDetails()).isEmpty();
+		}).expectComplete().verify(VERIFY_TIMEOUT);
 	}
 
 	@Test
 	void delegateRunsOnTheElasticScheduler() {
 		String currentThread = Thread.currentThread().getName();
-		HealthIndicator delegate = () -> Health
-			.status(Thread.currentThread().getName().equals(currentThread) ? Status.DOWN : Status.UP)
-			.build();
-		HealthIndicatorAdapter adapter = new HealthIndicatorAdapter(delegate);
+		HealthIndicatorAdapter adapter = new HealthIndicatorAdapter(
+				() -> Health.status(Thread.currentThread().getName().equals(currentThread) ? Status.DOWN : Status.UP)
+					.build());
 		StepVerifier.create(adapter.health())
 			.expectNext(Health.status(Status.UP).build())
 			.expectComplete()
-			.verify(Duration.ofSeconds(30));
+			.verify(VERIFY_TIMEOUT);
 	}
 
 }

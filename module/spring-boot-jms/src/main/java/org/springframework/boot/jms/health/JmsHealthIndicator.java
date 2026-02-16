@@ -19,28 +19,39 @@ package org.springframework.boot.jms.health;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import jakarta.jms.Connection;
 import jakarta.jms.ConnectionFactory;
 import jakarta.jms.JMSException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.convert.DurationStyle;
-import org.springframework.boot.health.contributor.AbstractHealthIndicator;
+import org.springframework.boot.health.contributor.AbstractTimeoutEnforcingHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutEnforcement;
 import org.springframework.core.log.LogMessage;
 import org.springframework.util.Assert;
 
 /**
  * {@link HealthIndicator} for a JMS {@link ConnectionFactory}.
+ * <p>
+ * This indicator uses {@link TimeoutEnforcement#INDICATOR}: when a health timeout is
+ * configured, the {@link MonitoredConnection} can bound how long
+ * {@link Connection#start()} may block. A companion thread waits for the configured
+ * duration; if {@link Connection#start()} has not finished, the connection is
+ * {@linkplain Connection#close() closed} to unblock the client. When no health timeout
+ * applies, a fixed watchdog is still used for hung {@link Connection#start()} calls.
  *
  * @author Stephane Nicoll
  * @author Venkata Naga Sai Srikanth Gollapudi
+ * @author Moritz Halbritter
  * @since 4.0.0
  */
-public class JmsHealthIndicator extends AbstractHealthIndicator {
+public class JmsHealthIndicator extends AbstractTimeoutEnforcingHealthIndicator {
 
 	/**
 	 * Default timeout to use when starting a connection for the health check.
@@ -78,11 +89,27 @@ public class JmsHealthIndicator extends AbstractHealthIndicator {
 	}
 
 	@Override
-	protected void doHealthCheck(Health.Builder builder) throws Exception {
+	protected void doHealthCheck(Health.Builder builder, @Nullable Duration timeout) throws Exception {
+		if (timeout == null) {
+			performHealthCheck(builder, this.startTimeout, false);
+			return;
+		}
+		performHealthCheck(builder, effectiveNativeWatchdog(timeout), true);
+	}
+
+	private void performHealthCheck(Health.Builder builder, Duration watchdog, boolean reportWatchdogAsTimeout)
+			throws Exception {
 		try (Connection connection = this.connectionFactory.createConnection()) {
-			new MonitoredConnection(connection).start();
+			new MonitoredConnection(connection).start(watchdog, reportWatchdogAsTimeout);
 			builder.up().withDetail("provider", connection.getMetaData().getJMSProviderName());
 		}
+	}
+
+	private Duration effectiveNativeWatchdog(Duration timeout) {
+		if (timeout.isNegative() || timeout.isZero()) {
+			return Duration.ofMillis(1);
+		}
+		return (timeout.toMillis() < 1) ? Duration.ofMillis(1) : timeout;
 	}
 
 	private final class MonitoredConnection {
@@ -91,18 +118,20 @@ public class JmsHealthIndicator extends AbstractHealthIndicator {
 
 		private final Connection connection;
 
+		private volatile boolean watchdogTriggered;
+
 		MonitoredConnection(Connection connection) {
 			this.connection = connection;
 		}
 
-		void start() throws JMSException {
-			Thread watchdog = new Thread(() -> {
+		void start(Duration watchdog, boolean reportWatchdogAsTimeout) throws Exception {
+			Thread watchdogThread = new Thread(() -> {
 				try {
-					Duration startTimeout1 = JmsHealthIndicator.this.startTimeout;
-					if (!this.latch.await(startTimeout1.toNanos(), TimeUnit.NANOSECONDS)) {
+					if (!this.latch.await(watchdog.toNanos(), TimeUnit.NANOSECONDS)) {
+						this.watchdogTriggered = true;
 						JmsHealthIndicator.this.logger
 							.warn(LogMessage.format("Connection failed to start within %s and will be closed.",
-									DurationStyle.SIMPLE.print(startTimeout1)));
+									DurationStyle.SIMPLE.print(watchdog)));
 						closeConnection();
 					}
 				}
@@ -110,10 +139,19 @@ public class JmsHealthIndicator extends AbstractHealthIndicator {
 					Thread.currentThread().interrupt();
 				}
 			}, "jms-health-indicator");
-			watchdog.setDaemon(true);
-			watchdog.start();
+			watchdogThread.setDaemon(true);
+			watchdogThread.start();
 			try {
 				this.connection.start();
+			}
+			catch (JMSException ex) {
+				if (this.watchdogTriggered && reportWatchdogAsTimeout) {
+					TimeoutException timeoutException = new TimeoutException(
+							"JMS connection failed to start within " + watchdog);
+					timeoutException.initCause(ex);
+					throw timeoutException;
+				}
+				throw ex;
 			}
 			finally {
 				this.latch.countDown();

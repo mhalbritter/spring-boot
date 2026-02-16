@@ -15,6 +15,11 @@
       "defaultValue": true
     },
     {
+      "name": "management.health.mongodb.timeout",
+      "type": "java.time.Duration",
+      "description": "Timeout for the MongoDB health check."
+    },
+    {
       "name": "spring.data.mongodb.grid-fs-database",
       "type": "java.lang.String",
       "deprecation": {

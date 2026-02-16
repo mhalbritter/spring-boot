@@ -16,21 +16,29 @@
 
 package org.springframework.boot.mongodb.health;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 import com.mongodb.MongoException;
+import com.mongodb.MongoExecutionTimeoutException;
+import com.mongodb.MongoTimeoutException;
+import com.mongodb.client.ListDatabasesIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.MongoIterable;
 import org.bson.Document;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.Status;
+import org.springframework.boot.health.contributor.TimeoutEnforcement;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willAnswer;
@@ -52,13 +60,13 @@ class MongoHealthIndicatorTests {
 		Document commandResult = mock(Document.class);
 		given(commandResult.getInteger("maxWireVersion")).willReturn(10);
 		MongoClient mongoClient = mock(MongoClient.class);
-		MongoIterable<String> databaseNames = mock(MongoIterable.class);
+		ListDatabasesIterable<Document> listDatabases = mock(ListDatabasesIterable.class);
 		willAnswer((invocation) -> {
-			((Consumer<String>) invocation.getArgument(0)).accept("test");
-			((Consumer<String>) invocation.getArgument(0)).accept("admin");
+			((Consumer<Document>) invocation.getArgument(0)).accept(new Document("name", "test"));
+			((Consumer<Document>) invocation.getArgument(0)).accept(new Document("name", "admin"));
 			return null;
-		}).given(databaseNames).forEach(any());
-		given(mongoClient.listDatabaseNames()).willReturn(databaseNames);
+		}).given(listDatabases).forEach(any());
+		given(mongoClient.listDatabases()).willReturn(listDatabases);
 		MongoDatabase adminDatabase = mock(MongoDatabase.class);
 		given(mongoClient.getDatabase("admin")).willReturn(adminDatabase);
 		given(adminDatabase.runCommand(Document.parse("{ hello: 1 }"))).willReturn(commandResult);
@@ -78,12 +86,12 @@ class MongoHealthIndicatorTests {
 		Document commandResult = mock(Document.class);
 		given(commandResult.getInteger("maxWireVersion")).willReturn(10);
 		MongoClient mongoClient = mock(MongoClient.class);
-		MongoIterable<String> databaseNames = mock(MongoIterable.class);
+		ListDatabasesIterable<Document> listDatabases = mock(ListDatabasesIterable.class);
 		willAnswer((invocation) -> {
-			((Consumer<String>) invocation.getArgument(0)).accept("test");
+			((Consumer<Document>) invocation.getArgument(0)).accept(new Document("name", "test"));
 			return null;
-		}).given(databaseNames).forEach(any());
-		given(mongoClient.listDatabaseNames()).willReturn(databaseNames);
+		}).given(listDatabases).forEach(any());
+		given(mongoClient.listDatabases()).willReturn(listDatabases);
 		MongoDatabase database = mock(MongoDatabase.class);
 		given(mongoClient.getDatabase("test")).willReturn(database);
 		given(database.runCommand(Document.parse("{ hello: 1 }"))).willReturn(commandResult);
@@ -96,13 +104,75 @@ class MongoHealthIndicatorTests {
 	}
 
 	@Test
+	@SuppressWarnings("unchecked")
+	void mongoIsUpWithTimeout() throws Exception {
+		Document commandResult = mock(Document.class);
+		given(commandResult.getInteger("maxWireVersion")).willReturn(10);
+		MongoClient mongoClient = mock(MongoClient.class);
+		ListDatabasesIterable<Document> listDatabases = mock(ListDatabasesIterable.class);
+		given(listDatabases.maxTime(anyLong(), any(TimeUnit.class))).willReturn(listDatabases);
+		willAnswer((invocation) -> {
+			((Consumer<Document>) invocation.getArgument(0)).accept(new Document("name", "db"));
+			return null;
+		}).given(listDatabases).forEach(any());
+		given(mongoClient.listDatabases()).willReturn(listDatabases);
+		MongoDatabase mongoDatabase = mock(MongoDatabase.class);
+		given(mongoDatabase.withTimeout(anyLong(), any(TimeUnit.class))).willReturn(mongoDatabase);
+		given(mongoClient.getDatabase("db")).willReturn(mongoDatabase);
+		given(mongoDatabase.runCommand(Document.parse("{ hello: 1 }"))).willReturn(commandResult);
+		MongoHealthIndicator healthIndicator = new MongoHealthIndicator(mongoClient);
+		Health health = healthIndicator.health(Duration.ofSeconds(5));
+		assertThat(health.getStatus()).isEqualTo(Status.UP);
+		assertThat(health.getDetails()).containsEntry("maxWireVersion", 10);
+		then(listDatabases).should().maxTime(5000, TimeUnit.MILLISECONDS);
+		then(mongoDatabase).should().withTimeout(5000, TimeUnit.MILLISECONDS);
+	}
+
+	@Test
 	void mongoIsDown() {
 		MongoClient mongoClient = mock(MongoClient.class);
-		given(mongoClient.listDatabaseNames()).willThrow(new MongoException("Connection failed"));
+		given(mongoClient.listDatabases()).willThrow(new MongoException("Connection failed"));
 		MongoHealthIndicator healthIndicator = new MongoHealthIndicator(mongoClient);
 		Health health = healthIndicator.health();
 		assertThat(health.getStatus()).isEqualTo(Status.DOWN);
 		assertThat((String) health.getDetails().get("error")).contains("Connection failed");
+	}
+
+	@Test
+	void getTimeoutEnforcementIsIndicator() {
+		MongoClient mongoClient = mock(MongoClient.class);
+		MongoHealthIndicator healthIndicator = new MongoHealthIndicator(mongoClient);
+		assertThat(healthIndicator.getTimeoutEnforcement()).isEqualTo(TimeoutEnforcement.INDICATOR);
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	void mongoTimeoutIsPropagated() {
+		MongoClient mongoClient = mock(MongoClient.class);
+		ListDatabasesIterable<Document> listDatabases = mock(ListDatabasesIterable.class);
+		given(listDatabases.maxTime(anyLong(), any(TimeUnit.class))).willReturn(listDatabases);
+		willAnswer((invocation) -> {
+			throw new MongoTimeoutException("timed out");
+		}).given(listDatabases).forEach(any());
+		given(mongoClient.listDatabases()).willReturn(listDatabases);
+		MongoHealthIndicator healthIndicator = new MongoHealthIndicator(mongoClient);
+		assertThatExceptionOfType(TimeoutException.class).isThrownBy(() -> healthIndicator.health(Duration.ofMillis(1)))
+			.withMessageContaining("timed out");
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	void mongoExecutionTimeoutIsPropagated() {
+		MongoClient mongoClient = mock(MongoClient.class);
+		ListDatabasesIterable<Document> listDatabases = mock(ListDatabasesIterable.class);
+		given(listDatabases.maxTime(anyLong(), any(TimeUnit.class))).willReturn(listDatabases);
+		willAnswer((invocation) -> {
+			throw new MongoExecutionTimeoutException(50, "max time expired");
+		}).given(listDatabases).forEach(any());
+		given(mongoClient.listDatabases()).willReturn(listDatabases);
+		MongoHealthIndicator healthIndicator = new MongoHealthIndicator(mongoClient);
+		assertThatExceptionOfType(TimeoutException.class).isThrownBy(() -> healthIndicator.health(Duration.ofMillis(1)))
+			.withMessageContaining("max time expired");
 	}
 
 }

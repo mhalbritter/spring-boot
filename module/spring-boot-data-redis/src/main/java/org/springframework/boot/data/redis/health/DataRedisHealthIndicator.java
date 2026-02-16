@@ -19,15 +19,25 @@ package org.springframework.boot.data.redis.health;
 import org.springframework.boot.health.contributor.AbstractHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutEnforcement;
 import org.springframework.data.redis.connection.RedisClusterConnection;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisConnectionUtils;
 import org.springframework.util.Assert;
 
 /**
  * Simple implementation of a {@link HealthIndicator} returning status information for
  * Redis data stores.
+ * <p>
+ * A configured health timeout is capped by Spring Boot
+ * ({@link TimeoutEnforcement#FRAMEWORK}), which can only interrupt the check. With a
+ * {@link JedisConnectionFactory} the check blocks in a socket read which interruption
+ * cannot cut short, so only {@code spring.data.redis.timeout} and
+ * {@code spring.data.redis.connect-timeout} end it; with a
+ * {@link LettuceConnectionFactory} it blocks on a future which cancellation unblocks.
  *
  * @author Christian Dupuis
  * @author Richard Santana

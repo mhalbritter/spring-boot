@@ -32,6 +32,9 @@ import org.springframework.util.StringUtils;
  * This implementation is only suitable if an {@link Exception} raised from
  * {@link #doHealthCheck(Health.Builder)} should create a {@link Status#DOWN} health
  * status.
+ * <p>
+ * To bound the check with the client's own timeout, extend
+ * {@link AbstractTimeoutEnforcingHealthIndicator} instead.
  *
  * @author Christian Dupuis
  * @since 4.0.0
@@ -86,7 +89,7 @@ public abstract class AbstractHealthIndicator implements HealthIndicator {
 		return builder.build();
 	}
 
-	private void logExceptionIfPresent(@Nullable Throwable throwable) {
+	void logExceptionIfPresent(@Nullable Throwable throwable) {
 		if (throwable != null && this.logger.isWarnEnabled()) {
 			String message = (throwable instanceof Exception ex) ? this.healthCheckFailedMessage.apply(ex) : null;
 			this.logger.warn(StringUtils.hasText(message) ? message : DEFAULT_MESSAGE, throwable);

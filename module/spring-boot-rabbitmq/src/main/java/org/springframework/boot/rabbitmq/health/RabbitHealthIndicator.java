@@ -22,11 +22,17 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.boot.health.contributor.AbstractHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutEnforcement;
 import org.springframework.util.Assert;
 
 /**
  * Simple implementation of a {@link HealthIndicator} returning status information for the
  * RabbitMQ messaging system.
+ * <p>
+ * A configured health timeout is capped by Spring Boot
+ * ({@link TimeoutEnforcement#FRAMEWORK}), which can only interrupt the check. Limit the
+ * blocking client work itself with {@code spring.rabbitmq.connection-timeout},
+ * {@code spring.rabbitmq.channel-rpc-timeout} and other client settings.
  *
  * @author Christian Dupuis
  * @since 4.2.0

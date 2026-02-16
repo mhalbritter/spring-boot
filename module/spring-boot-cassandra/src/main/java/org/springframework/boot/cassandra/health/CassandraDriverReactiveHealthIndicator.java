@@ -33,6 +33,9 @@ import org.springframework.util.Assert;
 /**
  * Simple implementation of a {@link ReactiveHealthIndicator} returning status information
  * for Cassandra data stores.
+ * <p>
+ * The check reads {@link CqlSession#getMetadata() node metadata} only (no CQL
+ * round-trip).
  *
  * @author Alexandre Dutra
  * @author Tomasz Lelek

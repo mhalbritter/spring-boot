@@ -16,12 +16,16 @@
 
 package org.springframework.boot.health.autoconfigure.registry;
 
+import java.util.Map;
+
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.convert.ApplicationConversionService;
 import org.springframework.boot.health.autoconfigure.contributor.HealthContributorAutoConfiguration;
+import org.springframework.boot.health.contributor.CompositeHealthContributor;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthContributors;
 import org.springframework.boot.health.contributor.HealthIndicator;
@@ -115,6 +119,45 @@ class HealthContributorRegistryAutoConfigurationTests {
 				}));
 	}
 
+	@Test
+	void runWhenTimeoutIsNotADurationFailsToStart() {
+		timeoutContextRunner().withPropertyValues("management.health.simple.timeout=nonsense")
+			.run((context) -> assertThat(context).hasFailed()
+				.getFailure()
+				.hasMessageContaining("Invalid timeout configured for health indicator 'simple'"));
+	}
+
+	@Test
+	void runWhenTimeoutIsNotPositiveFailsToStart() {
+		timeoutContextRunner().withPropertyValues("management.health.reactive.timeout=0s")
+			.run((context) -> assertThat(context).hasFailed()
+				.getFailure()
+				.hasMessageContaining("Invalid timeout configured for health indicator 'reactive'"));
+	}
+
+	@Test
+	void runWhenTimeoutsAreValidStarts() {
+		timeoutContextRunner()
+			.withPropertyValues("management.health.simple.timeout=5s", "management.health.defaults.timeout=10s")
+			.run((context) -> assertThat(context).hasNotFailed());
+	}
+
+	@Test
+	void runWhenTimeoutOfCompositeLeafIsInvalidFailsToStart() {
+		timeoutContextRunner().withUserConfiguration(CompositeHealthIndicatorConfiguration.class)
+			.withPropertyValues("management.health.composite.leaf.timeout=nonsense")
+			.run((context) -> assertThat(context).hasFailed()
+				.getFailure()
+				.hasMessageContaining("Invalid timeout configured for health indicator 'composite/leaf'"));
+	}
+
+	// A timeout is read as a Duration, which needs the converters SpringApplication
+	// installs.
+	private ApplicationContextRunner timeoutContextRunner() {
+		return this.contextRunner.withInitializer(
+				(context) -> context.getEnvironment().setConversionService(new ApplicationConversionService()));
+	}
+
 	@Configuration(proxyBeanMethods = false)
 	static class HealthIndicatorsConfiguration {
 
@@ -131,6 +174,17 @@ class HealthContributorRegistryAutoConfigurationTests {
 		@Bean
 		ReactiveHealthIndicator reactiveHealthIndicator() {
 			return () -> Mono.just(Health.up().build());
+		}
+
+	}
+
+	@Configuration(proxyBeanMethods = false)
+	static class CompositeHealthIndicatorConfiguration {
+
+		@Bean
+		CompositeHealthContributor compositeHealthContributor() {
+			HealthIndicator leaf = () -> Health.up().build();
+			return CompositeHealthContributor.fromMap(Map.of("leaf", leaf));
 		}
 
 	}

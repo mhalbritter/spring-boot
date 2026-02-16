@@ -17,6 +17,7 @@
 package org.springframework.boot.couchbase.health;
 
 import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.ReactiveCluster;
 import reactor.core.publisher.Mono;
 
 import org.springframework.boot.health.contributor.AbstractReactiveHealthIndicator;
@@ -25,6 +26,8 @@ import org.springframework.boot.health.contributor.ReactiveHealthIndicator;
 
 /**
  * A {@link ReactiveHealthIndicator} for Couchbase.
+ * <p>
+ * The check uses {@link ReactiveCluster#diagnostics() passive diagnostics} only.
  *
  * @author Mikalai Lushchytski
  * @author Stephane Nicoll

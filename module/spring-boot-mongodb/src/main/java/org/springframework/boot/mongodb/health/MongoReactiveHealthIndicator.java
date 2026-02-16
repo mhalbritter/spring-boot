@@ -16,26 +16,44 @@
 
 package org.springframework.boot.mongodb.health;
 
+import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
+import com.mongodb.MongoExecutionTimeoutException;
+import com.mongodb.MongoTimeoutException;
+import com.mongodb.reactivestreams.client.ListDatabasesPublisher;
 import com.mongodb.reactivestreams.client.MongoClient;
+import com.mongodb.reactivestreams.client.MongoDatabase;
 import org.bson.Document;
+import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import org.springframework.boot.health.contributor.AbstractReactiveHealthIndicator;
+import org.springframework.boot.health.contributor.AbstractTimeoutEnforcingReactiveHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
-import org.springframework.boot.health.contributor.ReactiveHealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutEnforcement;
 import org.springframework.util.Assert;
 
 /**
- * A {@link ReactiveHealthIndicator} for Mongo.
+ * A {@link org.springframework.boot.health.contributor.ReactiveHealthIndicator} for
+ * Mongo.
+ * <p>
+ * This indicator uses {@link TimeoutEnforcement#INDICATOR}: when a health timeout is
+ * configured, it is applied as {@code maxTime} for
+ * {@link MongoClient#listDatabases(Class)} and as a client operation timeout on each
+ * {@link MongoDatabase#runCommand(org.bson.conversions.Bson) runCommand}.
  *
  * @author Yulin Qin
  * @author Seonwoo Jung
+ * @author Stephane Nicoll
+ * @author Moritz Halbritter
  * @since 4.0.0
  */
-public class MongoReactiveHealthIndicator extends AbstractReactiveHealthIndicator {
+public class MongoReactiveHealthIndicator extends AbstractTimeoutEnforcingReactiveHealthIndicator {
 
 	private static final String ADMIN_DATABASE = "admin";
 
@@ -50,14 +68,54 @@ public class MongoReactiveHealthIndicator extends AbstractReactiveHealthIndicato
 	}
 
 	@Override
-	protected Mono<Health> doHealthCheck(Health.Builder builder) {
-		Mono<List<String>> databases = Flux.from(this.mongoClient.listDatabaseNames()).collectList();
-		return databases.flatMap((databaseNames) -> Mono
-			.from(this.mongoClient.getDatabase(getDatabaseName(databaseNames)).runCommand(HELLO_COMMAND))
-			.map((result) -> builder.up()
-				.withDetail("databases", databaseNames)
-				.withDetail("maxWireVersion", result.getInteger("maxWireVersion"))
-				.build()));
+	protected Mono<Health> doHealthCheck(Health.Builder builder, @Nullable Duration timeout) {
+		return collectHealthDetails(timeout).map((details) -> builder.up().withDetails(details).build())
+			.onErrorMap(MongoTimeoutException.class, this::asTimeoutException)
+			.onErrorMap(MongoExecutionTimeoutException.class, this::asTimeoutException);
+	}
+
+	private Mono<Map<String, Object>> collectHealthDetails(@Nullable Duration timeout) {
+		ListDatabasesPublisher<Document> listDatabases = this.mongoClient.listDatabases(Document.class);
+		if (timeout != null) {
+			listDatabases = listDatabases.maxTime(toMaxTimeMillis(timeout), TimeUnit.MILLISECONDS);
+		}
+		return Flux.from(listDatabases)
+			.map((databaseDoc) -> databaseDoc.getString("name"))
+			.collectList()
+			.flatMap((databases) -> helloForDatabase(getDatabaseName(databases), timeout)
+				.map((result) -> toDetails(databases, result)));
+	}
+
+	private Mono<Document> helloForDatabase(String name, @Nullable Duration timeout) {
+		MongoDatabase mongoDatabase = this.mongoClient.getDatabase(name);
+		if (timeout != null) {
+			mongoDatabase = mongoDatabase.withTimeout(toMaxTimeMillis(timeout), TimeUnit.MILLISECONDS);
+		}
+		return Mono.from(mongoDatabase.runCommand(HELLO_COMMAND));
+	}
+
+	private static Map<String, Object> toDetails(List<String> databases, Document helloResult) {
+		Map<String, Object> details = new LinkedHashMap<>();
+		details.put("databases", databases);
+		details.put("maxWireVersion", helloResult.getInteger("maxWireVersion"));
+		return details;
+	}
+
+	private TimeoutException asTimeoutException(Exception ex) {
+		TimeoutException timeoutException = new TimeoutException(ex.getMessage());
+		timeoutException.initCause(ex);
+		return timeoutException;
+	}
+
+	/**
+	 * Converts a {@link Duration} to a positive {@code maxTime} / client operation
+	 * timeout in whole milliseconds (minimum {@code 1}).
+	 * @param timeout the timeout
+	 * @return timeout in milliseconds
+	 */
+	private long toMaxTimeMillis(Duration timeout) {
+		long millis = timeout.toMillis();
+		return Math.max(1, millis);
 	}
 
 	private static String getDatabaseName(List<String> databases) {

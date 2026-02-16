@@ -180,7 +180,7 @@ abstract class HealthEndpointSupport<H, D> {
 	private @Nullable D getDescriptorAndLogIfSlow(Contributor<H, D> contributor, String name, boolean showDetails) {
 		Instant start = Instant.now();
 		try {
-			return contributor.getDescriptor(showDetails);
+			return contributor.getDescriptor(name, showDetails);
 		}
 		finally {
 			if (logger.isWarnEnabled() && this.slowContributorLoggingThreshold != null) {

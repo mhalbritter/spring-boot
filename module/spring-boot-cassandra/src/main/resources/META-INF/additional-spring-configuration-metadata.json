@@ -8,6 +8,11 @@
       "defaultValue": true
     },
     {
+      "name": "management.health.cassandra.timeout",
+      "type": "java.time.Duration",
+      "description": "Not used by the Cassandra health indicator (it reads session metadata only)."
+    },
+    {
       "name": "spring.cassandra.compression",
       "defaultValue": "none"
     },

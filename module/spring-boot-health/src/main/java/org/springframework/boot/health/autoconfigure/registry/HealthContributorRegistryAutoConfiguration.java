@@ -27,7 +27,9 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.health.contributor.HealthContributor;
+import org.springframework.boot.health.contributor.HealthIndicatorExecutor;
 import org.springframework.boot.health.contributor.ReactiveHealthContributor;
+import org.springframework.boot.health.contributor.ReactiveHealthIndicatorExecutor;
 import org.springframework.boot.health.registry.DefaultHealthContributorRegistry;
 import org.springframework.boot.health.registry.DefaultReactiveHealthContributorRegistry;
 import org.springframework.boot.health.registry.HealthContributorNameValidator;
@@ -35,6 +37,7 @@ import org.springframework.boot.health.registry.HealthContributorRegistry;
 import org.springframework.boot.health.registry.ReactiveHealthContributorRegistry;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 
 /**
  * {@link EnableAutoConfiguration Auto-configuration} for
@@ -59,6 +62,19 @@ public final class HealthContributorRegistryAutoConfiguration {
 		return new DefaultHealthContributorRegistry(nameValidators, nameGenerator.registrar(contributorBeans));
 	}
 
+	@Bean
+	@ConditionalOnMissingBean
+	HealthIndicatorExecutor healthIndicatorExecutor(Environment environment) {
+		return new HealthIndicatorExecutor(environment);
+	}
+
+	@Bean
+	HealthIndicatorTimeoutValidator healthIndicatorTimeoutValidator(Environment environment,
+			HealthContributorRegistry registry,
+			ObjectProvider<ReactiveHealthContributorRegistry> reactiveRegistryProvider) {
+		return new HealthIndicatorTimeoutValidator(environment, registry, reactiveRegistryProvider.getIfAvailable());
+	}
+
 	@Configuration(proxyBeanMethods = false)
 	@ConditionalOnClass(Flux.class)
 	static class ReactiveHealthContributorRegistryConfiguration {
@@ -73,6 +89,13 @@ public final class HealthContributorRegistryAutoConfiguration {
 				.getIfAvailable(HealthContributorNameGenerator::withoutStandardSuffixes);
 			return new DefaultReactiveHealthContributorRegistry(nameValidators,
 					nameGenerator.registrar(contributorBeans));
+		}
+
+		@Bean
+		@ConditionalOnMissingBean
+		ReactiveHealthIndicatorExecutor reactiveHealthIndicatorExecutor(
+				HealthIndicatorExecutor healthIndicatorExecutor) {
+			return new ReactiveHealthIndicatorExecutor(healthIndicatorExecutor);
 		}
 
 	}
