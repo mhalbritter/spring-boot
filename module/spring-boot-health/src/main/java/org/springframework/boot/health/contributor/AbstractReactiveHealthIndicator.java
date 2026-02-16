@@ -16,6 +16,8 @@
 
 package org.springframework.boot.health.contributor;
 
+import java.time.Duration;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 
 import org.apache.commons.logging.Log;
@@ -29,6 +31,13 @@ import org.springframework.util.StringUtils;
 /**
  * Base {@link ReactiveHealthIndicator} implementations that encapsulates creation of
  * {@link Health} instance and error handling.
+ * <p>
+ * To participate in configured {@link ReactiveHealthIndicator#health(Duration) native
+ * timeouts}, override {@link #getTimeoutSupport()} to return
+ * {@link TimeoutSupport#NATIVE} and implement
+ * {@link #doHealthCheck(Health.Builder, Duration)}. Otherwise the default
+ * {@link TimeoutSupport#NONE} applies and configured timeouts are ignored (with a
+ * one-time warning logged when a timeout property is set).
  *
  * @author Stephane Nicoll
  * @author Nikolay Rybak
@@ -84,6 +93,19 @@ public abstract class AbstractReactiveHealthIndicator implements ReactiveHealthI
 		}
 	}
 
+	@Override
+	public final Mono<Health> health(Duration timeout) {
+		try {
+			Health.Builder builder = new Health.Builder();
+			Mono<Health> result = doHealthCheck(builder, timeout)
+				.onErrorResume((ex) -> !(ex instanceof TimeoutException), this::handleFailure);
+			return result.doOnNext((health) -> logExceptionIfPresent(builder.getException()));
+		}
+		catch (Exception ex) {
+			return handleFailure(ex);
+		}
+	}
+
 	private void logExceptionIfPresent(@Nullable Throwable ex) {
 		if (ex != null && this.logger.isWarnEnabled()) {
 			String message = (ex instanceof Exception) ? this.healthCheckFailedMessage.apply(ex) : null;
@@ -103,5 +125,19 @@ public abstract class AbstractReactiveHealthIndicator implements ReactiveHealthI
 	 * @return a {@link Mono} that provides the {@link Health}
 	 */
 	protected abstract Mono<Health> doHealthCheck(Health.Builder builder);
+
+	/**
+	 * Actual health check logic. If an error occurs in the pipeline, it will be handled
+	 * automatically. This method is only called when {@link #getTimeoutSupport()} returns
+	 * {@link TimeoutSupport#NATIVE} (override the default {@link TimeoutSupport#NONE} to
+	 * enable it).
+	 * @param builder the {@link Health.Builder} to report health status and details
+	 * @param timeout the timeout to apply
+	 * @return a {@link Mono} that provides the {@link Health}
+	 * @since 4.1.0
+	 */
+	protected Mono<Health> doHealthCheck(Health.Builder builder, Duration timeout) {
+		throw new UnsupportedOperationException("Timeout is not supported");
+	}
 
 }

@@ -20,7 +20,9 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
 import javax.sql.DataSource;
 
@@ -31,6 +33,8 @@ import org.springframework.boot.health.contributor.AbstractHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.boot.health.contributor.Status;
+import org.springframework.boot.health.contributor.TimeoutSupport;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.dao.support.DataAccessUtils;
 import org.springframework.jdbc.IncorrectResultSetColumnCountException;
 import org.springframework.jdbc.core.ConnectionCallback;
@@ -56,8 +60,6 @@ public class DataSourceHealthIndicator extends AbstractHealthIndicator implement
 	private @Nullable DataSource dataSource;
 
 	private @Nullable String query;
-
-	private @Nullable JdbcTemplate jdbcTemplate;
 
 	/**
 	 * Create a new {@link DataSourceHealthIndicator} instance.
@@ -85,7 +87,6 @@ public class DataSourceHealthIndicator extends AbstractHealthIndicator implement
 		super("DataSource health check failed");
 		this.dataSource = dataSource;
 		this.query = query;
-		this.jdbcTemplate = (dataSource != null) ? new JdbcTemplate(dataSource) : null;
 	}
 
 	@Override
@@ -94,29 +95,50 @@ public class DataSourceHealthIndicator extends AbstractHealthIndicator implement
 	}
 
 	@Override
+	public TimeoutSupport getTimeoutSupport() {
+		return TimeoutSupport.NATIVE;
+	}
+
+	@Override
 	protected void doHealthCheck(Health.Builder builder) throws Exception {
 		if (this.dataSource == null) {
 			builder.up().withDetail("database", "unknown");
 		}
 		else {
-			doDataSourceHealthCheck(builder);
+			doDataSourceHealthCheck(builder, new JdbcTemplate(this.dataSource), 0);
 		}
 	}
 
-	private void doDataSourceHealthCheck(Health.Builder builder) {
-		Assert.state(this.jdbcTemplate != null, "'jdbcTemplate' must not be null");
-		builder.up().withDetail("database", getProduct(this.jdbcTemplate));
+	@Override
+	protected void doHealthCheck(Health.Builder builder, Duration timeout) throws Exception {
+		if (this.dataSource == null) {
+			builder.up().withDetail("database", "unknown");
+		}
+		else {
+			doDataSourceHealthCheck(builder, new JdbcTemplate(this.dataSource), toSeconds(timeout));
+		}
+	}
+
+	private void doDataSourceHealthCheck(Health.Builder builder, JdbcTemplate jdbcTemplate, int timeoutSeconds)
+			throws TimeoutException {
+		builder.up().withDetail("database", getProduct(jdbcTemplate));
 		String validationQuery = this.query;
 		if (StringUtils.hasText(validationQuery)) {
 			builder.withDetail("validationQuery", validationQuery);
-			// Avoid calling getObject as it breaks MySQL on Java 7 and later
-			List<Object> results = this.jdbcTemplate.query(validationQuery, new SingleColumnRowMapper());
-			Object result = DataAccessUtils.requiredSingleResult(results);
-			builder.withDetail("result", result);
+			jdbcTemplate.setQueryTimeout(timeoutSeconds);
+			try {
+				// Avoid calling getObject as it breaks MySQL on Java 7 and later
+				List<Object> results = jdbcTemplate.query(validationQuery, new SingleColumnRowMapper());
+				Object result = DataAccessUtils.requiredSingleResult(results);
+				builder.withDetail("result", result);
+			}
+			catch (QueryTimeoutException ex) {
+				throw new TimeoutException(ex.getMessage());
+			}
 		}
 		else {
 			builder.withDetail("validationQuery", "isValid()");
-			boolean valid = isConnectionValid(this.jdbcTemplate);
+			boolean valid = isConnectionValid(jdbcTemplate, timeoutSeconds);
 			builder.status((valid) ? Status.UP : Status.DOWN);
 		}
 	}
@@ -129,12 +151,20 @@ public class DataSourceHealthIndicator extends AbstractHealthIndicator implement
 		return connection.getMetaData().getDatabaseProductName();
 	}
 
-	private Boolean isConnectionValid(JdbcTemplate jdbcTemplate) {
-		return jdbcTemplate.execute((ConnectionCallback<Boolean>) this::isConnectionValid);
+	private Boolean isConnectionValid(JdbcTemplate jdbcTemplate, int timeoutSeconds) {
+		return jdbcTemplate.execute((ConnectionCallback<Boolean>) (connection) -> connection.isValid(timeoutSeconds));
 	}
 
-	private Boolean isConnectionValid(Connection connection) throws SQLException {
-		return connection.isValid(0);
+	/**
+	 * Converts a {@link Duration} to a positive JDBC timeout in whole seconds (rounded up
+	 * from milliseconds, minimum {@code 1}) for {@link Connection#isValid(int)} and query
+	 * timeout.
+	 * @param timeout the timeout
+	 * @return timeout in seconds
+	 */
+	private int toSeconds(Duration timeout) {
+		long seconds = (timeout.toMillis() + 999) / 1000;
+		return (int) Math.max(1, seconds);
 	}
 
 	/**
@@ -143,7 +173,6 @@ public class DataSourceHealthIndicator extends AbstractHealthIndicator implement
 	 */
 	public void setDataSource(DataSource dataSource) {
 		this.dataSource = dataSource;
-		this.jdbcTemplate = new JdbcTemplate(dataSource);
 	}
 
 	/**

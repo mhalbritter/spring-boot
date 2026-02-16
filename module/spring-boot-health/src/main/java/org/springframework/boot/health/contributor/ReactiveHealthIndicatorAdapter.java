@@ -16,6 +16,9 @@
 
 package org.springframework.boot.health.contributor;
 
+import java.time.Duration;
+import java.util.concurrent.TimeoutException;
+
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -33,6 +36,11 @@ class ReactiveHealthIndicatorAdapter implements HealthIndicator {
 	}
 
 	@Override
+	public TimeoutSupport getTimeoutSupport() {
+		return this.delegate.getTimeoutSupport();
+	}
+
+	@Override
 	public @Nullable Health health(boolean includeDetails) {
 		return this.delegate.health(includeDetails).block();
 	}
@@ -40,6 +48,32 @@ class ReactiveHealthIndicatorAdapter implements HealthIndicator {
 	@Override
 	public @Nullable Health health() {
 		return this.delegate.health().block();
+	}
+
+	@Override
+	public @Nullable Health health(Duration timeout) throws TimeoutException {
+		try {
+			return this.delegate.health(timeout).block();
+		}
+		catch (RuntimeException ex) {
+			if (ex.getCause() instanceof TimeoutException timeoutException) {
+				throw timeoutException;
+			}
+			throw ex;
+		}
+	}
+
+	@Override
+	public @Nullable Health health(Duration timeout, boolean includeDetails) throws TimeoutException {
+		try {
+			return this.delegate.health(timeout, includeDetails).block();
+		}
+		catch (RuntimeException ex) {
+			if (ex.getCause() instanceof TimeoutException timeoutException) {
+				throw timeoutException;
+			}
+			throw ex;
+		}
 	}
 
 }

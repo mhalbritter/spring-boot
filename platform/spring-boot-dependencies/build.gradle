@@ -2088,6 +2088,7 @@ bom {
 		}
 		links {
 			site("https://projectreactor.io")
+			javadoc("https://javadoc.io/doc/io.projectreactor/reactor-core/{version}", "reactor.core")
 			releaseNotes("https://github.com/reactor/reactor/releases/tag/{version}")
 		}
 	}

@@ -8,6 +8,11 @@
       "defaultValue": true
     },
     {
+      "name": "management.health.redis.timeout",
+      "type": "java.time.Duration",
+      "description": "Timeout for the Redis health check."
+    },
+    {
       "name": "spring.data.redis.lettuce.cluster.refresh.adaptive",
       "type": "java.lang.Boolean",
       "deprecation": {

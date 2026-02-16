@@ -41,12 +41,14 @@ import org.springframework.boot.health.contributor.CompositeHealthContributor;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthContributor;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.HealthIndicatorExecutor;
 import org.springframework.boot.health.registry.DefaultHealthContributorRegistry;
 import org.springframework.boot.health.registry.HealthContributorRegistry;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
 import org.springframework.boot.jdbc.health.DataSourceHealthIndicator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.payload.FieldDescriptor;
 import org.springframework.util.unit.DataSize;
@@ -104,12 +106,18 @@ class HealthEndpointDocumentationTests extends MockMvcEndpointDocumentationTests
 	static class TestConfiguration {
 
 		@Bean
-		HealthEndpoint healthEndpoint(Map<String, HealthContributor> contributors) {
+		HealthIndicatorExecutor healthIndicatorExecutor(Environment environment) {
+			return new HealthIndicatorExecutor(environment);
+		}
+
+		@Bean
+		HealthEndpoint healthEndpoint(Map<String, HealthContributor> contributors,
+				HealthIndicatorExecutor healthIndicatorExecutor) {
 			HealthContributorRegistry registry = new DefaultHealthContributorRegistry(null,
 					HealthContributorNameGenerator.withoutStandardSuffixes().registrar(contributors));
 			HealthEndpointGroup primary = new TestHealthEndpointGroup();
 			HealthEndpointGroups groups = HealthEndpointGroups.of(primary, Collections.emptyMap());
-			return new HealthEndpoint(registry, null, groups, null);
+			return new HealthEndpoint(registry, null, groups, null, healthIndicatorExecutor);
 		}
 
 		@Bean

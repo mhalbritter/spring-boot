@@ -35,6 +35,7 @@ import org.springframework.boot.grpc.server.health.HealthCheckedGrpcComponents;
 import org.springframework.boot.grpc.server.health.StatusAggregator;
 import org.springframework.boot.grpc.server.health.StatusMapper;
 import org.springframework.boot.health.autoconfigure.contributor.HealthContributorMembershipValidator;
+import org.springframework.boot.health.contributor.HealthIndicatorExecutor;
 import org.springframework.boot.health.registry.HealthContributorRegistry;
 import org.springframework.boot.health.registry.ReactiveHealthContributorRegistry;
 import org.springframework.context.ApplicationContext;
@@ -99,9 +100,10 @@ public final class GrpcServerHealthAutoConfiguration {
 		@ConditionalOnMissingBean
 		GrpcServerHealth grpcServerHealth(HealthContributorRegistry healthContributorRegistry,
 				ObjectProvider<ReactiveHealthContributorRegistry> reactiveHealthContributorRegistry,
-				HealthCheckedGrpcComponents healthCheckedGrpcComponents) {
+				HealthCheckedGrpcComponents healthCheckedGrpcComponents,
+				HealthIndicatorExecutor healthIndicatorExecutor) {
 			return new GrpcServerHealth(healthContributorRegistry, reactiveHealthContributorRegistry.getIfAvailable(),
-					healthCheckedGrpcComponents);
+					healthCheckedGrpcComponents, healthIndicatorExecutor);
 		}
 
 		@Bean

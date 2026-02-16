@@ -16,6 +16,7 @@
 
 package org.springframework.boot.actuate.health;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 
@@ -37,8 +38,11 @@ import org.springframework.boot.health.contributor.CompositeReactiveHealthContri
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthContributor;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.HealthIndicatorExecutor;
 import org.springframework.boot.health.contributor.ReactiveHealthContributor;
 import org.springframework.boot.health.contributor.ReactiveHealthIndicator;
+import org.springframework.boot.health.contributor.ReactiveHealthIndicatorExecutor;
+import org.springframework.boot.health.contributor.TimeoutSupport;
 import org.springframework.boot.health.registry.DefaultHealthContributorRegistry;
 import org.springframework.boot.health.registry.DefaultReactiveHealthContributorRegistry;
 import org.springframework.boot.health.registry.HealthContributorRegistry;
@@ -46,9 +50,12 @@ import org.springframework.boot.health.registry.ReactiveHealthContributorRegistr
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.mock.env.MockPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.util.ReflectionUtils;
 
@@ -191,6 +198,62 @@ class HealthEndpointWebIntegrationTests {
 					.isEqualTo("DOWN"));
 	}
 
+	@WebEndpointTest
+	void whenHealthIndicatorExceedsTimeoutReturns503(ApplicationContext context, WebTestClient client) {
+		ConfigurableEnvironment environment = (ConfigurableEnvironment) context.getEnvironment();
+		MockPropertySource propertySource = new MockPropertySource("timeout-test");
+		propertySource.setProperty("management.health.charlie.timeout", Duration.ofMillis(50));
+		environment.getPropertySources().addFirst(propertySource);
+		try {
+			HealthIndicator slowIndicator = new HealthIndicator() {
+				@Override
+				public TimeoutSupport getTimeoutSupport() {
+					return TimeoutSupport.INTERRUPTION;
+				}
+
+				@Override
+				public Health health() {
+					try {
+						Thread.sleep(500);
+					}
+					catch (InterruptedException ex) {
+						Thread.currentThread().interrupt();
+						throw new RuntimeException(ex);
+					}
+					return Health.up().build();
+				}
+			};
+			ReactiveHealthIndicator reactiveSlowIndicator = new ReactiveHealthIndicator() {
+				@Override
+				public TimeoutSupport getTimeoutSupport() {
+					return TimeoutSupport.INTERRUPTION;
+				}
+
+				@Override
+				public Mono<Health> health() {
+					return Mono.just(Health.up().build()).delayElement(Duration.ofMillis(500));
+				}
+			};
+			withHealthContributor(context, "charlie", slowIndicator, reactiveSlowIndicator,
+					() -> client.get()
+						.uri("/actuator/health")
+						.accept(MediaType.APPLICATION_JSON)
+						.exchange()
+						.expectStatus()
+						.isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
+						.expectBody()
+						.jsonPath("status")
+						.isEqualTo("DOWN")
+						.jsonPath("components.charlie.status")
+						.isEqualTo("DOWN")
+						.jsonPath("components.charlie.details.reason")
+						.isEqualTo("timeout"));
+		}
+		finally {
+			environment.getPropertySources().remove("timeout-test");
+		}
+	}
+
 	private void withHealthContributor(ApplicationContext context, String name, HealthContributor healthContributor,
 			ReactiveHealthContributor reactiveHealthContributor, ThrowingCallable callable) {
 		HealthContributorRegistry healthContributorRegistry = getContributorRegistry(context,
@@ -270,20 +333,32 @@ class HealthEndpointWebIntegrationTests {
 		}
 
 		@Bean
+		HealthIndicatorExecutor healthIndicatorExecutor(Environment environment) {
+			return new HealthIndicatorExecutor(environment);
+		}
+
+		@Bean
+		@ConditionalOnWebApplication(type = Type.REACTIVE)
+		ReactiveHealthIndicatorExecutor reactiveHealthIndicatorExecutor(Environment environment) {
+			return new ReactiveHealthIndicatorExecutor(environment);
+		}
+
+		@Bean
 		HealthEndpoint healthEndpoint(HealthContributorRegistry healthContributorRegistry,
 				ObjectProvider<ReactiveHealthContributorRegistry> reactiveHealthContributorRegistry,
-				HealthEndpointGroups healthEndpointGroups) {
+				HealthEndpointGroups healthEndpointGroups, HealthIndicatorExecutor healthIndicatorExecutor) {
 			return new HealthEndpoint(healthContributorRegistry, reactiveHealthContributorRegistry.getIfAvailable(),
-					healthEndpointGroups, null);
+					healthEndpointGroups, null, healthIndicatorExecutor);
 		}
 
 		@Bean
 		@ConditionalOnWebApplication(type = Type.SERVLET)
 		HealthEndpointWebExtension healthWebEndpointExtension(HealthContributorRegistry healthContributorRegistry,
 				ObjectProvider<ReactiveHealthContributorRegistry> reactiveHealthContributorRegistry,
-				HealthEndpointGroups healthEndpointGroups) {
+				HealthEndpointGroups healthEndpointGroups, HealthIndicatorExecutor healthIndicatorExecutor) {
 			return new HealthEndpointWebExtension(healthContributorRegistry,
-					reactiveHealthContributorRegistry.getIfAvailable(), healthEndpointGroups, null);
+					reactiveHealthContributorRegistry.getIfAvailable(), healthEndpointGroups, null,
+					healthIndicatorExecutor);
 		}
 
 		@Bean
@@ -291,9 +366,11 @@ class HealthEndpointWebIntegrationTests {
 		ReactiveHealthEndpointWebExtension reactiveHealthWebEndpointExtension(
 				ReactiveHealthContributorRegistry reactiveHealthContributorRegistry,
 				ObjectProvider<HealthContributorRegistry> healthContributorRegistry,
-				HealthEndpointGroups healthEndpointGroups) {
+				HealthEndpointGroups healthEndpointGroups,
+				ReactiveHealthIndicatorExecutor reactiveHealthIndicatorExecutor) {
 			return new ReactiveHealthEndpointWebExtension(reactiveHealthContributorRegistry,
-					healthContributorRegistry.getIfAvailable(), healthEndpointGroups, null);
+					healthContributorRegistry.getIfAvailable(), healthEndpointGroups, null,
+					reactiveHealthIndicatorExecutor);
 		}
 
 		@Bean

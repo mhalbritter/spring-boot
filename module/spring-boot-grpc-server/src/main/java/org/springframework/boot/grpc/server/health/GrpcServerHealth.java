@@ -30,6 +30,7 @@ import org.springframework.boot.health.contributor.CompositeHealthContributor;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthContributors;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.HealthIndicatorExecutor;
 import org.springframework.boot.health.contributor.Status;
 import org.springframework.boot.health.registry.HealthContributorRegistry;
 import org.springframework.boot.health.registry.ReactiveHealthContributorRegistry;
@@ -50,19 +51,25 @@ public class GrpcServerHealth {
 
 	private final HealthCheckedGrpcComponents components;
 
+	private final HealthIndicatorExecutor healthIndicatorExecutor;
+
 	/**
 	 * Create a new {@link GrpcServerHealth} instance.
 	 * @param registry the health contributor registry
 	 * @param fallbackRegistry the fallback registry or {@code null}
 	 * @param components the components used to provide the server health
+	 * @param healthIndicatorExecutor the executor to execute health indicators on
 	 */
 	public GrpcServerHealth(HealthContributorRegistry registry,
-			@Nullable ReactiveHealthContributorRegistry fallbackRegistry, HealthCheckedGrpcComponents components) {
+			@Nullable ReactiveHealthContributorRegistry fallbackRegistry, HealthCheckedGrpcComponents components,
+			HealthIndicatorExecutor healthIndicatorExecutor) {
 		Assert.notNull(registry, "'registry' must not be null");
 		Assert.notNull(components, "'components' must not be null");
+		Assert.notNull(healthIndicatorExecutor, "'healthIndicatorExecutor' must not be null");
 		this.registry = registry;
 		this.fallbackRegistry = fallbackRegistry;
 		this.components = components;
+		this.healthIndicatorExecutor = healthIndicatorExecutor;
 	}
 
 	public void update(HealthStatusManager manager) {
@@ -70,7 +77,7 @@ public class GrpcServerHealth {
 	}
 
 	public void update(BiConsumer<String, ServingStatus> updater) {
-		Cache cache = new Cache();
+		Cache cache = new Cache(this.healthIndicatorExecutor);
 		HealthCheckedGrpcComponent serverComponent = this.components.getServer();
 		if (serverComponent != null) {
 			updater.accept("", getServingStatus(cache, serverComponent));
@@ -113,8 +120,15 @@ public class GrpcServerHealth {
 
 		private final Map<String, Health> health = new HashMap<>();
 
+		private final HealthIndicatorExecutor healthIndicatorExecutor;
+
+		Cache(HealthIndicatorExecutor healthIndicatorExecutor) {
+			this.healthIndicatorExecutor = healthIndicatorExecutor;
+		}
+
 		@Nullable Health getHealth(String name, HealthIndicator indicator) {
-			return this.health.computeIfAbsent(name, (key) -> indicator.health(false));
+			return this.health.computeIfAbsent(name,
+					(key) -> this.healthIndicatorExecutor.execute(indicator, name, false).join());
 		}
 
 	}

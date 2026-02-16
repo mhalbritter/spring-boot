@@ -34,6 +34,7 @@ import org.springframework.boot.health.contributor.CompositeReactiveHealthContri
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.ReactiveHealthContributor;
 import org.springframework.boot.health.contributor.ReactiveHealthIndicator;
+import org.springframework.boot.health.contributor.ReactiveHealthIndicatorExecutor;
 import org.springframework.boot.health.contributor.Status;
 import org.springframework.boot.health.registry.DefaultReactiveHealthContributorRegistry;
 import org.springframework.boot.health.registry.ReactiveHealthContributorRegistry;
@@ -111,7 +112,8 @@ class ReactiveHealthEndpointWebExtensionTests extends
 	@Override
 	protected ReactiveHealthEndpointWebExtension create(ReactiveHealthContributorRegistry registry,
 			HealthEndpointGroups groups, @Nullable Duration slowContributorLoggingThreshold) {
-		return new ReactiveHealthEndpointWebExtension(registry, null, groups, slowContributorLoggingThreshold);
+		return new ReactiveHealthEndpointWebExtension(registry, null, groups, slowContributorLoggingThreshold,
+				new ReactiveHealthIndicatorExecutor(null));
 	}
 
 	@Override

@@ -31,6 +31,7 @@ import org.springframework.boot.health.contributor.CompositeHealthContributor;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthContributor;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.HealthIndicatorExecutor;
 import org.springframework.boot.health.contributor.Status;
 import org.springframework.boot.health.registry.DefaultHealthContributorRegistry;
 import org.springframework.boot.health.registry.HealthContributorRegistry;
@@ -45,6 +46,7 @@ import static org.mockito.Mockito.mock;
  *
  * @author Phillip Webb
  * @author Scott Frederick
+ * @author Moritz Halbritter
  */
 @ExtendWith(OutputCaptureExtension.class)
 class HealthEndpointTests extends
@@ -108,7 +110,8 @@ class HealthEndpointTests extends
 	@Override
 	protected HealthEndpoint create(HealthContributorRegistry registry, HealthEndpointGroups groups,
 			@Nullable Duration slowContributorLoggingThreshold) {
-		return new HealthEndpoint(registry, null, groups, slowContributorLoggingThreshold);
+		return new HealthEndpoint(registry, null, groups, slowContributorLoggingThreshold,
+				new HealthIndicatorExecutor(null));
 	}
 
 	@Override

@@ -34,6 +34,7 @@ import org.springframework.boot.actuate.endpoint.web.WebEndpointResponse;
 import org.springframework.boot.actuate.endpoint.web.WebServerNamespace;
 import org.springframework.boot.actuate.endpoint.web.annotation.EndpointWebExtension;
 import org.springframework.boot.health.contributor.Health;
+import org.springframework.boot.health.contributor.ReactiveHealthIndicatorExecutor;
 import org.springframework.boot.health.registry.HealthContributorRegistry;
 import org.springframework.boot.health.registry.ReactiveHealthContributorRegistry;
 import org.springframework.context.annotation.ImportRuntimeHints;
@@ -59,11 +60,34 @@ public class ReactiveHealthEndpointWebExtension
 	 * @param groups the health endpoint groups
 	 * @param slowContributorLoggingThreshold duration after which slow health indicator
 	 * logging should occur
+	 * @deprecated since 4.1.0 for removal in 4.3.0 in favor of
+	 * {@link #ReactiveHealthEndpointWebExtension(ReactiveHealthContributorRegistry, HealthContributorRegistry, HealthEndpointGroups, Duration, ReactiveHealthIndicatorExecutor)}
 	 */
+	@Deprecated(since = "4.1.0", forRemoval = true)
 	public ReactiveHealthEndpointWebExtension(ReactiveHealthContributorRegistry registry,
 			@Nullable HealthContributorRegistry fallbackRegistry, HealthEndpointGroups groups,
 			@Nullable Duration slowContributorLoggingThreshold) {
-		super(Contributor.reactive(registry, fallbackRegistry), groups, slowContributorLoggingThreshold);
+		this(registry, fallbackRegistry, groups, slowContributorLoggingThreshold,
+				new ReactiveHealthIndicatorExecutor(null));
+	}
+
+	/**
+	 * Create a new {@link ReactiveHealthEndpointWebExtension} instance.
+	 * @param registry the health contributor registry
+	 * @param fallbackRegistry the fallback registry or {@code null}
+	 * @param groups the health endpoint groups
+	 * @param slowContributorLoggingThreshold duration after which slow health indicator
+	 * logging should occur
+	 * @param reactiveHealthIndicatorExecutor the {@link ReactiveHealthIndicatorExecutor}
+	 * to execute indicators on
+	 * @since 4.1.0
+	 */
+	public ReactiveHealthEndpointWebExtension(ReactiveHealthContributorRegistry registry,
+			@Nullable HealthContributorRegistry fallbackRegistry, HealthEndpointGroups groups,
+			@Nullable Duration slowContributorLoggingThreshold,
+			ReactiveHealthIndicatorExecutor reactiveHealthIndicatorExecutor) {
+		super(Contributor.reactive(registry, fallbackRegistry, reactiveHealthIndicatorExecutor), groups,
+				slowContributorLoggingThreshold);
 	}
 
 	@ReadOperation

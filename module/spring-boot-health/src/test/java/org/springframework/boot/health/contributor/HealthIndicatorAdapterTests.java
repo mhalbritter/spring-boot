@@ -17,11 +17,14 @@
 package org.springframework.boot.health.contributor;
 
 import java.time.Duration;
+import java.util.concurrent.TimeoutException;
 
 import org.junit.jupiter.api.Test;
 import reactor.test.StepVerifier;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -59,6 +62,27 @@ class HealthIndicatorAdapterTests {
 			.expectNext(Health.status(Status.UP).build())
 			.expectComplete()
 			.verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	void shouldReturnDelegateTimeout() {
+		HealthIndicator delegate = mock(HealthIndicator.class);
+		HealthIndicatorAdapter adapter = new HealthIndicatorAdapter(delegate);
+		for (TimeoutSupport value : TimeoutSupport.values()) {
+			given(delegate.getTimeoutSupport()).willReturn(value);
+			assertThat(adapter.getTimeoutSupport()).isEqualTo(value);
+		}
+	}
+
+	@Test
+	void shouldDelegateHealthWithTimeout() throws TimeoutException {
+		HealthIndicator delegate = mock(HealthIndicator.class);
+		HealthIndicatorAdapter adapter = new HealthIndicatorAdapter(delegate);
+		Health status = Health.up().build();
+		Duration timeout = Duration.ofSeconds(5);
+		given(delegate.health(timeout)).willReturn(status);
+		StepVerifier.create(adapter.health(timeout)).expectNext(status).expectComplete().verify(Duration.ofSeconds(30));
+		then(delegate).should().health(timeout);
 	}
 
 }

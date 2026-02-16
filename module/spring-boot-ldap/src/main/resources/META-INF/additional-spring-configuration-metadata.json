@@ -5,6 +5,11 @@
       "type": "java.lang.Boolean",
       "description": "Whether to enable LDAP health check.",
       "defaultValue": true
+    },
+    {
+      "name": "management.health.ldap.timeout",
+      "type": "java.time.Duration",
+      "description": "Timeout for the LDAP health check."
     }
   ]
 }

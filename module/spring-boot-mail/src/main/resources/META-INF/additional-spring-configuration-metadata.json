@@ -8,6 +8,11 @@
       "defaultValue": true
     },
     {
+      "name": "management.health.mail.timeout",
+      "type": "java.time.Duration",
+      "description": "Timeout for the Mail health check."
+    },
+    {
       "name": "spring.mail.test-connection",
       "description": "Whether to test that the mail server is available on startup.",
       "sourceType": "org.springframework.boot.autoconfigure.mail.MailProperties",

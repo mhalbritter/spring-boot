@@ -26,6 +26,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.boot.health.actuate.endpoint.HealthEndpoint;
 import org.springframework.boot.health.actuate.endpoint.HealthEndpointGroups;
 import org.springframework.boot.health.actuate.endpoint.HealthEndpointWebExtension;
+import org.springframework.boot.health.contributor.HealthIndicatorExecutor;
 import org.springframework.boot.health.registry.HealthContributorRegistry;
 import org.springframework.boot.health.registry.ReactiveHealthContributorRegistry;
 import org.springframework.context.annotation.Bean;
@@ -48,10 +49,11 @@ class HealthEndpointWebExtensionConfiguration {
 	@ConditionalOnMissingBean
 	HealthEndpointWebExtension healthEndpointWebExtension(HealthContributorRegistry healthContributorRegistry,
 			ObjectProvider<ReactiveHealthContributorRegistry> reactiveHealthContributorRegistry,
-			HealthEndpointGroups groups, HealthEndpointProperties properties) {
+			HealthEndpointGroups groups, HealthEndpointProperties properties,
+			HealthIndicatorExecutor healthIndicatorExecutor) {
 		return new HealthEndpointWebExtension(healthContributorRegistry,
 				reactiveHealthContributorRegistry.getIfAvailable(), groups,
-				properties.getLogging().getSlowIndicatorThreshold());
+				properties.getLogging().getSlowIndicatorThreshold(), healthIndicatorExecutor);
 	}
 
 }

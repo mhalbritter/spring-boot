@@ -16,6 +16,9 @@
 
 package org.springframework.boot.health.contributor;
 
+import java.time.Duration;
+import java.util.concurrent.TimeoutException;
+
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -23,6 +26,7 @@ import org.jspecify.annotations.Nullable;
  *
  * @author Dave Syer
  * @author Phillip Webb
+ * @author Moritz Halbritter
  * @since 4.0.0
  */
 @FunctionalInterface
@@ -46,5 +50,55 @@ public non-sealed interface HealthIndicator extends HealthContributor {
 	 * @return the health
 	 */
 	@Nullable Health health();
+
+	/**
+	 * Returns how this indicator participates when a timeout is configured (see
+	 * {@link HealthIndicatorExecutor}).
+	 * <ul>
+	 * <li>{@link TimeoutSupport#NONE} &mdash; the configured timeout is not enforced; a
+	 * warning is logged once per indicator name if a timeout is configured anyway.</li>
+	 * <li>{@link TimeoutSupport#NATIVE} &mdash; {@link #health(Duration)} (or
+	 * {@link #health(Duration, boolean)}) is called so the indicator can apply the limit
+	 * with stack-appropriate APIs.</li>
+	 * <li>{@link TimeoutSupport#INTERRUPTION} &mdash; {@link #health()} (or
+	 * {@link #health(boolean)}) is run on another thread and
+	 * {@link java.util.concurrent.Future#get(long, java.util.concurrent.TimeUnit)}
+	 * enforces the limit; on timeout the task is cancelled with interruption.</li>
+	 * </ul>
+	 * @return the timeout support of that indicator
+	 * @since 4.1.0
+	 */
+	default TimeoutSupport getTimeoutSupport() {
+		return TimeoutSupport.NONE;
+	}
+
+	/**
+	 * Return an indication of health, respecting the given timeout. This method will only
+	 * be called if {@link #getTimeoutSupport()} returns {@link TimeoutSupport#NATIVE}.
+	 * @param timeout the timeout
+	 * @return the health
+	 * @throws TimeoutException if a timeout occurred
+	 * @since 4.1.0
+	 */
+	default @Nullable Health health(Duration timeout) throws TimeoutException {
+		throw new UnsupportedOperationException("Timeout is not supported");
+	}
+
+	/**
+	 * Return an indication of health, respecting the given timeout. This method will only
+	 * be called if {@link #getTimeoutSupport()} returns {@link TimeoutSupport#NATIVE}.
+	 * @param includeDetails if details should be included or removed
+	 * @param timeout the timeout
+	 * @return the health
+	 * @throws TimeoutException if a timeout occurred
+	 * @since 4.1.0
+	 */
+	default @Nullable Health health(Duration timeout, boolean includeDetails) throws TimeoutException {
+		Health health = health(timeout);
+		if (health == null) {
+			return null;
+		}
+		return includeDetails ? health : health.withoutDetails();
+	}
 
 }

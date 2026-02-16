@@ -27,6 +27,7 @@ import org.springframework.boot.health.actuate.endpoint.HealthEndpointGroupsPost
 import org.springframework.boot.health.actuate.endpoint.HttpCodeStatusMapper;
 import org.springframework.boot.health.actuate.endpoint.StatusAggregator;
 import org.springframework.boot.health.autoconfigure.contributor.HealthContributorMembershipValidator;
+import org.springframework.boot.health.contributor.HealthIndicatorExecutor;
 import org.springframework.boot.health.registry.HealthContributorRegistry;
 import org.springframework.boot.health.registry.ReactiveHealthContributorRegistry;
 import org.springframework.context.ApplicationContext;
@@ -87,9 +88,10 @@ class HealthEndpointConfiguration {
 	@ConditionalOnMissingBean
 	HealthEndpoint healthEndpoint(HealthContributorRegistry healthContributorRegistry,
 			ObjectProvider<ReactiveHealthContributorRegistry> reactiveHealthContributorRegistry,
-			HealthEndpointGroups groups, HealthEndpointProperties properties) {
+			HealthEndpointGroups groups, HealthEndpointProperties properties,
+			HealthIndicatorExecutor healthIndicatorExecutor) {
 		return new HealthEndpoint(healthContributorRegistry, reactiveHealthContributorRegistry.getIfAvailable(), groups,
-				properties.getLogging().getSlowIndicatorThreshold());
+				properties.getLogging().getSlowIndicatorThreshold(), healthIndicatorExecutor);
 	}
 
 	@Bean

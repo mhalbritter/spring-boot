@@ -16,6 +16,8 @@
 
 package org.springframework.boot.health.contributor;
 
+import java.time.Duration;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 
 import org.apache.commons.logging.Log;
@@ -32,6 +34,12 @@ import org.springframework.util.StringUtils;
  * This implementation is only suitable if an {@link Exception} raised from
  * {@link #doHealthCheck(Health.Builder)} should create a {@link Status#DOWN} health
  * status.
+ * <p>
+ * To participate in configured {@link HealthIndicator#health(Duration) native timeouts},
+ * override {@link #getTimeoutSupport()} to return {@link TimeoutSupport#NATIVE} and
+ * implement {@link #doHealthCheck(Health.Builder, Duration)}. Otherwise the default
+ * {@link TimeoutSupport#NONE} applies and configured timeouts are ignored (with a
+ * one-time warning logged when a timeout property is set).
  *
  * @author Christian Dupuis
  * @since 4.0.0
@@ -86,6 +94,22 @@ public abstract class AbstractHealthIndicator implements HealthIndicator {
 		return builder.build();
 	}
 
+	@Override
+	public Health health(Duration timeout) throws TimeoutException {
+		Health.Builder builder = new Health.Builder();
+		try {
+			doHealthCheck(builder, timeout);
+		}
+		catch (TimeoutException ex) {
+			throw ex;
+		}
+		catch (Exception ex) {
+			builder.down(ex);
+		}
+		logExceptionIfPresent(builder.getException());
+		return builder.build();
+	}
+
 	private void logExceptionIfPresent(@Nullable Throwable throwable) {
 		if (throwable != null && this.logger.isWarnEnabled()) {
 			String message = (throwable instanceof Exception ex) ? this.healthCheckFailedMessage.apply(ex) : null;
@@ -100,5 +124,19 @@ public abstract class AbstractHealthIndicator implements HealthIndicator {
 	 * system status.
 	 */
 	protected abstract void doHealthCheck(Health.Builder builder) throws Exception;
+
+	/**
+	 * Actual health check logic with an applied timeout. This method is only called when
+	 * {@link #getTimeoutSupport()} returns {@link TimeoutSupport#NATIVE} (override the
+	 * default {@link TimeoutSupport#NONE} to enable it).
+	 * @param builder the {@link Health.Builder} to report health status and details
+	 * @param timeout the timeout to apply
+	 * @throws Exception any {@link Exception} that should create a {@link Status#DOWN}
+	 * system status.
+	 * @since 4.1.0
+	 */
+	protected void doHealthCheck(Health.Builder builder, Duration timeout) throws Exception {
+		throw new UnsupportedOperationException("Timeout is not supported");
+	}
 
 }

@@ -8,6 +8,11 @@
       "defaultValue": true
     },
     {
+      "name": "management.health.cassandra.timeout",
+      "type": "java.time.Duration",
+      "description": "Timeout for the Cassandra health check."
+    },
+    {
       "name": "spring.cassandra.compression",
       "defaultValue": "none"
     },

@@ -35,10 +35,20 @@
       "defaultValue": true
     },
     {
+      "name": "management.health.defaults.timeout",
+      "type": "java.time.Duration",
+      "description": "Default timeout for health indicators."
+    },
+    {
       "name": "management.health.diskspace.enabled",
       "type": "java.lang.Boolean",
       "description": "Whether to enable disk space health check.",
       "defaultValue": true
+    },
+    {
+      "name": "management.health.diskspace.timeout",
+      "type": "java.time.Duration",
+      "description": "Timeout for the disk space health check."
     },
     {
       "name": "management.health.influxdb.enabled",
@@ -56,10 +66,20 @@
       "defaultValue": false
     },
     {
+      "name": "management.health.livenessstate.timeout",
+      "type": "java.time.Duration",
+      "description": "Timeout for the liveness state health check."
+    },
+    {
       "name": "management.health.ping.enabled",
       "type": "java.lang.Boolean",
       "description": "Whether to enable ping health check.",
       "defaultValue": true
+    },
+    {
+      "name": "management.health.ping.timeout",
+      "type": "java.time.Duration",
+      "description": "Timeout for the ping health check."
     },
     {
       "name": "management.health.probes.enabled",
@@ -79,10 +99,20 @@
       "defaultValue": false
     },
     {
+      "name": "management.health.readinessstate.timeout",
+      "type": "java.time.Duration",
+      "description": "Timeout for the readiness state health check."
+    },
+    {
       "name": "management.health.ssl.enabled",
       "type": "java.lang.Boolean",
       "description": "Whether to enable SSL certificate health check.",
       "defaultValue": true
+    },
+    {
+      "name": "management.health.ssl.timeout",
+      "type": "java.time.Duration",
+      "description": "Timeout for the SSL certificate health check."
     }
   ],
   "hints": [

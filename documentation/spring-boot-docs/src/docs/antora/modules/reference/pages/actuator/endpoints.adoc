@@ -708,6 +708,20 @@ Additional javadoc:org.springframework.boot.health.contributor.HealthIndicator[]
 
 These can be disabled by using the configprop:management.endpoint.health.probes.enabled[] configuration property.
 
+You can run health indicators with a maximum execution time, if the health indicator supports it.
+You can set a default timeout for all indicators with configprop:management.health.defaults.timeout[].
+To configure a timeout for a specific indicator, use `management.health.key.timeout`, where `key` is the indicator name (for example, `db`, `redis`, `cassandra`, etc.) from the xref:actuator/endpoints.adoc#actuator.endpoints.health.auto-configured-health-indicators[auto-configured indicators table] above.
+For nested composite indicators, the `/` path separator in the indicator name is replaced with `.` in the property name (for example, a nested indicator named `datasource/primary` is configured with `management.health.datasource.primary.timeout`).
+When a health check exceeds its timeout, that indicator reports status `DOWN` with a detail `reason: "timeout"`.
+
+How the limit is applied depends on the indicator's timeout mode (see javadoc:org.springframework.boot.health.contributor.HealthIndicator#getTimeoutSupport[] and javadoc:org.springframework.boot.health.contributor.ReactiveHealthIndicator#getTimeoutSupport[]).
+`NONE` ignores the configured timeout (Spring Boot logs a one-time warning per indicator name).
+`NATIVE` lets the indicator honor the duration with stack-specific APIs.
+`INTERRUPTION` enforces it from the outside (thread interruption for blocking checks, javadoc:reactor.core.publisher.Mono#timeout(java.time.Duration)[] for reactive ones).
+`INTERRUPTION` is best-effort: blocking libraries do not always stop as soon as the timeout elapses, so wall-clock time can exceed the configured duration before `DOWN` is reported.
+Blocking interruption-based checks use a bounded thread pool; if the pool rejects work, the check can fail with an error instead of a `DOWN` result with `reason: "timeout"`.
+For the database health indicator, JDBC timeouts are expressed in whole seconds; values under one second are rounded up to one second.
+
 
 
 [[actuator.endpoints.health.writing-custom-health-indicators]]

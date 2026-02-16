@@ -30,6 +30,7 @@ import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
 import org.springframework.boot.actuate.endpoint.annotation.Selector;
 import org.springframework.boot.actuate.endpoint.annotation.Selector.Match;
 import org.springframework.boot.health.contributor.Health;
+import org.springframework.boot.health.contributor.HealthIndicatorExecutor;
 import org.springframework.boot.health.registry.HealthContributorRegistry;
 import org.springframework.boot.health.registry.ReactiveHealthContributorRegistry;
 
@@ -58,11 +59,32 @@ public class HealthEndpoint extends HealthEndpointSupport<Health, HealthDescript
 	 * @param groups the health endpoint groups
 	 * @param slowContributorLoggingThreshold duration after which slow health indicator
 	 * logging should occur
+	 * @deprecated since 4.1.0 for removal in 4.3.0 in favor of
+	 * {@link #HealthEndpoint(HealthContributorRegistry, ReactiveHealthContributorRegistry, HealthEndpointGroups, Duration, HealthIndicatorExecutor)}
 	 */
+	@Deprecated(since = "4.1.0", forRemoval = true)
 	public HealthEndpoint(HealthContributorRegistry registry,
 			@Nullable ReactiveHealthContributorRegistry fallbackRegistry, HealthEndpointGroups groups,
 			@Nullable Duration slowContributorLoggingThreshold) {
-		super(Contributor.blocking(registry, fallbackRegistry), groups, slowContributorLoggingThreshold);
+		this(registry, fallbackRegistry, groups, slowContributorLoggingThreshold, new HealthIndicatorExecutor(null));
+	}
+
+	/**
+	 * Create a new {@link HealthEndpoint} instance.
+	 * @param registry the health contributor registry
+	 * @param fallbackRegistry the fallback registry or {@code null}
+	 * @param groups the health endpoint groups
+	 * @param slowContributorLoggingThreshold duration after which slow health indicator
+	 * logging should occur
+	 * @param healthIndicatorExecutor the {@link HealthIndicatorExecutor} to execute
+	 * indicators on
+	 * @since 4.1.0
+	 */
+	public HealthEndpoint(HealthContributorRegistry registry,
+			@Nullable ReactiveHealthContributorRegistry fallbackRegistry, HealthEndpointGroups groups,
+			@Nullable Duration slowContributorLoggingThreshold, HealthIndicatorExecutor healthIndicatorExecutor) {
+		super(Contributor.blocking(registry, fallbackRegistry, healthIndicatorExecutor), groups,
+				slowContributorLoggingThreshold);
 	}
 
 	@ReadOperation

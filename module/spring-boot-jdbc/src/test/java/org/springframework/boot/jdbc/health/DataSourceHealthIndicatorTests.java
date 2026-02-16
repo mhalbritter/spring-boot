@@ -18,6 +18,11 @@ package org.springframework.boot.jdbc.health;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.SQLTimeoutException;
+import java.sql.Statement;
+import java.time.Duration;
+import java.util.Objects;
+import java.util.concurrent.TimeoutException;
 
 import javax.sql.DataSource;
 
@@ -27,12 +32,15 @@ import org.junit.jupiter.api.Test;
 
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.Status;
+import org.springframework.boot.health.contributor.TimeoutSupport;
 import org.springframework.boot.jdbc.EmbeddedDatabaseConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.entry;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
@@ -123,6 +131,64 @@ class DataSourceHealthIndicatorTests {
 		assertThat(health.getStatus()).isEqualTo(Status.DOWN);
 		assertThat(health.getDetails()).containsOnly(entry("database", "HSQL Database Engine"),
 				entry("validationQuery", "isValid()"));
+	}
+
+	@Test
+	void getTimeoutSupport() {
+		assertThat(this.indicator.getTimeoutSupport()).isEqualTo(TimeoutSupport.NATIVE);
+	}
+
+	@Test
+	void healthIndicatorWithTimeoutPassesTimeoutToIsValid() throws Exception {
+		DataSource dataSource = mock(DataSource.class);
+		Connection connection = mock(Connection.class);
+		given(connection.isValid(2)).willReturn(true);
+		given(connection.getMetaData()).willReturn(this.dataSource.getConnection().getMetaData());
+		given(dataSource.getConnection()).willReturn(connection);
+		this.indicator.setDataSource(dataSource);
+		Health health = Objects.requireNonNull(this.indicator.health(Duration.ofMillis(1500), true));
+		assertThat(health.getStatus()).isEqualTo(Status.UP);
+		then(connection).should().isValid(2);
+	}
+
+	@Test
+	void healthIndicatorWithTimeoutAndConnectionValidationFailureReturnsDown() throws Exception {
+		DataSource dataSource = mock(DataSource.class);
+		Connection connection = mock(Connection.class);
+		given(connection.isValid(1)).willReturn(false);
+		given(connection.getMetaData()).willReturn(this.dataSource.getConnection().getMetaData());
+		given(dataSource.getConnection()).willReturn(connection);
+		this.indicator.setDataSource(dataSource);
+		Health health = Objects.requireNonNull(this.indicator.health(Duration.ofMillis(500), true));
+		assertThat(health.getStatus()).isEqualTo(Status.DOWN);
+	}
+
+	@Test
+	void healthIndicatorWithTimeoutAndCustomValidationQueryThrowsTimeoutExceptionOnQueryTimeout() throws Exception {
+		DataSource dataSource = mock(DataSource.class);
+		Connection connection = mock(Connection.class);
+		Statement statement = mock(Statement.class);
+		given(connection.getMetaData()).willReturn(this.dataSource.getConnection().getMetaData());
+		given(connection.createStatement()).willReturn(statement);
+		given(statement.executeQuery(anyString())).willThrow(new SQLTimeoutException("Query timed out"));
+		given(dataSource.getConnection()).willReturn(connection);
+		this.indicator.setDataSource(dataSource);
+		this.indicator.setQuery("SELECT 1");
+		assertThatExceptionOfType(TimeoutException.class)
+			.isThrownBy(() -> this.indicator.health(Duration.ofMillis(500), true));
+		then(statement).should().setQueryTimeout(1);
+	}
+
+	@Test
+	void healthIndicatorWithTimeoutAndCustomValidationQuery() throws Exception {
+		String customValidationQuery = "SELECT COUNT(*) from FOO";
+		new JdbcTemplate(this.dataSource).execute("CREATE TABLE FOO (id INTEGER IDENTITY PRIMARY KEY)");
+		this.indicator.setDataSource(this.dataSource);
+		this.indicator.setQuery(customValidationQuery);
+		Health health = Objects.requireNonNull(this.indicator.health(Duration.ofSeconds(10), true));
+		assertThat(health.getStatus()).isEqualTo(Status.UP);
+		assertThat(health.getDetails()).containsOnly(entry("database", "HSQL Database Engine"), entry("result", 0L),
+				entry("validationQuery", customValidationQuery));
 	}
 
 }

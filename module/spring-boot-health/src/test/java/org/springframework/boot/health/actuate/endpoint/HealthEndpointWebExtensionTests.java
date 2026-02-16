@@ -34,6 +34,7 @@ import org.springframework.boot.health.contributor.CompositeHealthContributor;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthContributor;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.HealthIndicatorExecutor;
 import org.springframework.boot.health.contributor.Status;
 import org.springframework.boot.health.registry.DefaultHealthContributorRegistry;
 import org.springframework.boot.health.registry.HealthContributorRegistry;
@@ -103,7 +104,8 @@ class HealthEndpointWebExtensionTests extends
 	@Override
 	protected HealthEndpointWebExtension create(HealthContributorRegistry registry, HealthEndpointGroups groups,
 			@Nullable Duration slowIndicatorLoggingThreshold) {
-		return new HealthEndpointWebExtension(registry, null, groups, slowIndicatorLoggingThreshold);
+		return new HealthEndpointWebExtension(registry, null, groups, slowIndicatorLoggingThreshold,
+				new HealthIndicatorExecutor(null));
 	}
 
 	@Override

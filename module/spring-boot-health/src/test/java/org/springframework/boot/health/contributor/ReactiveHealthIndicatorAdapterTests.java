@@ -16,10 +16,16 @@
 
 package org.springframework.boot.health.contributor;
 
+import java.time.Duration;
+import java.util.concurrent.TimeoutException;
+
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.mock;
 
 /**
  * Tests for {@link ReactiveHealthIndicatorAdapter}.
@@ -48,6 +54,38 @@ class ReactiveHealthIndicatorAdapterTests {
 		assertThat(health).isNotNull();
 		assertThat(health.getStatus()).isEqualTo(Status.UP);
 		assertThat(health.getDetails()).isEmpty();
+	}
+
+	@Test
+	void shouldReturnDelegateTimeout() {
+		ReactiveHealthIndicator delegate = mock(ReactiveHealthIndicator.class);
+		ReactiveHealthIndicatorAdapter adapter = new ReactiveHealthIndicatorAdapter(delegate);
+		for (TimeoutSupport value : TimeoutSupport.values()) {
+			given(delegate.getTimeoutSupport()).willReturn(value);
+			assertThat(adapter.getTimeoutSupport()).isEqualTo(value);
+		}
+	}
+
+	@Test
+	void shouldDelegateHealthWithTimeout() throws TimeoutException {
+		ReactiveHealthIndicator delegate = mock(ReactiveHealthIndicator.class);
+		ReactiveHealthIndicatorAdapter adapter = new ReactiveHealthIndicatorAdapter(delegate);
+		Health status = Health.up().build();
+		Duration timeout = Duration.ofSeconds(5);
+		given(delegate.health(timeout)).willReturn(Mono.just(status));
+		adapter.health(timeout);
+		then(delegate).should().health(timeout);
+	}
+
+	@Test
+	void shouldDelegateHealthWithTimeoutAndDetails() throws TimeoutException {
+		ReactiveHealthIndicator delegate = mock(ReactiveHealthIndicator.class);
+		ReactiveHealthIndicatorAdapter adapter = new ReactiveHealthIndicatorAdapter(delegate);
+		Health status = Health.up().build();
+		Duration timeout = Duration.ofSeconds(5);
+		given(delegate.health(timeout, true)).willReturn(Mono.just(status));
+		adapter.health(timeout, true);
+		then(delegate).should().health(timeout, true);
 	}
 
 }

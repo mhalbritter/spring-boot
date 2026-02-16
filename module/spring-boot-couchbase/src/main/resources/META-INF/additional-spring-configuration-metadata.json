@@ -10,12 +10,7 @@
     {
       "name": "management.health.couchbase.timeout",
       "type": "java.time.Duration",
-      "description": "Timeout for getting the Bucket information from the server.",
-      "defaultValue": "1000ms",
-      "deprecation": {
-        "level": "error",
-        "since": "2.0.6"
-      }
+      "description": "Timeout for the Couchbase health check."
     },
     {
       "name": "spring.couchbase.bootstrap-hosts",
