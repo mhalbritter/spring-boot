@@ -32,6 +32,7 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.opentelemetry.OpenTelemetryEnvironmentVariables;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 
@@ -54,12 +55,18 @@ public final class OpenTelemetrySdkAutoConfiguration {
 	OpenTelemetrySdk openTelemetrySdk(ObjectProvider<SdkTracerProvider> openTelemetrySdkTracerProvider,
 			ObjectProvider<ContextPropagators> openTelemetryContextPropagators,
 			ObjectProvider<SdkLoggerProvider> openTelemetrySdkLoggerProvider,
-			ObjectProvider<SdkMeterProvider> openTelemetrySdkMeterProvider) {
+			ObjectProvider<SdkMeterProvider> openTelemetrySdkMeterProvider,
+			ObjectProvider<OpenTelemetryEnvironmentVariables> envVariablesProvider) {
+		OpenTelemetryEnvironmentVariables envVariables = envVariablesProvider
+			.getIfAvailable(OpenTelemetryEnvironmentVariables::fromSystemEnv);
 		OpenTelemetrySdkBuilder builder = OpenTelemetrySdk.builder();
-		openTelemetrySdkTracerProvider.ifAvailable(builder::setTracerProvider);
 		openTelemetryContextPropagators.ifAvailable(builder::setPropagators);
-		openTelemetrySdkLoggerProvider.ifAvailable(builder::setLoggerProvider);
-		openTelemetrySdkMeterProvider.ifAvailable(builder::setMeterProvider);
+		boolean sdkDisabled = envVariables.getBoolean("OTEL_SDK_DISABLED");
+		if (!sdkDisabled) {
+			openTelemetrySdkTracerProvider.ifAvailable(builder::setTracerProvider);
+			openTelemetrySdkLoggerProvider.ifAvailable(builder::setLoggerProvider);
+			openTelemetrySdkMeterProvider.ifAvailable(builder::setMeterProvider);
+		}
 		return builder.build();
 	}
 

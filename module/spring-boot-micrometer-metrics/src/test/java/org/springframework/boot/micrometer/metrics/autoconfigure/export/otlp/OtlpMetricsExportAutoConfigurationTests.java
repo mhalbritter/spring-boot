@@ -19,7 +19,9 @@ package org.springframework.boot.micrometer.metrics.autoconfigure.export.otlp;
 import java.util.concurrent.ScheduledExecutorService;
 
 import io.micrometer.core.instrument.Clock;
+import io.micrometer.core.ipc.http.HttpSender;
 import io.micrometer.registry.otlp.OtlpConfig;
+import io.micrometer.registry.otlp.OtlpHttpMetricsSender;
 import io.micrometer.registry.otlp.OtlpMeterRegistry;
 import io.micrometer.registry.otlp.OtlpMetricsSender;
 import org.junit.jupiter.api.Test;
@@ -151,6 +153,28 @@ class OtlpMetricsExportAutoConfigurationTests {
 	}
 
 	@Test
+	void autoConfiguresOtlpHttpMetricsSender() {
+		this.contextRunner.withUserConfiguration(BaseConfiguration.class)
+			.run((context) -> assertThat(context).hasSingleBean(OtlpHttpMetricsSender.class));
+	}
+
+	@Test
+	void usesCustomHttpSenderIfAvailable() {
+		this.contextRunner.withUserConfiguration(BaseConfiguration.class, CustomHttpSenderConfiguration.class)
+			.run((context) -> {
+				assertThat(context).hasSingleBean(OtlpHttpMetricsSender.class);
+				assertThat(context).hasBean("customHttpSender");
+			});
+	}
+
+	@Test
+	void backsOffOtlpHttpMetricsSenderWhenCustomMetricsSenderIsProvided() {
+		this.contextRunner.withUserConfiguration(BaseConfiguration.class, CustomMetricsSenderConfiguration.class)
+			.run((context) -> assertThat(context).doesNotHaveBean(OtlpHttpMetricsSender.class)
+				.hasSingleBean(OtlpMetricsSender.class));
+	}
+
+	@Test
 	void shouldBackOffIfSpringBootOpenTelemetryIsMissing() {
 		this.contextRunner.withUserConfiguration(BaseConfiguration.class)
 			.withClassLoader(new FilteredClassLoader("org.springframework.boot.opentelemetry"))
@@ -202,6 +226,16 @@ class OtlpMetricsExportAutoConfigurationTests {
 		@Bean
 		OtlpMetricsConnectionDetails otlpConnectionDetails() {
 			return () -> "http://localhost:12345/v1/metrics";
+		}
+
+	}
+
+	@Configuration(proxyBeanMethods = false)
+	static class CustomHttpSenderConfiguration {
+
+		@Bean
+		HttpSender customHttpSender() {
+			return (request) -> new HttpSender.Response(200, null);
 		}
 
 	}

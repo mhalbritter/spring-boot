@@ -16,8 +16,12 @@
 
 package org.springframework.boot.micrometer.metrics.autoconfigure.export.otlp;
 
+import java.time.Duration;
+
 import io.micrometer.core.instrument.Clock;
+import io.micrometer.core.ipc.http.HttpSender;
 import io.micrometer.registry.otlp.OtlpConfig;
+import io.micrometer.registry.otlp.OtlpHttpMetricsSender;
 import io.micrometer.registry.otlp.OtlpMeterRegistry;
 import io.micrometer.registry.otlp.OtlpMetricsSender;
 import org.jspecify.annotations.Nullable;
@@ -34,6 +38,7 @@ import org.springframework.boot.micrometer.metrics.autoconfigure.CompositeMeterR
 import org.springframework.boot.micrometer.metrics.autoconfigure.MetricsAutoConfiguration;
 import org.springframework.boot.micrometer.metrics.autoconfigure.export.ConditionalOnEnabledMetricsExport;
 import org.springframework.boot.micrometer.metrics.autoconfigure.export.simple.SimpleMetricsExportAutoConfiguration;
+import org.springframework.boot.opentelemetry.OpenTelemetryEnvironmentVariables;
 import org.springframework.boot.opentelemetry.autoconfigure.OpenTelemetryProperties;
 import org.springframework.boot.thread.Threading;
 import org.springframework.context.annotation.Bean;
@@ -79,8 +84,7 @@ public final class OtlpMetricsExportAutoConfiguration {
 	@Bean
 	@ConditionalOnMissingBean
 	@ConditionalOnThreading(Threading.PLATFORM)
-	OtlpMeterRegistry otlpMeterRegistry(OtlpConfig otlpConfig, Clock clock,
-			ObjectProvider<OtlpMetricsSender> metricsSender) {
+	OtlpMeterRegistry otlpMeterRegistry(OtlpConfig otlpConfig, Clock clock, OtlpMetricsSender metricsSender) {
 		return builder(otlpConfig, clock, metricsSender).build();
 	}
 
@@ -88,16 +92,45 @@ public final class OtlpMetricsExportAutoConfiguration {
 	@ConditionalOnMissingBean
 	@ConditionalOnThreading(Threading.VIRTUAL)
 	OtlpMeterRegistry otlpMeterRegistryVirtualThreads(OtlpConfig otlpConfig, Clock clock,
-			ObjectProvider<OtlpMetricsSender> metricsSender) {
+			OtlpMetricsSender metricsSender) {
 		VirtualThreadTaskExecutor executor = new VirtualThreadTaskExecutor("otlp-meter-registry-");
 		return builder(otlpConfig, clock, metricsSender).threadFactory(executor.getVirtualThreadFactory()).build();
 	}
 
-	private OtlpMeterRegistry.Builder builder(OtlpConfig otlpConfig, Clock clock,
-			ObjectProvider<OtlpMetricsSender> metricsSender) {
-		OtlpMeterRegistry.Builder builder = OtlpMeterRegistry.builder(otlpConfig).clock(clock);
-		metricsSender.ifAvailable(builder::metricsSender);
-		return builder;
+	@Bean
+	@ConditionalOnMissingBean(OtlpMetricsSender.class)
+	OtlpHttpMetricsSender otlpMetricsSender(ObjectProvider<HttpSender> httpSenderProvider,
+			ObjectProvider<OpenTelemetryEnvironmentVariables> envVariablesProvider) {
+		OpenTelemetryEnvironmentVariables envVariables = envVariablesProvider
+			.getIfAvailable(OpenTelemetryEnvironmentVariables::fromSystemEnv);
+		HttpSender httpSender = httpSenderProvider
+			.getIfAvailable(() -> new JdkHttpClientHttpSender(getHttpSenderConnectTimeout(envVariables),
+					getHttpSenderTimeout(envVariables)));
+		return new OtlpHttpMetricsSender(httpSender);
+	}
+
+	private Duration getHttpSenderConnectTimeout(OpenTelemetryEnvironmentVariables envVariables) {
+		if (envVariables.getTimeout("OTEL_EXPORTER_OTLP_METRICS_TIMEOUT") != null
+				|| envVariables.getTimeout("OTEL_EXPORTER_OTLP_TIMEOUT") != null) {
+			return Duration.ofSeconds(10); // Same as in OpenTelemetry Java SDK
+		}
+		return Duration.ofSeconds(1); // Same as in Micrometer's HttpUrlConnectionSender
+	}
+
+	private Duration getHttpSenderTimeout(OpenTelemetryEnvironmentVariables envVariables) {
+		Duration specificTimeout = envVariables.getTimeout("OTEL_EXPORTER_OTLP_METRICS_TIMEOUT");
+		if (specificTimeout != null) {
+			return specificTimeout;
+		}
+		Duration generalTimeout = envVariables.getTimeout("OTEL_EXPORTER_OTLP_TIMEOUT");
+		if (generalTimeout != null) {
+			return generalTimeout;
+		}
+		return Duration.ofSeconds(10); // Same as in Micrometer's HttpUrlConnectionSender
+	}
+
+	private OtlpMeterRegistry.Builder builder(OtlpConfig otlpConfig, Clock clock, OtlpMetricsSender metricsSender) {
+		return OtlpMeterRegistry.builder(otlpConfig).clock(clock).metricsSender(metricsSender);
 	}
 
 	/**

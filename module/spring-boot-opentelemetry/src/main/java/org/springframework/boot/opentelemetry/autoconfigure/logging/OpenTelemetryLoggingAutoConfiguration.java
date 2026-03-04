@@ -20,6 +20,7 @@ import io.opentelemetry.sdk.logs.LogRecordProcessor;
 import io.opentelemetry.sdk.logs.SdkLoggerProvider;
 import io.opentelemetry.sdk.logs.SdkLoggerProviderBuilder;
 import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor;
+import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessorBuilder;
 import io.opentelemetry.sdk.logs.export.LogRecordExporter;
 import io.opentelemetry.sdk.resources.Resource;
 
@@ -29,6 +30,7 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.opentelemetry.OpenTelemetryEnvironmentVariables;
 import org.springframework.boot.opentelemetry.autoconfigure.OpenTelemetrySdkAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 
@@ -47,9 +49,17 @@ public final class OpenTelemetryLoggingAutoConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean
-	BatchLogRecordProcessor openTelemetryBatchLogRecordProcessor(ObjectProvider<LogRecordExporter> logRecordExporters) {
+	BatchLogRecordProcessor openTelemetryBatchLogRecordProcessor(ObjectProvider<LogRecordExporter> logRecordExporters,
+			ObjectProvider<OpenTelemetryEnvironmentVariables> envVariablesProvider) {
+		OpenTelemetryEnvironmentVariables envVariables = envVariablesProvider
+			.getIfAvailable(OpenTelemetryEnvironmentVariables::fromSystemEnv);
 		LogRecordExporter exporter = LogRecordExporter.composite(logRecordExporters.orderedStream().toList());
-		return BatchLogRecordProcessor.builder(exporter).build();
+		BatchLogRecordProcessorBuilder builder = BatchLogRecordProcessor.builder(exporter);
+		envVariables.applyDuration("OTEL_BLRP_SCHEDULE_DELAY", builder::setScheduleDelay);
+		envVariables.applyTimeout("OTEL_BLRP_EXPORT_TIMEOUT", builder::setExporterTimeout);
+		envVariables.applyInteger("OTEL_BLRP_MAX_QUEUE_SIZE", builder::setMaxQueueSize);
+		envVariables.applyInteger("OTEL_BLRP_MAX_EXPORT_BATCH_SIZE", builder::setMaxExportBatchSize);
+		return builder.build();
 	}
 
 	@Bean

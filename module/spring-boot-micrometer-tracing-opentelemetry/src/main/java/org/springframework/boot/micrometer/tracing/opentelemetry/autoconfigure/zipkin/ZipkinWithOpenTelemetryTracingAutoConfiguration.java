@@ -17,18 +17,21 @@
 package org.springframework.boot.micrometer.tracing.opentelemetry.autoconfigure.zipkin;
 
 import io.opentelemetry.exporter.zipkin.ZipkinSpanExporter;
+import io.opentelemetry.exporter.zipkin.ZipkinSpanExporterBuilder;
 import zipkin2.Span;
 import zipkin2.reporter.BytesEncoder;
 import zipkin2.reporter.BytesMessageSender;
 import zipkin2.reporter.Encoding;
 import zipkin2.reporter.SpanBytesEncoder;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.micrometer.tracing.autoconfigure.ConditionalOnEnabledTracingExport;
+import org.springframework.boot.opentelemetry.OpenTelemetryEnvironmentVariables;
 import org.springframework.context.annotation.Bean;
 
 /**
@@ -57,8 +60,14 @@ public final class ZipkinWithOpenTelemetryTracingAutoConfiguration {
 	@ConditionalOnMissingBean
 	@ConditionalOnBean(BytesMessageSender.class)
 	@ConditionalOnEnabledTracingExport("zipkin")
-	ZipkinSpanExporter zipkinSpanExporter(BytesMessageSender sender, BytesEncoder<Span> spanBytesEncoder) {
-		return ZipkinSpanExporter.builder().setSender(sender).setEncoder(spanBytesEncoder).build();
+	ZipkinSpanExporter zipkinSpanExporter(BytesMessageSender sender, BytesEncoder<Span> spanBytesEncoder,
+			ObjectProvider<OpenTelemetryEnvironmentVariables> envVariablesProvider) {
+		OpenTelemetryEnvironmentVariables envVariables = envVariablesProvider
+			.getIfAvailable(OpenTelemetryEnvironmentVariables::fromSystemEnv);
+		ZipkinSpanExporterBuilder builder = ZipkinSpanExporter.builder();
+		envVariables.applyTimeout("OTEL_EXPORTER_ZIPKIN_TIMEOUT", builder::setReadTimeout);
+		envVariables.applyString("OTEL_EXPORTER_ZIPKIN_ENDPOINT", builder::setEndpoint);
+		return builder.setSender(sender).setEncoder(spanBytesEncoder).build();
 	}
 
 }

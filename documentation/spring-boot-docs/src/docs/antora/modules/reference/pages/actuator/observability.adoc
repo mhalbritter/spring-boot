@@ -143,6 +143,11 @@ Micrometer also supports the following environment variables to configure the me
 * https://opentelemetry.io/docs/languages/sdk-configuration/otlp-exporter/#otel_exporter_otlp_metrics_endpoint[`OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`]
 * https://opentelemetry.io/docs/languages/sdk-configuration/otlp-exporter/#otel_exporter_otlp_headers[`OTEL_EXPORTER_OTLP_HEADERS`]
 * https://opentelemetry.io/docs/languages/sdk-configuration/otlp-exporter/#otel_exporter_otlp_metrics_headers[`OTEL_EXPORTER_OTLP_METRICS_HEADERS`]
+* https://opentelemetry.io/docs/specs/otel/protocol/exporter/#specifying-headers-via-environment-variables[`OTEL_EXPORTER_OTLP_COMPRESSION`]
+* https://opentelemetry.io/docs/specs/otel/protocol/exporter/#specifying-headers-via-environment-variables[`OTEL_EXPORTER_OTLP_METRICS_COMPRESSION`]
+* https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#periodic-exporting-metricreader[`OTEL_METRIC_EXPORT_INTERVAL`]
+* https://opentelemetry.io/docs/specs/otel/metrics/sdk_exporters/otlp/#additional-environment-variable-configuration[`OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE`]
+* https://opentelemetry.io/docs/specs/otel/metrics/sdk_exporters/otlp/#additional-environment-variable-configuration[`OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION`]
 
 Other environment variables as described in https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/[the OpenTelemetry documentation] are not supported.
 

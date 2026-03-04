@@ -16,7 +16,9 @@
 
 package org.springframework.boot.micrometer.tracing.opentelemetry.autoconfigure;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import io.micrometer.tracing.SpanCustomizer;
 import io.micrometer.tracing.exporter.SpanExportingPredicate;
@@ -33,10 +35,13 @@ import io.micrometer.tracing.otel.bridge.OtelTracer.EventPublisher;
 import io.micrometer.tracing.otel.bridge.Slf4JEventListener;
 import io.micrometer.tracing.propagation.Propagator;
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.baggage.propagation.W3CBaggagePropagator;
 import io.opentelemetry.api.metrics.MeterProvider;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
 import io.opentelemetry.context.propagation.ContextPropagators;
 import io.opentelemetry.context.propagation.TextMapPropagator;
+import io.opentelemetry.extension.trace.propagation.B3Propagator;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.SdkTracerProviderBuilder;
@@ -47,6 +52,7 @@ import io.opentelemetry.sdk.trace.export.SpanExporter;
 import io.opentelemetry.sdk.trace.samplers.Sampler;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.SpringBootVersion;
@@ -59,9 +65,12 @@ import org.springframework.boot.micrometer.tracing.autoconfigure.MicrometerTraci
 import org.springframework.boot.micrometer.tracing.autoconfigure.NoopTracerAutoConfiguration;
 import org.springframework.boot.micrometer.tracing.autoconfigure.TracingProperties;
 import org.springframework.boot.micrometer.tracing.opentelemetry.autoconfigure.OpenTelemetryTracingProperties.Export;
+import org.springframework.boot.opentelemetry.OpenTelemetryEnvironmentVariables;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 /**
  * {@link EnableAutoConfiguration Auto-configuration} for OpenTelemetry tracing.
@@ -97,8 +106,13 @@ public final class OpenTelemetryTracingAutoConfiguration {
 	@Bean
 	@ConditionalOnMissingBean
 	SdkTracerProvider otelSdkTracerProvider(Resource resource, SpanProcessors spanProcessors, Sampler sampler,
-			ObjectProvider<SdkTracerProviderBuilderCustomizer> customizers) {
-		SdkTracerProviderBuilder builder = SdkTracerProvider.builder().setSampler(sampler).setResource(resource);
+			ObjectProvider<SdkTracerProviderBuilderCustomizer> customizers,
+			ObjectProvider<OpenTelemetryEnvironmentVariables> envVariablesProvider) {
+		OpenTelemetryEnvironmentVariables envVariables = envVariablesProvider
+			.getIfAvailable(OpenTelemetryEnvironmentVariables::fromSystemEnv);
+		SdkTracerProviderBuilder builder = SdkTracerProvider.builder()
+			.setSampler(getSampler(sampler, envVariables))
+			.setResource(resource);
 		spanProcessors.forEach(builder::addSpanProcessor);
 		customizers.orderedStream().forEach((customizer) -> customizer.customize(builder));
 		return builder.build();
@@ -106,8 +120,13 @@ public final class OpenTelemetryTracingAutoConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean
-	ContextPropagators otelContextPropagators(ObjectProvider<TextMapPropagator> textMapPropagators) {
-		return ContextPropagators.create(TextMapPropagator.composite(textMapPropagators.orderedStream().toList()));
+	ContextPropagators otelContextPropagators(ObjectProvider<TextMapPropagator> textMapPropagators,
+			ObjectProvider<OpenTelemetryEnvironmentVariables> envVariablesProvider) {
+		OpenTelemetryEnvironmentVariables envVariables = envVariablesProvider
+			.getIfAvailable(OpenTelemetryEnvironmentVariables::fromSystemEnv);
+		String propagators = envVariables.getString("OTEL_PROPAGATORS");
+		return (propagators != null) ? createPropagatorsFromEnvVariable(propagators)
+				: ContextPropagators.create(TextMapPropagator.composite(textMapPropagators.orderedStream().toList()));
 	}
 
 	@Bean
@@ -127,17 +146,21 @@ public final class OpenTelemetryTracingAutoConfiguration {
 	@ConditionalOnMissingBean
 	BatchSpanProcessor otelSpanProcessor(SpanExporters spanExporters,
 			ObjectProvider<SpanExportingPredicate> spanExportingPredicates, ObjectProvider<SpanReporter> spanReporters,
-			ObjectProvider<SpanFilter> spanFilters, ObjectProvider<MeterProvider> meterProvider) {
+			ObjectProvider<SpanFilter> spanFilters, ObjectProvider<MeterProvider> meterProvider,
+			ObjectProvider<OpenTelemetryEnvironmentVariables> envVariablesProvider) {
+		OpenTelemetryEnvironmentVariables envVariables = envVariablesProvider
+			.getIfAvailable(OpenTelemetryEnvironmentVariables::fromSystemEnv);
 		Export properties = this.openTelemetryTracingProperties.getExport();
 		CompositeSpanExporter spanExporter = new CompositeSpanExporter(spanExporters.list(),
 				spanExportingPredicates.orderedStream().toList(), spanReporters.orderedStream().toList(),
 				spanFilters.orderedStream().toList());
 		BatchSpanProcessorBuilder builder = BatchSpanProcessor.builder(spanExporter)
 			.setExportUnsampledSpans(properties.isIncludeUnsampled())
-			.setExporterTimeout(properties.getTimeout())
-			.setMaxExportBatchSize(properties.getMaxBatchSize())
-			.setMaxQueueSize(properties.getMaxQueueSize())
-			.setScheduleDelay(properties.getScheduleDelay());
+			.setExporterTimeout(envVariables.getTimeoutOrElse("OTEL_BSP_EXPORT_TIMEOUT", properties.getTimeout()))
+			.setMaxExportBatchSize(
+					envVariables.getIntegerOrElse("OTEL_BSP_MAX_EXPORT_BATCH_SIZE", properties.getMaxBatchSize()))
+			.setMaxQueueSize(envVariables.getIntegerOrElse("OTEL_BSP_MAX_QUEUE_SIZE", properties.getMaxQueueSize()))
+			.setScheduleDelay(envVariables.getDurationOrElse("OTEL_BSP_SCHEDULE_DELAY", properties.getScheduleDelay()));
 		meterProvider.ifAvailable(builder::setMeterProvider);
 		return builder.build();
 	}
@@ -192,6 +215,68 @@ public final class OpenTelemetryTracingAutoConfiguration {
 	@ConditionalOnMissingBean(SpanCustomizer.class)
 	OtelSpanCustomizer otelSpanCustomizer() {
 		return new OtelSpanCustomizer();
+	}
+
+	private ContextPropagators createPropagatorsFromEnvVariable(String envVariableValue) {
+		Set<String> propagatorNames = StringUtils.commaDelimitedListToSet(envVariableValue);
+		if (propagatorNames.contains("none")) {
+			Assert.state(propagatorNames.size() == 1,
+					"'none' found in OTEL_PROPAGATORS, but also found more propagators: '%s'"
+						.formatted(envVariableValue));
+			return ContextPropagators.noop();
+		}
+		List<TextMapPropagator> propagators = new ArrayList<>();
+		for (String propagatorName : propagatorNames) {
+			TextMapPropagator propagator = createPropagator(propagatorName);
+			if (propagator != null) {
+				propagators.add(propagator);
+			}
+		}
+		return ContextPropagators.create(TextMapPropagator.composite(propagators));
+	}
+
+	private @Nullable TextMapPropagator createPropagator(String name) {
+		return switch (name) {
+			case "tracecontext" -> W3CTraceContextPropagator.getInstance();
+			case "baggage" -> W3CBaggagePropagator.getInstance();
+			case "b3" -> B3Propagator.injectingSingleHeader();
+			case "b3multi" -> B3Propagator.injectingMultiHeaders();
+			default -> {
+				logger.warn("Unsupported propagator '%s' in OTEL_PROPAGATORS".formatted(name));
+				yield null;
+			}
+		};
+	}
+
+	private Sampler getSampler(Sampler samplerFromContext, OpenTelemetryEnvironmentVariables envVariables) {
+		String sampler = envVariables.getString("OTEL_TRACES_SAMPLER");
+		if (sampler == null) {
+			return samplerFromContext;
+		}
+		logger.debug("Environment variable OTEL_TRACES_SAMPLER is set, ignoring sampler from context");
+		return switch (sampler) {
+			case "always_on" -> Sampler.alwaysOn();
+			case "always_off" -> Sampler.alwaysOff();
+			case "traceidratio" -> Sampler.traceIdRatioBased(getRatio(envVariables));
+			case "parent_based_always_on" -> Sampler.parentBased(Sampler.alwaysOn());
+			case "parent_based_always_off" -> Sampler.parentBased(Sampler.alwaysOff());
+			case "parentbased_traceidratio" -> Sampler.parentBased(Sampler.traceIdRatioBased(getRatio(envVariables)));
+			default -> throw new IllegalStateException(
+					"Unsupported sampler '%s' in environment variable OTEL_TRACES_SAMPLER".formatted(sampler));
+		};
+	}
+
+	private double getRatio(OpenTelemetryEnvironmentVariables envVariables) {
+		// See
+		// https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#general-sdk-configuration
+		double defaultValue = 1.0;
+		double value = envVariables.getDoubleOrElse("OTEL_TRACES_SAMPLER_ARG", defaultValue);
+		if (value < 0.0 || value > 1.0) {
+			logger.warn("OTEL_TRACES_SAMPLER_ARG must be between 0.0 and 1.0, but was %f. Using default of %f"
+				.formatted(value, defaultValue));
+			return defaultValue;
+		}
+		return value;
 	}
 
 	static class OTelEventPublisher implements EventPublisher {
