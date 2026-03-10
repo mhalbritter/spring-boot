@@ -1,0 +1,146 @@
+https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/
+
+https://opentelemetry.io/docs/specs/otel/configuration/common/
+
+https://opentelemetry.io/docs/specs/otel/protocol/exporter/
+
+https://opentelemetry.io/docs/specs/otel/metrics/sdk_exporters/otlp/
+
+## Won't support
+
+* OTEL_CONFIG_FILE
+  not available - Needs DeclarativeConfiguration from opentelemetry-sdk-extension-incubator
+* OTEL_ENTITIES
+  incubating spec, also not supported in OpenTelemetry Java SDK
+* OTEL_LOG_LEVEL
+  we don't use their logger
+* OTEL_EXPORTER_PROMETHEUS_HOST
+  we don't use OpenTelemetry's Prometheus
+* OTEL_EXPORTER_PROMETHEUS_PORT
+  we don't use OpenTelemetry's Prometheus
+* OTEL_EXPORTER_OTLP_METRICS_PROTOCOL
+  we use Micrometer's OtlpRegistry which only supports http/protobuf
+* OTEL_METRIC_EXPORT_TIMEOUT
+  We use Micrometer's OtlpRegistry for which we have a timeout, and we don't use a Periodic exporting MetricReader
+* OTEL_EXPORTER_ZIPKIN_ENDPOINT
+  OpenTelemetry's Zipkin support is deprecated
+* OTEL_EXPORTER_ZIPKIN_TIMEOUT
+  OpenTelemetry's Zipkin support is deprecated
+
+## Done
+
+* OTEL_EXPORTER_OTLP_ENDPOINT
+  management.opentelemetry.tracing.export.otlp.endpoint / management.opentelemetry.logging.export.otlp.endpoint / management.otlp.metrics.export.url
+* OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+  management.otlp.metrics.export.url
+* OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+  management.opentelemetry.tracing.export.otlp.endpoint
+* OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
+  management.opentelemetry.logging.export.otlp.endpoint
+* OTEL_METRIC_EXPORT_INTERVAL
+  management.otlp.metrics.export.step
+* OTEL_BSP_SCHEDULE_DELAY
+  management.opentelemetry.tracing.export.schedule-delay
+* OTEL_BSP_EXPORT_TIMEOUT
+  management.opentelemetry.tracing.export.timeout
+* OTEL_BSP_MAX_QUEUE_SIZE
+  management.opentelemetry.tracing.export.max-queue-size
+* OTEL_BSP_MAX_EXPORT_BATCH_SIZE
+  management.opentelemetry.tracing.export.max-batch-size
+* OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+  management.otlp.metrics.export.aggregation-temporality
+* OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION
+  management.otlp.metrics.export.histogram-flavor
+* OTEL_EXPORTER_OTLP_COMPRESSION
+  management.opentelemetry.tracing.export.otlp.compression / management.opentelemetry.logging.export.otlp.compression / management.otlp.metrics.export.compression-mode
+* OTEL_EXPORTER_OTLP_METRICS_COMPRESSION
+  management.otlp.metrics.export.compression-mode
+* OTEL_EXPORTER_OTLP_TRACES_COMPRESSION
+  management.opentelemetry.tracing.export.otlp.compression
+* OTEL_EXPORTER_OTLP_LOGS_COMPRESSION
+  management.opentelemetry.logging.export.otlp.compression
+* OTEL_EXPORTER_OTLP_TIMEOUT
+  management.opentelemetry.tracing.export.otlp.timeout / management.opentelemetry.logging.export.otlp.timeout / management.otlp.metrics.export.read-timeout
+* OTEL_EXPORTER_OTLP_METRICS_TIMEOUT
+  management.otlp.metrics.export.read-timeout
+* OTEL_EXPORTER_OTLP_TRACES_TIMEOUT
+  management.opentelemetry.tracing.export.otlp.timeout
+* OTEL_EXPORTER_OTLP_LOGS_TIMEOUT
+  management.opentelemetry.logging.export.otlp.timeout
+* OTEL_EXPORTER_OTLP_PROTOCOL
+  management.opentelemetry.tracing.export.otlp.transport / management.opentelemetry.logging.export.otlp.transport
+* OTEL_EXPORTER_OTLP_TRACES_PROTOCOL
+  management.opentelemetry.tracing.export.otlp.transport
+* OTEL_EXPORTER_OTLP_LOGS_PROTOCOL
+  management.opentelemetry.logging.export.otlp.transport
+* OTEL_EXPORTER_OTLP_HEADERS
+  management.opentelemetry.tracing.export.otlp.headers.* / management.opentelemetry.logging.export.otlp.headers.* / management.otlp.metrics.export.headers.*
+* OTEL_EXPORTER_OTLP_METRICS_HEADERS
+  management.otlp.metrics.export.headers.*
+* OTEL_EXPORTER_OTLP_TRACES_HEADERS
+  management.opentelemetry.tracing.export.otlp.headers.*
+* OTEL_EXPORTER_OTLP_LOGS_HEADERS
+  management.opentelemetry.logging.export.otlp.headers.*
+* OTEL_METRICS_EXPORTER
+  management.otlp.metrics.export.enabled
+* OTEL_TRACES_EXPORTER
+  management.tracing.export.otlp.enabled
+* OTEL_PROPAGATORS
+  management.tracing.propagation.type
+  tracecontext -> management.tracing.propagation.type=W3C
+  b3 -> management.tracing.propagation.type=B3
+  b3multi -> management.tracing.propagation.type=B3_MULTI
+  baggage -> management.tracing.baggage.enabled=true|false
+* OTEL_LOGS_EXPORTER
+  management.logging.export.otlp.enabled
+* OTEL_BLRP_SCHEDULE_DELAY
+  management.opentelemetry.logging.export.schedule-delay
+* OTEL_BLRP_EXPORT_TIMEOUT
+  management.opentelemetry.logging.export.timeout
+* OTEL_BLRP_MAX_QUEUE_SIZE
+  management.opentelemetry.logging.export.max-queue-size
+* OTEL_BLRP_MAX_EXPORT_BATCH_SIZE
+  management.opentelemetry.logging.export.max-batch-size
+* OTEL_TRACES_SAMPLER_ARG
+  management.tracing.sampling.probability
+* OTEL_TRACES_SAMPLER
+  management.opentelemetry.tracing.sampler
+* OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT
+* OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT
+  management.opentelemetry.tracing.limits.max-attribute-value-length
+* OTEL_LOGRECORD_ATTRIBUTE_VALUE_LENGTH_LIMIT
+  management.opentelemetry.logging.limits.max-attribute-value-length
+* OTEL_ATTRIBUTE_COUNT_LIMIT
+* OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT
+  management.opentelemetry.tracing.limits.max-attributes
+* OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT
+  management.opentelemetry.logging.limits.max-attributes
+* OTEL_SPAN_EVENT_COUNT_LIMIT
+  management.opentelemetry.tracing.max-events
+* OTEL_SPAN_LINK_COUNT_LIMIT
+  management.opentelemetry.tracing.max-links
+* OTEL_EVENT_ATTRIBUTE_COUNT_LIMIT
+  management.opentelemetry.tracing.max-attributes-per-event
+* OTEL_LINK_ATTRIBUTE_COUNT_LIMIT
+  management.opentelemetry.tracing.max-attributes-per-link
+* OTEL_SDK_DISABLED
+  management.opentelemetry.enabled
+* OTEL_METRICS_EXEMPLAR_FILTER
+  management.tracing.exemplars.include
+* OTEL_EXPORTER_OTLP_CERTIFICATE (file path!)
+* OTEL_EXPORTER_OTLP_TRACES_CERTIFICATE (file path!)
+* OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE (file path!)
+* OTEL_EXPORTER_OTLP_METRICS_CERTIFICATE (file path!)
+  Mapped to SslBundle
+
+* OTEL_EXPORTER_OTLP_CLIENT_KEY (file path!)
+* OTEL_EXPORTER_OTLP_TRACES_CLIENT_KEY (file path!)
+* OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY (file path!)
+* OTEL_EXPORTER_OTLP_METRICS_CLIENT_KEY (file path!)
+  Mapped to SslBundle
+
+* OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE (file path!)
+* OTEL_EXPORTER_OTLP_TRACES_CLIENT_CERTIFICATE (file path!)
+* OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE (file path!)
+* OTEL_EXPORTER_OTLP_METRICS_CLIENT_CERTIFICATE (file path!)
+  Mapped to SslBundle
