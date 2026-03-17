@@ -16,7 +16,6 @@
 
 package org.springframework.boot.opentelemetry.autoconfigure;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -44,7 +43,8 @@ import org.springframework.util.StringUtils;
  * @author Moritz Halbritter
  * @since 4.1.0
  */
-// TODO MH: Add something to disable an environment processor
+// TODO MH: Add something to disable an environment processor - Look at
+// org.springframework.boot.reactor.ReactorEnvironmentPostProcessor.postProcessEnvironment
 public class OpenTelemetryEnvironmentVariableEnvironmentPostProcessor implements EnvironmentPostProcessor {
 
 	private final Log logger;
@@ -153,13 +153,13 @@ public class OpenTelemetryEnvironmentVariableEnvironmentPostProcessor implements
 		this.environmentVariables.getInt("OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT", "OTEL_ATTRIBUTE_COUNT_LIMIT")
 			.addToMap(map, "management.opentelemetry.tracing.limits.max-attributes");
 		this.environmentVariables.getInt("OTEL_SPAN_EVENT_COUNT_LIMIT")
-			.addToMap(map, "management.opentelemetry.tracing.max-events");
+			.addToMap(map, "management.opentelemetry.tracing.limits.max-events");
 		this.environmentVariables.getInt("OTEL_SPAN_LINK_COUNT_LIMIT")
-			.addToMap(map, "management.opentelemetry.tracing.max-links");
+			.addToMap(map, "management.opentelemetry.tracing.limits.max-links");
 		this.environmentVariables.getInt("OTEL_EVENT_ATTRIBUTE_COUNT_LIMIT")
-			.addToMap(map, "management.opentelemetry.tracing.max-attributes-per-event");
+			.addToMap(map, "management.opentelemetry.tracing.limits.max-attributes-per-event");
 		this.environmentVariables.getInt("OTEL_LINK_ATTRIBUTE_COUNT_LIMIT")
-			.addToMap(map, "management.opentelemetry.tracing.max-attributes-per-link");
+			.addToMap(map, "management.opentelemetry.tracing.limits.max-attributes-per-link");
 		this.environmentVariables.getString("OTEL_METRICS_EXEMPLAR_FILTER")
 			.addToMap(map, "management.tracing.exemplars.include", this::mapExemplarsInclude);
 		EnvVariable certificate = this.environmentVariables.getString("OTEL_EXPORTER_OTLP_TRACES_CERTIFICATE",
@@ -220,25 +220,18 @@ public class OpenTelemetryEnvironmentVariableEnvironmentPostProcessor implements
 		map.put(bundleKey, OriginTrackedValue.of(bundleName, this.environmentVariables.getOrigin(firstPresent)));
 		if (certificateFile.isPresent()) {
 			String value = certificateFile.value();
-			Assert.state(value != null, "'value' must not be null");
-			Path certificatePath = Path.of(value).toAbsolutePath();
 			map.put("spring.ssl.bundle.pem.%s.truststore.certificate".formatted(bundleName), OriginTrackedValue
-				.of("file:%s".formatted(certificatePath), this.environmentVariables.getOrigin(certificateFile)));
+				.of("file:%s".formatted(value), this.environmentVariables.getOrigin(certificateFile)));
 		}
 		if (clientKeyFile.isPresent()) {
 			String value = clientKeyFile.value();
-			Assert.state(value != null, "'value' must not be null");
-			Path clientKeyPath = Path.of(value).toAbsolutePath();
 			map.put("spring.ssl.bundle.pem.%s.keystore.private-key".formatted(bundleName), OriginTrackedValue
-				.of("file:%s".formatted(clientKeyPath), this.environmentVariables.getOrigin(clientKeyFile)));
+				.of("file:%s".formatted(value), this.environmentVariables.getOrigin(clientKeyFile)));
 		}
 		if (clientCertificateFile.isPresent()) {
 			String value = clientCertificateFile.value();
-			Assert.state(value != null, "'value' must not be null");
-			Path clientCertificatePath = Path.of(value).toAbsolutePath();
-			map.put("spring.ssl.bundle.pem.%s.keystore.certificate".formatted(bundleName),
-					OriginTrackedValue.of("file:%s".formatted(clientCertificatePath),
-							this.environmentVariables.getOrigin(clientCertificateFile)));
+			map.put("spring.ssl.bundle.pem.%s.keystore.certificate".formatted(bundleName), OriginTrackedValue
+				.of("file:%s".formatted(value), this.environmentVariables.getOrigin(clientCertificateFile)));
 		}
 	}
 
