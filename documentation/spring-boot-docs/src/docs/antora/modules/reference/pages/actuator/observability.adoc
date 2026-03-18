@@ -143,6 +143,8 @@ Spring Boot supports a subset of the https://opentelemetry.io/docs/specs/otel/co
 These environment variables are automatically mapped to Spring Boot configuration properties at startup.
 When an environment variable has a signal-specific variant (for example, `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`) and a general variant (`OTEL_EXPORTER_OTLP_ENDPOINT`), the signal-specific variant takes precedence.
 
+This mapping can be disabled by setting configprop:management.opentelemetry.map-environment-variables[] to `false`.
+
 [[actuator.observability.opentelemetry.environment-variables.general]]
 ==== General
 

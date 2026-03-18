@@ -39,13 +39,16 @@ import org.springframework.util.StringUtils;
 
 /**
  * Converts OpenTelemetry SDK environment variables into Spring Boot properties.
+ * <p>
+ * Can be disabled by setting {@code management.opentelemetry.map-environment-variables}
+ * to {@code false}.
  *
  * @author Moritz Halbritter
  * @since 4.1.0
  */
-// TODO MH: Add something to disable an environment processor - Look at
-// org.springframework.boot.reactor.ReactorEnvironmentPostProcessor.postProcessEnvironment
 public class OpenTelemetryEnvironmentVariableEnvironmentPostProcessor implements EnvironmentPostProcessor {
+
+	static final String ENABLED_PROPERTY = "management.opentelemetry.map-environment-variables";
 
 	private final Log logger;
 
@@ -63,6 +66,9 @@ public class OpenTelemetryEnvironmentVariableEnvironmentPostProcessor implements
 
 	@Override
 	public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
+		if (!environment.getProperty(ENABLED_PROPERTY, Boolean.class, true)) {
+			return;
+		}
 		Map<String, OriginTrackedValue> map = new HashMap<>();
 		mapEnabled(map);
 		mapPropagators(map);

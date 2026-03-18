@@ -744,6 +744,22 @@ class OpenTelemetryEnvironmentVariableEnvironmentPostProcessorTests {
 	}
 
 	@Test
+	void shouldNotMapWhenDisabledViaProperty() {
+		DeferredLogs logFactory = new DeferredLogs();
+		Map<String, String> envVars = Map.of("OTEL_SDK_DISABLED", "true");
+		OpenTelemetryEnvironmentVariableEnvironmentPostProcessor processor = new OpenTelemetryEnvironmentVariableEnvironmentPostProcessor(
+				logFactory, new OpenTelemetryEnvironmentVariables(logFactory, envVars::get));
+		ConfigurableEnvironment environment = new StandardEnvironment();
+		environment.getPropertySources()
+			.addFirst(new org.springframework.core.env.MapPropertySource("test",
+					Map.of(OpenTelemetryEnvironmentVariableEnvironmentPostProcessor.ENABLED_PROPERTY, "false")));
+		int sourceCountBefore = environment.getPropertySources().size();
+		processor.postProcessEnvironment(environment, new SpringApplication());
+		assertThat(environment.getPropertySources()).hasSize(sourceCountBefore);
+		assertThat(environment.getProperty("management.opentelemetry.enabled")).isNull();
+	}
+
+	@Test
 	void specificMetricsCompressionShouldOverrideFallback() {
 		Map<String, String> env = new HashMap<>();
 		env.put("OTEL_EXPORTER_OTLP_METRICS_COMPRESSION", "gzip");
