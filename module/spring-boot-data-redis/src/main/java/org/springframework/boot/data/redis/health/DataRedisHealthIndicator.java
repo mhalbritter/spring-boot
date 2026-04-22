@@ -18,20 +18,31 @@ package org.springframework.boot.data.redis.health;
 
 import org.springframework.boot.health.contributor.AbstractHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
-import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutSupport;
 import org.springframework.data.redis.connection.RedisClusterConnection;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisConnectionUtils;
 import org.springframework.util.Assert;
 
 /**
- * Simple implementation of a {@link HealthIndicator} returning status information for
- * Redis data stores.
+ * Simple implementation of a
+ * {@link org.springframework.boot.health.contributor.HealthIndicator} returning status
+ * information for Redis data stores.
+ * <p>
+ * Timeout participation depends on the {@link RedisConnectionFactory} type:
+ * {@link LettuceConnectionFactory} uses {@link TimeoutSupport#INTERRUPTION}.
+ * {@link JedisConnectionFactory} (and any other non-Lettuce factory) uses
+ * {@link TimeoutSupport#NONE}: Jedis performs blocking {@link java.net.Socket} reads that
+ * are not reliably cut short by thread interruption, so a configured health timeout
+ * cannot be enforced predictably.
  *
  * @author Christian Dupuis
  * @author Richard Santana
  * @author Scott Frederick
+ * @author Moritz Halbritter
  * @since 4.0.0
  */
 public class DataRedisHealthIndicator extends AbstractHealthIndicator {
@@ -42,6 +53,12 @@ public class DataRedisHealthIndicator extends AbstractHealthIndicator {
 		super("Redis health check failed");
 		Assert.notNull(connectionFactory, "'connectionFactory' must not be null");
 		this.redisConnectionFactory = connectionFactory;
+	}
+
+	@Override
+	public TimeoutSupport getTimeoutSupport() {
+		return (this.redisConnectionFactory instanceof LettuceConnectionFactory) ? TimeoutSupport.INTERRUPTION
+				: TimeoutSupport.NONE;
 	}
 
 	@Override

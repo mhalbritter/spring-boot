@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.Status;
+import org.springframework.boot.health.contributor.TimeoutSupport;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.connection.ClusterInfo;
 import org.springframework.data.redis.connection.RedisClusterConnection;
@@ -32,6 +33,8 @@ import org.springframework.data.redis.connection.RedisClusterNode;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisServerCommands;
+import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
@@ -85,6 +88,27 @@ class RedisHealthIndicatorTests {
 		Health health = healthIndicator.health();
 		assertThat(health.getStatus()).isEqualTo(Status.DOWN);
 		assertThat((String) health.getDetails().get("error")).contains("Connection failed");
+	}
+
+	@Test
+	void getTimeoutSupportWhenLettuceConnectionFactory() {
+		RedisConnectionFactory redisConnectionFactory = mock(LettuceConnectionFactory.class);
+		DataRedisHealthIndicator healthIndicator = new DataRedisHealthIndicator(redisConnectionFactory);
+		assertThat(healthIndicator.getTimeoutSupport()).isEqualTo(TimeoutSupport.INTERRUPTION);
+	}
+
+	@Test
+	void getTimeoutSupportWhenJedisConnectionFactory() {
+		RedisConnectionFactory redisConnectionFactory = mock(JedisConnectionFactory.class);
+		DataRedisHealthIndicator healthIndicator = new DataRedisHealthIndicator(redisConnectionFactory);
+		assertThat(healthIndicator.getTimeoutSupport()).isEqualTo(TimeoutSupport.NONE);
+	}
+
+	@Test
+	void getTimeoutSupportWhenUnknownFactory() {
+		RedisConnectionFactory redisConnectionFactory = mock(RedisConnectionFactory.class);
+		DataRedisHealthIndicator healthIndicator = new DataRedisHealthIndicator(redisConnectionFactory);
+		assertThat(healthIndicator.getTimeoutSupport()).isEqualTo(TimeoutSupport.NONE);
 	}
 
 	@Test

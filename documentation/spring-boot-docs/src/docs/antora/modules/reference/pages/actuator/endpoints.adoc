@@ -720,7 +720,12 @@ How the limit is applied depends on the indicator's timeout mode (see javadoc:or
 `INTERRUPTION` enforces it from the outside (thread interruption for blocking checks, javadoc:reactor.core.publisher.Mono#timeout(java.time.Duration)[] for reactive ones).
 `INTERRUPTION` is best-effort: blocking libraries do not always stop as soon as the timeout elapses, so wall-clock time can exceed the configured duration before `DOWN` is reported.
 Blocking interruption-based checks use a bounded thread pool; if the pool rejects work, the check can fail with an error instead of a `DOWN` result with `reason: "timeout"`.
-For the database health indicator, JDBC timeouts are expressed in whole seconds; values under one second are rounded up to one second.
+
+NOTE: With the `database` health indicator, JDBC timeouts are expressed in whole seconds; values under one second are rounded up to one second.
+
+NOTE: The `redis` indicator uses timeout mode `INTERRUPTION` when you use javadoc:org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory[].
+With javadoc:org.springframework.data.redis.connection.jedis.JedisConnectionFactory[] (or any other javadoc:org.springframework.data.redis.connection.RedisConnectionFactory[]), the indicator uses timeout mode `NONE`, so those properties do not bound how long that check can run.
+Use Lettuce if you want the Redis health check to participate in configured timeouts at all.
 
 
 
