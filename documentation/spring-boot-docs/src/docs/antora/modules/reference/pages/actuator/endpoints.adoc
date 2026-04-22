@@ -727,6 +727,11 @@ NOTE: The `redis` indicator uses timeout mode `INTERRUPTION` when you use javado
 With javadoc:org.springframework.data.redis.connection.jedis.JedisConnectionFactory[] (or any other javadoc:org.springframework.data.redis.connection.RedisConnectionFactory[]), the indicator uses timeout mode `NONE`, so those properties do not bound how long that check can run.
 Use Lettuce if you want the Redis health check to participate in configured timeouts at all.
 
+NOTE: The `jms` indicator uses timeout mode `NATIVE`, so configprop:management.health.jms.timeout[] and configprop:management.health.defaults.timeout[] bound how long `jakarta.jms.Connection#start()` may block by closing the connection when that limit is exceeded.
+When no timeout is configured, the indicator still uses a short internal watchdog for hung `jakarta.jms.Connection#start()` calls.
+
+NOTE: The `hazelcast` indicator uses timeout mode `NATIVE`, so configprop:management.health.hazelcast.timeout[] and configprop:management.health.defaults.timeout[] bound the maximum lifespan of the transactional health check using javadoc:com.hazelcast.transaction.TransactionOptions#setTimeout(long,java.util.concurrent.TimeUnit)[setTimeout(long, TimeUnit)] on javadoc:com.hazelcast.transaction.TransactionOptions[].
+
 
 
 [[actuator.endpoints.health.writing-custom-health-indicators]]

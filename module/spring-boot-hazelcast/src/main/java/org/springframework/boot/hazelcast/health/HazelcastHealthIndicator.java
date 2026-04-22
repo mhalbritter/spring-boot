@@ -16,15 +16,25 @@
 
 package org.springframework.boot.hazelcast.health;
 
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.transaction.TransactionOptions;
+import com.hazelcast.transaction.TransactionTimedOutException;
 
 import org.springframework.boot.health.contributor.AbstractHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutSupport;
 import org.springframework.util.Assert;
 
 /**
  * {@link HealthIndicator} for Hazelcast.
+ * <p>
+ * When a health timeout is configured, it is applied as the Hazelcast transaction timeout
+ * for the transactional health probe.
  *
  * @author Dmytro Nosan
  * @author Stephane Nicoll
@@ -42,16 +52,57 @@ public class HazelcastHealthIndicator extends AbstractHealthIndicator {
 	}
 
 	@Override
+	public TimeoutSupport getTimeoutSupport() {
+		return TimeoutSupport.NATIVE;
+	}
+
+	@Override
 	protected void doHealthCheck(Health.Builder builder) {
 		if (!this.hazelcast.getLifecycleService().isRunning()) {
 			builder.down();
 			return;
 		}
 		this.hazelcast.executeTransaction((context) -> {
-			String uuid = this.hazelcast.getLocalEndpoint().getUuid().toString();
-			builder.up().withDetail("name", this.hazelcast.getName()).withDetail("uuid", uuid);
+			addDetails(builder);
 			return null;
 		});
+	}
+
+	@Override
+	protected void doHealthCheck(Health.Builder builder, Duration timeout) throws Exception {
+		if (!this.hazelcast.getLifecycleService().isRunning()) {
+			builder.down();
+			return;
+		}
+		TransactionOptions options = new TransactionOptions();
+		options.setTimeout(toTransactionTimeoutMillis(timeout), TimeUnit.MILLISECONDS);
+		try {
+			this.hazelcast.executeTransaction(options, (context) -> {
+				addDetails(builder);
+				return null;
+			});
+		}
+		catch (TransactionTimedOutException ex) {
+			TimeoutException timeoutException = new TimeoutException(ex.getMessage());
+			timeoutException.initCause(ex);
+			throw timeoutException;
+		}
+	}
+
+	private void addDetails(Health.Builder builder) {
+		String uuid = this.hazelcast.getLocalEndpoint().getUuid().toString();
+		builder.up().withDetail("name", this.hazelcast.getName()).withDetail("uuid", uuid);
+	}
+
+	/**
+	 * Converts a {@link Duration} to a positive transaction timeout in whole milliseconds
+	 * (minimum {@code 1}).
+	 * @param timeout the timeout
+	 * @return timeout in milliseconds
+	 */
+	private long toTransactionTimeoutMillis(Duration timeout) {
+		long millis = timeout.toMillis();
+		return Math.max(1, millis);
 	}
 
 }
