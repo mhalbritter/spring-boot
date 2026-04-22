@@ -16,6 +16,9 @@
 
 package org.springframework.boot.jms.health;
 
+import java.time.Duration;
+import java.util.concurrent.TimeoutException;
+
 import jakarta.jms.Connection;
 import jakarta.jms.ConnectionFactory;
 import jakarta.jms.ConnectionMetaData;
@@ -26,8 +29,10 @@ import org.mockito.stubbing.Answer;
 
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.Status;
+import org.springframework.boot.health.contributor.TimeoutSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willAnswer;
@@ -40,6 +45,13 @@ import static org.mockito.Mockito.mock;
  * @author Stephane Nicoll
  */
 class JmsHealthIndicatorTests {
+
+	@Test
+	void getTimeoutSupportIsNative() {
+		ConnectionFactory connectionFactory = mock(ConnectionFactory.class);
+		JmsHealthIndicator indicator = new JmsHealthIndicator(connectionFactory);
+		assertThat(indicator.getTimeoutSupport()).isEqualTo(TimeoutSupport.NATIVE);
+	}
 
 	@Test
 	void jmsBrokerIsUp() throws JMSException {
@@ -94,6 +106,25 @@ class JmsHealthIndicatorTests {
 		Health health = indicator.health();
 		assertThat(health.getStatus()).isEqualTo(Status.DOWN);
 		assertThat(health.getDetails()).doesNotContainKey("provider");
+	}
+
+	@Test
+	void whenConnectionStartExceedsNativeTimeout() throws JMSException {
+		ConnectionMetaData connectionMetaData = mock(ConnectionMetaData.class);
+		given(connectionMetaData.getJMSProviderName()).willReturn("JMS test provider");
+		Connection connection = mock(Connection.class);
+		UnresponsiveStartAnswer unresponsiveStartAnswer = new UnresponsiveStartAnswer();
+		willAnswer(unresponsiveStartAnswer).given(connection).start();
+		willAnswer((invocation) -> {
+			unresponsiveStartAnswer.connectionClosed();
+			return null;
+		}).given(connection).close();
+		given(connection.getMetaData()).willReturn(connectionMetaData);
+		ConnectionFactory connectionFactory = mock(ConnectionFactory.class);
+		given(connectionFactory.createConnection()).willReturn(connection);
+		JmsHealthIndicator indicator = new JmsHealthIndicator(connectionFactory);
+		assertThatExceptionOfType(TimeoutException.class).isThrownBy(() -> indicator.health(Duration.ofMillis(200)))
+			.withCauseInstanceOf(JMSException.class);
 	}
 
 	@Test
