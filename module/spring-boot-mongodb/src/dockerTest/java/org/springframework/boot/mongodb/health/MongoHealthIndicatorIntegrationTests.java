@@ -16,6 +16,9 @@
 
 package org.springframework.boot.mongodb.health;
 
+import java.time.Duration;
+import java.util.concurrent.TimeoutException;
+
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoClientSettings.Builder;
@@ -48,13 +51,19 @@ class MongoHealthIndicatorIntegrationTests {
 	static MongoDBContainer mongo = TestImage.container(MongoDBContainer.class);
 
 	@Test
-	void standardApi() {
+	void standardApi() throws TimeoutException {
 		Health health = mongoHealth();
 		assertHealth(health);
 	}
 
 	@Test
-	void strictV1Api() {
+	void standardApiWithNativeTimeout() throws TimeoutException {
+		Health health = mongoHealth(null, Duration.ofSeconds(30));
+		assertHealth(health);
+	}
+
+	@Test
+	void strictV1Api() throws TimeoutException {
 		Health health = mongoHealth(ServerApi.builder().strict(true).version(ServerApiVersion.V1).build());
 		assertHealth(health);
 	}
@@ -67,11 +76,15 @@ class MongoHealthIndicatorIntegrationTests {
 					.containsExactlyInAnyOrder("local", "admin", "config"));
 	}
 
-	private Health mongoHealth() {
-		return mongoHealth(null);
+	private Health mongoHealth() throws TimeoutException {
+		return mongoHealth(null, null);
 	}
 
-	private Health mongoHealth(@Nullable ServerApi serverApi) {
+	private Health mongoHealth(@Nullable ServerApi serverApi) throws TimeoutException {
+		return mongoHealth(serverApi, null);
+	}
+
+	private Health mongoHealth(@Nullable ServerApi serverApi, @Nullable Duration timeout) throws TimeoutException {
 		Builder settingsBuilder = MongoClientSettings.builder()
 			.applyConnectionString(new ConnectionString(mongo.getConnectionString()));
 		if (serverApi != null) {
@@ -80,7 +93,7 @@ class MongoHealthIndicatorIntegrationTests {
 		MongoClientSettings settings = settingsBuilder.build();
 		MongoClient mongoClient = MongoClients.create(settings);
 		MongoHealthIndicator healthIndicator = new MongoHealthIndicator(mongoClient);
-		Health health = healthIndicator.health(true);
+		Health health = (timeout != null) ? healthIndicator.health(timeout, true) : healthIndicator.health(true);
 		assertThat(health).isNotNull();
 		return health;
 	}
