@@ -22,11 +22,16 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.boot.health.contributor.AbstractHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutSupport;
 import org.springframework.util.Assert;
 
 /**
  * Simple implementation of a {@link HealthIndicator} returning status information for the
  * RabbitMQ messaging system.
+ * <p>
+ * This indicator uses {@link TimeoutSupport#NONE} because neither native client timeouts
+ * nor interruption can reliably cap every blocking path for the configured health
+ * duration.
  *
  * @author Christian Dupuis
  * @since 4.0.0
@@ -39,6 +44,11 @@ public class RabbitHealthIndicator extends AbstractHealthIndicator {
 		super("Rabbit health check failed");
 		Assert.notNull(rabbitTemplate, "'rabbitTemplate' must not be null");
 		this.rabbitTemplate = rabbitTemplate;
+	}
+
+	@Override
+	public TimeoutSupport getTimeoutSupport() {
+		return TimeoutSupport.NONE;
 	}
 
 	@Override

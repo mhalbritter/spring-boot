@@ -730,9 +730,12 @@ Use Lettuce if you want the Redis health check to participate in configured time
 NOTE: The `jms` indicator uses timeout mode `NATIVE`, so configprop:management.health.jms.timeout[] and configprop:management.health.defaults.timeout[] bound how long `jakarta.jms.Connection#start()` may block by closing the connection when that limit is exceeded.
 When no timeout is configured, the indicator still uses a short internal watchdog for hung `jakarta.jms.Connection#start()` calls.
 
-NOTE: The `hazelcast` indicator uses timeout mode `NATIVE`, so configprop:management.health.hazelcast.timeout[] and configprop:management.health.defaults.timeout[] bound the maximum lifespan of the transactional health check using javadoc:com.hazelcast.transaction.TransactionOptions#setTimeout(long,java.util.concurrent.TimeUnit)[setTimeout(long, TimeUnit)] on javadoc:com.hazelcast.transaction.TransactionOptions[].
+NOTE: The `hazelcast` indicator uses timeout mode `NATIVE`, so configprop:management.health.hazelcast.timeout[] and configprop:management.health.defaults.timeout[] bound the maximum lifespan of the transactional health check.
 
-NOTE: The `elasticsearch` indicator uses timeout mode `NATIVE`, so configprop:management.health.elasticsearch.timeout[] and configprop:management.health.defaults.timeout[] bound the cluster health request using per-request javadoc:org.apache.hc.client5.http.config.RequestConfig[] connection lease and response timeouts on javadoc:co.elastic.clients.transport.rest5_client.low_level.RequestOptions[].
+NOTE: The `elasticsearch` indicator uses timeout mode `NATIVE`, so configprop:management.health.elasticsearch.timeout[] and configprop:management.health.defaults.timeout[] bound the cluster health request.
+
+NOTE: The `rabbit` indicator uses timeout mode `NONE`, so configprop:management.health.rabbit.timeout[] and configprop:management.health.defaults.timeout[] do not bound how long that check can run.
+Limit blocking time with configprop:spring.rabbitmq.connection-timeout[], configprop:spring.rabbitmq.channel-rpc-timeout[], and other client settings instead.
 
 
 
