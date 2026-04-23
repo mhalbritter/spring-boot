@@ -18,20 +18,28 @@ package org.springframework.boot.elasticsearch.health;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.net.SocketTimeoutException;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 import co.elastic.clients.transport.rest5_client.low_level.Request;
 import co.elastic.clients.transport.rest5_client.low_level.Response;
 import co.elastic.clients.transport.rest5_client.low_level.Rest5Client;
+import org.apache.hc.client5.http.ConnectTimeoutException;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.io.entity.BasicHttpEntity;
+import org.apache.hc.core5.util.Timeout;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.Status;
+import org.springframework.boot.health.contributor.TimeoutSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -52,16 +60,18 @@ class ElasticsearchRestClientHealthIndicatorTests {
 
 	@Test
 	void elasticsearchIsUp() throws IOException {
+		ArgumentCaptor<Request> requestCaptor = ArgumentCaptor.forClass(Request.class);
 		BasicHttpEntity httpEntity = new BasicHttpEntity(
 				new ByteArrayInputStream(createJsonResult(200, "green").getBytes()), ContentType.APPLICATION_JSON);
 		Response response = mock(Response.class);
 		given(response.getStatusCode()).willReturn(200);
 		given(response.getEntity()).willReturn(httpEntity);
-		given(this.restClient.performRequest(any(Request.class))).willReturn(response);
+		given(this.restClient.performRequest(requestCaptor.capture())).willReturn(response);
 		org.springframework.boot.health.contributor.Health health = this.elasticsearchRestClientHealthIndicator
 			.health();
 		assertThat(health.getStatus()).isEqualTo(Status.UP);
 		assertHealthDetailsWithStatus(health.getDetails(), "green");
+		assertThat(requestCaptor.getValue().getOptions().getRequestConfig()).isNull();
 	}
 
 	@Test
@@ -108,6 +118,56 @@ class ElasticsearchRestClientHealthIndicatorTests {
 		Health health = this.elasticsearchRestClientHealthIndicator.health();
 		assertThat(health.getStatus()).isEqualTo(Status.OUT_OF_SERVICE);
 		assertHealthDetailsWithStatus(health.getDetails(), "red");
+	}
+
+	@Test
+	void getTimeoutSupportIsNative() {
+		assertThat(this.elasticsearchRestClientHealthIndicator.getTimeoutSupport()).isEqualTo(TimeoutSupport.NATIVE);
+	}
+
+	@Test
+	void elasticsearchIsUpWithConfiguredTimeout() throws Exception {
+		ArgumentCaptor<Request> requestCaptor = ArgumentCaptor.forClass(Request.class);
+		BasicHttpEntity httpEntity = new BasicHttpEntity(
+				new ByteArrayInputStream(createJsonResult(200, "green").getBytes()), ContentType.APPLICATION_JSON);
+		Response response = mock(Response.class);
+		given(response.getStatusCode()).willReturn(200);
+		given(response.getEntity()).willReturn(httpEntity);
+		given(this.restClient.performRequest(requestCaptor.capture())).willReturn(response);
+		Health health = this.elasticsearchRestClientHealthIndicator.health(Duration.ofSeconds(5));
+		assertThat(health.getStatus()).isEqualTo(Status.UP);
+		assertHealthDetailsWithStatus(health.getDetails(), "green");
+		assertThat(requestCaptor.getValue().getOptions().getRequestConfig()).isNotNull();
+		assertThat(requestCaptor.getValue().getOptions().getRequestConfig().getConnectionRequestTimeout())
+			.isEqualTo(Timeout.ofMilliseconds(5000));
+		assertThat(requestCaptor.getValue().getOptions().getRequestConfig().getResponseTimeout())
+			.isEqualTo(Timeout.ofMilliseconds(5000));
+	}
+
+	@Test
+	void elasticsearchSocketTimeoutMapsToTimeoutException() throws Exception {
+		given(this.restClient.performRequest(any(Request.class))).willThrow(new SocketTimeoutException("timed out"));
+		assertThatExceptionOfType(TimeoutException.class)
+			.isThrownBy(() -> this.elasticsearchRestClientHealthIndicator.health(Duration.ofSeconds(1)))
+			.satisfies((ex) -> assertThat(ex).hasRootCauseInstanceOf(SocketTimeoutException.class));
+	}
+
+	@Test
+	void elasticsearchConnectTimeoutMapsToTimeoutException() throws Exception {
+		given(this.restClient.performRequest(any(Request.class)))
+			.willThrow(new ConnectTimeoutException("connect timed out"));
+		assertThatExceptionOfType(TimeoutException.class)
+			.isThrownBy(() -> this.elasticsearchRestClientHealthIndicator.health(Duration.ofSeconds(1)))
+			.satisfies((ex) -> assertThat(ex).hasRootCauseInstanceOf(ConnectTimeoutException.class));
+	}
+
+	@Test
+	void elasticsearchWrappedSocketTimeoutMapsToTimeoutException() throws Exception {
+		IOException wrapped = new IOException("wrapper", new SocketTimeoutException("read timed out"));
+		given(this.restClient.performRequest(any(Request.class))).willThrow(wrapped);
+		assertThatExceptionOfType(TimeoutException.class)
+			.isThrownBy(() -> this.elasticsearchRestClientHealthIndicator.health(Duration.ofSeconds(1)))
+			.satisfies((ex) -> assertThat(ex).hasRootCauseInstanceOf(SocketTimeoutException.class));
 	}
 
 	private void assertHealthDetailsWithStatus(Map<String, Object> details, String status) {

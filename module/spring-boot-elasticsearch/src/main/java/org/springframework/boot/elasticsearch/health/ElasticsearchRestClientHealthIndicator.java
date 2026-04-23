@@ -16,32 +16,46 @@
 
 package org.springframework.boot.elasticsearch.health;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 import co.elastic.clients.transport.rest5_client.low_level.Request;
+import co.elastic.clients.transport.rest5_client.low_level.RequestOptions;
 import co.elastic.clients.transport.rest5_client.low_level.Response;
 import co.elastic.clients.transport.rest5_client.low_level.Rest5Client;
+import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.core5.http.HttpStatus;
+import org.apache.hc.core5.util.Timeout;
 
 import org.springframework.boot.health.contributor.AbstractHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.boot.health.contributor.Status;
+import org.springframework.boot.health.contributor.TimeoutSupport;
 import org.springframework.boot.json.JsonParser;
 import org.springframework.boot.json.JsonParserFactory;
 import org.springframework.util.StreamUtils;
 
 /**
  * {@link HealthIndicator} for an Elasticsearch cluster using a {@link Rest5Client}.
+ * <p>
+ * When a health timeout is configured, it is applied on the request for the connection
+ * lease request and the response.
  *
  * @author Artsiom Yudovin
  * @author Brian Clozel
  * @author Filip Hrisafov
+ * @author Moritz Halbritter
  * @since 4.0.0
  */
 public class ElasticsearchRestClientHealthIndicator extends AbstractHealthIndicator {
+
+	private static final String CLUSTER_HEALTH_ENDPOINT = "/_cluster/health/";
 
 	private static final String RED_STATUS = "red";
 
@@ -56,8 +70,56 @@ public class ElasticsearchRestClientHealthIndicator extends AbstractHealthIndica
 	}
 
 	@Override
+	public TimeoutSupport getTimeoutSupport() {
+		return TimeoutSupport.NATIVE;
+	}
+
+	@Override
 	protected void doHealthCheck(Health.Builder builder) throws Exception {
-		Response response = this.client.performRequest(new Request("GET", "/_cluster/health/"));
+		Response response = this.client.performRequest(new Request("GET", CLUSTER_HEALTH_ENDPOINT));
+		handleResponse(builder, response);
+	}
+
+	@Override
+	protected void doHealthCheck(Health.Builder builder, Duration timeout) throws Exception {
+		Request request = createClusterHealthRequest(timeout);
+		try {
+			handleResponse(builder, this.client.performRequest(request));
+		}
+		catch (SocketTimeoutException ex) {
+			throw createTimeoutException(ex);
+		}
+		catch (IOException ex) {
+			if (containsTimeoutCause(ex)) {
+				throw createTimeoutException(ex);
+			}
+			throw ex;
+		}
+	}
+
+	private Request createClusterHealthRequest(Duration timeout) {
+		Request request = new Request("GET", CLUSTER_HEALTH_ENDPOINT);
+		Timeout clientTimeout = Timeout.ofMilliseconds(toTimeoutMillis(timeout));
+		RequestConfig requestConfig = RequestConfig.custom()
+			.setConnectionRequestTimeout(clientTimeout)
+			.setResponseTimeout(clientTimeout)
+			.build();
+		request.setOptions(RequestOptions.DEFAULT.toBuilder().setRequestConfig(requestConfig).build());
+		return request;
+	}
+
+	/**
+	 * Converts a {@link Duration} to a positive HTTP client timeout in whole milliseconds
+	 * (minimum {@code 1}).
+	 * @param timeout the timeout
+	 * @return timeout in milliseconds
+	 */
+	private long toTimeoutMillis(Duration timeout) {
+		long millis = timeout.toMillis();
+		return Math.max(1, millis);
+	}
+
+	private void handleResponse(Health.Builder builder, Response response) throws IOException {
 		if (response.getStatusCode() != HttpStatus.SC_OK) {
 			builder.down();
 			builder.withDetail("statusCode", response.getStatusCode());
@@ -65,15 +127,32 @@ public class ElasticsearchRestClientHealthIndicator extends AbstractHealthIndica
 			return;
 		}
 		try (InputStream inputStream = response.getEntity().getContent()) {
-			doHealthCheck(builder, StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8));
+			parseClusterHealth(builder, StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8));
 		}
 	}
 
-	private void doHealthCheck(Health.Builder builder, String json) {
+	private void parseClusterHealth(Health.Builder builder, String json) {
 		Map<String, Object> response = this.jsonParser.parseMap(json);
 		String status = (String) response.get("status");
 		builder.status((RED_STATUS.equals(status)) ? Status.OUT_OF_SERVICE : Status.UP);
 		builder.withDetails(response);
+	}
+
+	private boolean containsTimeoutCause(Throwable ex) {
+		Throwable current = ex;
+		while (current != null) {
+			if (current instanceof SocketTimeoutException) {
+				return true;
+			}
+			current = current.getCause();
+		}
+		return false;
+	}
+
+	private TimeoutException createTimeoutException(Exception cause) {
+		TimeoutException timeoutException = new TimeoutException(cause.getMessage());
+		timeoutException.initCause(cause);
+		return timeoutException;
 	}
 
 }
