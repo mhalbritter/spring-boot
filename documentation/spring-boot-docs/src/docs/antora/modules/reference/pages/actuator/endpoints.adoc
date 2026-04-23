@@ -734,6 +734,9 @@ NOTE: The `hazelcast` indicator uses timeout mode `NATIVE`, so configprop:manage
 
 NOTE: The `elasticsearch` indicator uses timeout mode `NATIVE`, so configprop:management.health.elasticsearch.timeout[] and configprop:management.health.defaults.timeout[] bound the cluster health request.
 
+NOTE: The `neo4j` indicator uses timeout mode `NATIVE`, so configprop:management.health.neo4j.timeout[] and configprop:management.health.defaults.timeout[] bound the Cypher health check.
+Values under one millisecond are rounded up to one millisecond.
+
 NOTE: The `rabbit` indicator uses timeout mode `NONE`, so configprop:management.health.rabbit.timeout[] and configprop:management.health.defaults.timeout[] do not bound how long that check can run.
 Limit blocking time with configprop:spring.rabbitmq.connection-timeout[], configprop:spring.rabbitmq.channel-rpc-timeout[], and other client settings instead.
 

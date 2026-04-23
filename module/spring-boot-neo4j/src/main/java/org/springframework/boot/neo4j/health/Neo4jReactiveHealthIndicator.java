@@ -16,12 +16,18 @@
 
 package org.springframework.boot.neo4j.health;
 
+import java.time.Duration;
+import java.util.concurrent.TimeoutException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.jspecify.annotations.Nullable;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
+import org.neo4j.driver.TransactionConfig;
+import org.neo4j.driver.exceptions.ConnectionReadTimeoutException;
 import org.neo4j.driver.exceptions.SessionExpiredException;
+import org.neo4j.driver.exceptions.TransactionTerminatedException;
 import org.neo4j.driver.reactivestreams.ReactiveResult;
 import org.neo4j.driver.reactivestreams.ReactiveSession;
 import org.neo4j.driver.summary.ResultSummary;
@@ -31,12 +37,16 @@ import reactor.util.retry.Retry;
 
 import org.springframework.boot.health.contributor.AbstractReactiveHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
-import org.springframework.boot.health.contributor.ReactiveHealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutSupport;
 import org.springframework.util.Assert;
 
 /**
- * {@link ReactiveHealthIndicator} that tests the status of a Neo4j by executing a Cypher
- * statement and extracting server and database information.
+ * {@link org.springframework.boot.health.contributor.ReactiveHealthIndicator} that tests
+ * the status of a Neo4j by executing a Cypher statement and extracting server and
+ * database information.
+ * <p>
+ * This indicator uses {@link TimeoutSupport#NATIVE}: when a health timeout is configured,
+ * it is applied to the Cypher health check with {@link TransactionConfig#timeout()}.
  *
  * @author Michael J. Simons
  * @author Stephane Nicoll
@@ -52,13 +62,19 @@ public final class Neo4jReactiveHealthIndicator extends AbstractReactiveHealthIn
 	private final Neo4jHealthDetailsHandler healthDetailsHandler;
 
 	public Neo4jReactiveHealthIndicator(Driver driver) {
+		super("Neo4j health check failed");
 		this.driver = driver;
 		this.healthDetailsHandler = new Neo4jHealthDetailsHandler();
 	}
 
 	@Override
+	public TimeoutSupport getTimeoutSupport() {
+		return TimeoutSupport.NATIVE;
+	}
+
+	@Override
 	protected Mono<Health> doHealthCheck(Health.Builder builder) {
-		return runHealthCheckQuery()
+		return runHealthCheckQuery(null)
 			.doOnError(SessionExpiredException.class, (ex) -> logger.warn(Neo4jHealthIndicator.MESSAGE_SESSION_EXPIRED))
 			.retryWhen(Retry.max(1).filter(SessionExpiredException.class::isInstance))
 			.map((healthDetails) -> {
@@ -67,16 +83,54 @@ public final class Neo4jReactiveHealthIndicator extends AbstractReactiveHealthIn
 			});
 	}
 
-	Mono<Neo4jHealthDetails> runHealthCheckQuery() {
-		return Mono.using(this::session, this::healthDetails, ReactiveSession::close);
+	@Override
+	protected Mono<Health> doHealthCheck(Health.Builder builder, Duration timeout) {
+		return runHealthCheckQuery(timeout)
+			.doOnError(SessionExpiredException.class, (ex) -> logger.warn(Neo4jHealthIndicator.MESSAGE_SESSION_EXPIRED))
+			.retryWhen(Retry.max(1).filter(SessionExpiredException.class::isInstance))
+			.onErrorMap(this::mapClientTimeoutFailure)
+			.map((healthDetails) -> {
+				this.healthDetailsHandler.addHealthDetails(builder, healthDetails);
+				return builder.build();
+			});
+	}
+
+	private Throwable mapClientTimeoutFailure(Throwable ex) {
+		if (ex instanceof TimeoutException) {
+			return ex;
+		}
+		if (ex instanceof TransactionTerminatedException || ex instanceof ConnectionReadTimeoutException) {
+			TimeoutException timeoutException = new TimeoutException(ex.getMessage());
+			timeoutException.initCause(ex);
+			return timeoutException;
+		}
+		return ex;
+	}
+
+	Mono<Neo4jHealthDetails> runHealthCheckQuery(@Nullable Duration timeout) {
+		TransactionConfig transactionConfig = transactionConfigForHealth(timeout);
+		return Mono.using(this::session, (session) -> healthDetails(session, transactionConfig),
+				ReactiveSession::close);
+	}
+
+	private TransactionConfig transactionConfigForHealth(@Nullable Duration timeout) {
+		if (timeout == null) {
+			return TransactionConfig.empty();
+		}
+		return TransactionConfig.builder().withTimeout(minimumTransactionTimeout(timeout)).build();
+	}
+
+	private Duration minimumTransactionTimeout(Duration timeout) {
+		Duration minimum = Duration.ofMillis(1);
+		return (timeout.compareTo(minimum) < 0) ? minimum : timeout;
 	}
 
 	private ReactiveSession session() {
 		return this.driver.session(ReactiveSession.class, Neo4jHealthIndicator.DEFAULT_SESSION_CONFIG);
 	}
 
-	private Mono<Neo4jHealthDetails> healthDetails(ReactiveSession session) {
-		return Mono.from(session.run(Neo4jHealthIndicator.CYPHER)).flatMap(this::healthDetails);
+	private Mono<Neo4jHealthDetails> healthDetails(ReactiveSession session, TransactionConfig transactionConfig) {
+		return Mono.from(session.run(Neo4jHealthIndicator.CYPHER, transactionConfig)).flatMap(this::healthDetails);
 	}
 
 	private Mono<? extends Neo4jHealthDetails> healthDetails(ReactiveResult result) {

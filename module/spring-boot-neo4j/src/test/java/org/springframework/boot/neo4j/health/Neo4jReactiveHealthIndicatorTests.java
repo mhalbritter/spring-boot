@@ -17,15 +17,19 @@
 package org.springframework.boot.neo4j.health;
 
 import java.time.Duration;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.SessionConfig;
+import org.neo4j.driver.TransactionConfig;
 import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.ServiceUnavailableException;
 import org.neo4j.driver.exceptions.SessionExpiredException;
+import org.neo4j.driver.exceptions.TransactionTerminatedException;
 import org.neo4j.driver.reactivestreams.ReactiveResult;
 import org.neo4j.driver.reactivestreams.ReactiveSession;
 import org.neo4j.driver.summary.ResultSummary;
@@ -34,10 +38,10 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import org.springframework.boot.health.contributor.Status;
+import org.springframework.boot.health.contributor.TimeoutSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -71,7 +75,7 @@ class Neo4jReactiveHealthIndicatorTests {
 		ReactiveSession session = mock(ReactiveSession.class);
 		ReactiveResult statementResult = mockStatementResult(resultSummary, "4711", "some edition");
 		AtomicInteger count = new AtomicInteger();
-		given(session.run(anyString())).will((invocation) -> {
+		given(session.run(eq(Neo4jHealthIndicator.CYPHER), any(TransactionConfig.class))).will((invocation) -> {
 			if (count.compareAndSet(0, 1)) {
 				return Flux.error(new SessionExpiredException("Session expired"));
 			}
@@ -100,6 +104,46 @@ class Neo4jReactiveHealthIndicatorTests {
 		}).expectComplete().verify(Duration.ofSeconds(30));
 	}
 
+	@Test
+	void getTimeoutSupportIsNative() {
+		Driver driver = mock(Driver.class);
+		assertThat(new Neo4jReactiveHealthIndicator(driver).getTimeoutSupport()).isEqualTo(TimeoutSupport.NATIVE);
+	}
+
+	@Test
+	void neo4jIsUpWithTimeoutUsesTransactionConfig() {
+		ResultSummary resultSummary = ResultSummaryMock.createResultSummary("My Home", "test");
+		ReactiveResult statementResult = mockStatementResult(resultSummary, "4711", "ultimate collectors edition");
+		ReactiveSession session = mock(ReactiveSession.class);
+		given(session.run(eq(Neo4jHealthIndicator.CYPHER), any(TransactionConfig.class)))
+			.willReturn(Mono.just(statementResult));
+		Driver driver = mock(Driver.class);
+		given(driver.session(eq(ReactiveSession.class), any(SessionConfig.class))).willReturn(session);
+		Neo4jReactiveHealthIndicator healthIndicator = new Neo4jReactiveHealthIndicator(driver);
+		healthIndicator.health(Duration.ofSeconds(5))
+			.as(StepVerifier::create)
+			.consumeNextWith((health) -> assertThat(health.getStatus()).isEqualTo(Status.UP))
+			.expectComplete()
+			.verify(Duration.ofSeconds(30));
+		ArgumentCaptor<TransactionConfig> captor = ArgumentCaptor.forClass(TransactionConfig.class);
+		then(session).should().run(eq(Neo4jHealthIndicator.CYPHER), captor.capture());
+		assertThat(captor.getValue().timeout()).isEqualTo(Duration.ofSeconds(5));
+	}
+
+	@Test
+	void transactionTerminatedExceptionIsPropagatedAsTimeoutException() {
+		ReactiveSession session = mock(ReactiveSession.class);
+		given(session.run(eq(Neo4jHealthIndicator.CYPHER), any(TransactionConfig.class)))
+			.willReturn(Flux.error(new TransactionTerminatedException("Transaction has been terminated")));
+		Driver driver = mock(Driver.class);
+		given(driver.session(eq(ReactiveSession.class), any(SessionConfig.class))).willReturn(session);
+		Neo4jReactiveHealthIndicator healthIndicator = new Neo4jReactiveHealthIndicator(driver);
+		healthIndicator.health(Duration.ofSeconds(5))
+			.as(StepVerifier::create)
+			.expectError(TimeoutException.class)
+			.verify(Duration.ofSeconds(30));
+	}
+
 	private ReactiveResult mockStatementResult(ResultSummary resultSummary, String version, String edition) {
 		Record record = mock(Record.class);
 		given(record.get("edition")).willReturn(Values.value(edition));
@@ -113,7 +157,8 @@ class Neo4jReactiveHealthIndicatorTests {
 	private Driver mockDriver(ResultSummary resultSummary, String version, String edition) {
 		ReactiveResult statementResult = mockStatementResult(resultSummary, version, edition);
 		ReactiveSession session = mock(ReactiveSession.class);
-		given(session.run(anyString())).willReturn(Mono.just(statementResult));
+		given(session.run(eq(Neo4jHealthIndicator.CYPHER), eq(TransactionConfig.empty())))
+			.willReturn(Mono.just(statementResult));
 		Driver driver = mock(Driver.class);
 		given(driver.session(eq(ReactiveSession.class), any(SessionConfig.class))).willReturn(session);
 		return driver;

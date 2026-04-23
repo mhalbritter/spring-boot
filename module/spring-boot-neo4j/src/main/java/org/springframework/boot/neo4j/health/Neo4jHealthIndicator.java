@@ -16,24 +16,35 @@
 
 package org.springframework.boot.neo4j.health;
 
+import java.time.Duration;
+import java.util.concurrent.TimeoutException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.SessionConfig;
+import org.neo4j.driver.TransactionConfig;
+import org.neo4j.driver.exceptions.ConnectionReadTimeoutException;
 import org.neo4j.driver.exceptions.SessionExpiredException;
+import org.neo4j.driver.exceptions.TransactionTerminatedException;
 import org.neo4j.driver.summary.ResultSummary;
 
 import org.springframework.boot.health.contributor.AbstractHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
-import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutSupport;
 
 /**
- * {@link HealthIndicator} that tests the status of a Neo4j by executing a Cypher
- * statement and extracting server and database information.
+ * {@link org.springframework.boot.health.contributor.HealthIndicator} that tests the
+ * status of a Neo4j by executing a Cypher statement and extracting server and database
+ * information.
+ * <p>
+ * This indicator uses {@link TimeoutSupport#NATIVE}: when a health timeout is configured,
+ * it is applied to the Cypher health check with {@link TransactionConfig#timeout()}.
  *
  * @author Eric Spiegelberg
  * @author Stephane Nicoll
@@ -72,31 +83,65 @@ public class Neo4jHealthIndicator extends AbstractHealthIndicator {
 	}
 
 	@Override
+	public TimeoutSupport getTimeoutSupport() {
+		return TimeoutSupport.NATIVE;
+	}
+
+	@Override
 	protected void doHealthCheck(Health.Builder builder) {
 		try {
-			try {
-				runHealthCheckQuery(builder);
-			}
-			catch (SessionExpiredException ex) {
-				// Retry one time when the session has been expired
-				logger.warn(MESSAGE_SESSION_EXPIRED);
-				runHealthCheckQuery(builder);
-			}
+			executeWithSessionRetry(builder, null);
 		}
 		catch (Exception ex) {
 			builder.down().withException(ex);
 		}
 	}
 
-	private void runHealthCheckQuery(Health.Builder builder) {
+	@Override
+	protected void doHealthCheck(Health.Builder builder, Duration timeout) throws Exception {
+		try {
+			executeWithSessionRetry(builder, timeout);
+		}
+		catch (TransactionTerminatedException | ConnectionReadTimeoutException ex) {
+			TimeoutException timeoutException = new TimeoutException(ex.getMessage());
+			timeoutException.initCause(ex);
+			throw timeoutException;
+		}
+	}
+
+	private void executeWithSessionRetry(Health.Builder builder, @Nullable Duration timeout) {
+		try {
+			runHealthCheckQuery(builder, timeout);
+		}
+		catch (SessionExpiredException ex) {
+			// Retry one time when the session has been expired
+			logger.warn(MESSAGE_SESSION_EXPIRED);
+			runHealthCheckQuery(builder, timeout);
+		}
+	}
+
+	private void runHealthCheckQuery(Health.Builder builder, @Nullable Duration timeout) {
 		// We use WRITE here to make sure UP is returned for a server that supports
 		// all possible workloads
 		try (Session session = this.driver.session(DEFAULT_SESSION_CONFIG)) {
-			Result result = session.run(CYPHER);
+			TransactionConfig transactionConfig = transactionConfigForHealth(timeout);
+			Result result = session.run(CYPHER, transactionConfig);
 			Record record = result.single();
 			ResultSummary resultSummary = result.consume();
 			this.healthDetailsHandler.addHealthDetails(builder, new Neo4jHealthDetails(record, resultSummary));
 		}
+	}
+
+	private TransactionConfig transactionConfigForHealth(@Nullable Duration timeout) {
+		if (timeout == null) {
+			return TransactionConfig.empty();
+		}
+		return TransactionConfig.builder().withTimeout(minimumTransactionTimeout(timeout)).build();
+	}
+
+	private Duration minimumTransactionTimeout(Duration timeout) {
+		Duration minimum = Duration.ofMillis(1);
+		return (timeout.compareTo(minimum) < 0) ? minimum : timeout;
 	}
 
 }
