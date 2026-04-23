@@ -10,7 +10,7 @@
     {
       "name": "management.health.cassandra.timeout",
       "type": "java.time.Duration",
-      "description": "Timeout for the Cassandra health check."
+      "description": "Timeout for the Cassandra health check. Not used: the Cassandra driver health indicator uses timeout mode NONE (it reads session metadata only)."
     },
     {
       "name": "spring.cassandra.compression",

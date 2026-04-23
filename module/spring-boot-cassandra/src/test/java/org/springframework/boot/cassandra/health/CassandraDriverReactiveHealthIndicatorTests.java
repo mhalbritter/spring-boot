@@ -36,6 +36,7 @@ import reactor.test.StepVerifier;
 
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.Status;
+import org.springframework.boot.health.contributor.TimeoutSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -55,6 +56,13 @@ class CassandraDriverReactiveHealthIndicatorTests {
 	void createWhenCqlSessionIsNullShouldThrowException() {
 		assertThatIllegalArgumentException().isThrownBy(() -> new CassandraDriverReactiveHealthIndicator(null))
 			.withMessage("'session' must not be null");
+	}
+
+	@Test
+	void getTimeoutSupportIsNone() {
+		CqlSession session = mockCqlSessionWithNodeState(NodeState.UP);
+		assertThat(new CassandraDriverReactiveHealthIndicator(session).getTimeoutSupport())
+			.isEqualTo(TimeoutSupport.NONE);
 	}
 
 	@Test

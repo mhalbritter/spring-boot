@@ -28,11 +28,16 @@ import org.springframework.boot.health.contributor.AbstractReactiveHealthIndicat
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.ReactiveHealthIndicator;
 import org.springframework.boot.health.contributor.Status;
+import org.springframework.boot.health.contributor.TimeoutSupport;
 import org.springframework.util.Assert;
 
 /**
  * Simple implementation of a {@link ReactiveHealthIndicator} returning status information
  * for Cassandra data stores.
+ * <p>
+ * This indicator uses {@link TimeoutSupport#NONE}: configured health timeouts do not
+ * apply. The check reads {@link CqlSession#getMetadata() node metadata} only (no CQL
+ * round-trip).
  *
  * @author Alexandre Dutra
  * @author Tomasz Lelek
@@ -50,6 +55,11 @@ public class CassandraDriverReactiveHealthIndicator extends AbstractReactiveHeal
 		super("Cassandra health check failed");
 		Assert.notNull(session, "'session' must not be null");
 		this.session = session;
+	}
+
+	@Override
+	public TimeoutSupport getTimeoutSupport() {
+		return TimeoutSupport.NONE;
 	}
 
 	@Override

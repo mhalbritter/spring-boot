@@ -33,6 +33,7 @@ import org.junit.jupiter.api.Test;
 
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.Status;
+import org.springframework.boot.health.contributor.TimeoutSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -52,6 +53,12 @@ class CassandraDriverHealthIndicatorTests {
 	void createWhenCqlSessionIsNullShouldThrowException() {
 		assertThatIllegalArgumentException().isThrownBy(() -> new CassandraDriverHealthIndicator(null))
 			.withMessage("'session' must not be null");
+	}
+
+	@Test
+	void getTimeoutSupportIsNone() {
+		CqlSession session = mockCqlSessionWithNodeState(NodeState.UP);
+		assertThat(new CassandraDriverHealthIndicator(session).getTimeoutSupport()).isEqualTo(TimeoutSupport.NONE);
 	}
 
 	@Test
