@@ -24,12 +24,18 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.boot.health.contributor.AbstractHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutSupport;
 import org.springframework.ldap.core.ContextExecutor;
 import org.springframework.ldap.core.LdapOperations;
 import org.springframework.util.Assert;
 
 /**
  * {@link HealthIndicator} for configured LDAP server(s).
+ * <p>
+ * This indicator uses {@link TimeoutSupport#NONE}: configured health timeouts do not
+ * apply. Limit blocking LDAP work with your {@link LdapOperations} / context source and
+ * JNDI environment (for example, {@code com.sun.jndi.ldap.connect.timeout} and
+ * {@code com.sun.jndi.ldap.read.timeout} when using the JDK LDAP provider).
  *
  * @author Eddú Meléndez
  * @author Stephane Nicoll
@@ -45,6 +51,11 @@ public class LdapHealthIndicator extends AbstractHealthIndicator {
 		super("LDAP health check failed");
 		Assert.notNull(ldapOperations, "'ldapOperations' must not be null");
 		this.ldapOperations = ldapOperations;
+	}
+
+	@Override
+	public TimeoutSupport getTimeoutSupport() {
+		return TimeoutSupport.NONE;
 	}
 
 	@Override

@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.Status;
+import org.springframework.boot.health.contributor.TimeoutSupport;
 import org.springframework.ldap.CommunicationException;
 import org.springframework.ldap.core.ContextExecutor;
 import org.springframework.ldap.core.LdapTemplate;
@@ -36,6 +37,12 @@ import static org.mockito.Mockito.mock;
  * @author Eddú Meléndez
  */
 class LdapHealthIndicatorTests {
+
+	@Test
+	void getTimeoutSupportIsNone() {
+		LdapTemplate ldapTemplate = mock(LdapTemplate.class);
+		assertThat(new LdapHealthIndicator(ldapTemplate).getTimeoutSupport()).isEqualTo(TimeoutSupport.NONE);
+	}
 
 	@Test
 	@SuppressWarnings("unchecked")

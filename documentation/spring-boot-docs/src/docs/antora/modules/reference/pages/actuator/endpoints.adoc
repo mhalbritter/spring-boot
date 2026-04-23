@@ -737,6 +737,9 @@ NOTE: The `elasticsearch` indicator uses timeout mode `NATIVE`, so configprop:ma
 NOTE: The `rabbit` indicator uses timeout mode `NONE`, so configprop:management.health.rabbit.timeout[] and configprop:management.health.defaults.timeout[] do not bound how long that check can run.
 Limit blocking time with configprop:spring.rabbitmq.connection-timeout[], configprop:spring.rabbitmq.channel-rpc-timeout[], and other client settings instead.
 
+NOTE: The `ldap` indicator uses timeout mode `NONE`, so configprop:management.health.ldap.timeout[] and configprop:management.health.defaults.timeout[] do not bound how long that check can run.
+Limit blocking time with configprop:spring.ldap.base-environment[] (for example, `com.sun.jndi.ldap.connect.timeout` and `com.sun.jndi.ldap.read.timeout` entries for the JDK LDAP provider) or your LDAP `ContextSource` configuration instead.
+
 
 
 [[actuator.endpoints.health.writing-custom-health-indicators]]

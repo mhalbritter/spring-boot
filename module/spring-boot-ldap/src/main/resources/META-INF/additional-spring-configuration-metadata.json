@@ -9,7 +9,7 @@
     {
       "name": "management.health.ldap.timeout",
       "type": "java.time.Duration",
-      "description": "Timeout for the LDAP health check."
+      "description": "Not used by the LDAP health indicator (timeout mode NONE)."
     }
   ]
 }
