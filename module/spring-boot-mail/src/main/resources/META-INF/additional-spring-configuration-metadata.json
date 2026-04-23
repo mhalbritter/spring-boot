@@ -10,7 +10,7 @@
     {
       "name": "management.health.mail.timeout",
       "type": "java.time.Duration",
-      "description": "Timeout for the Mail health check."
+      "description": "Not used by the Mail health indicator (timeout mode NONE)."
     },
     {
       "name": "spring.mail.test-connection",

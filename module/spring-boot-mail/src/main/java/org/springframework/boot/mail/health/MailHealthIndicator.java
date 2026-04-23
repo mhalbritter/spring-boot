@@ -19,11 +19,17 @@ package org.springframework.boot.mail.health;
 import org.springframework.boot.health.contributor.AbstractHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutSupport;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.util.StringUtils;
 
 /**
  * {@link HealthIndicator} for configured smtp server(s).
+ * <p>
+ * This indicator uses {@link TimeoutSupport#NONE}: configured health timeouts do not
+ * apply. Limit blocking mail operations with Jakarta Mail settings on the
+ * {@link JavaMailSenderImpl} (for example, {@code mail.smtp.connectiontimeout} and
+ * {@code mail.smtp.timeout} in {@code spring.mail.properties}).
  *
  * @author Johannes Edmeier
  * @author Scott Frederick
@@ -36,6 +42,11 @@ public class MailHealthIndicator extends AbstractHealthIndicator {
 	public MailHealthIndicator(JavaMailSenderImpl mailSender) {
 		super("Mail health check failed");
 		this.mailSender = mailSender;
+	}
+
+	@Override
+	public TimeoutSupport getTimeoutSupport() {
+		return TimeoutSupport.NONE;
 	}
 
 	@Override
