@@ -743,8 +743,9 @@ Limit blocking time with configprop:spring.ldap.base-environment[] (for example,
 NOTE: The `mail` indicator uses timeout mode `NONE`, so configprop:management.health.mail.timeout[] and configprop:management.health.defaults.timeout[] do not bound how long that check can run.
 Limit blocking time with configprop:spring.mail.properties[] (for example, `mail.smtp.connectiontimeout` and `mail.smtp.timeout` for SMTP) instead.
 
-NOTE: The `cassandra` indicator uses timeout mode `NONE`, so configprop:management.health.cassandra.timeout[] and configprop:management.health.defaults.timeout[] do not bound how long that check can run.
-It inspects javadoc:com.datastax.oss.driver.api.core.CqlSession#getMetadata()[driver metadata] (node states) only, with no CQL round-trip.
+NOTE: The `cassandra` indicator uses timeout mode `NONE`, it inspects javadoc:com.datastax.oss.driver.api.core.CqlSession#getMetadata()[driver metadata] (node states) only, with no CQL round-trip.
+
+NOTE: The `couchbase` indicator uses timeout mode `NONE`, it uses javadoc:com.couchbase.client.java.Cluster#diagnostics()[passive diagnostics] only.
 
 
 

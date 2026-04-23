@@ -32,6 +32,7 @@ import org.junit.jupiter.api.Test;
 
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.Status;
+import org.springframework.boot.health.contributor.TimeoutSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
@@ -45,6 +46,12 @@ import static org.mockito.Mockito.mock;
  * @author Stephane Nicoll
  */
 class CouchbaseHealthIndicatorTests {
+
+	@Test
+	void getTimeoutSupportIsNone() {
+		Cluster cluster = mock(Cluster.class);
+		assertThat(new CouchbaseHealthIndicator(cluster).getTimeoutSupport()).isEqualTo(TimeoutSupport.NONE);
+	}
 
 	@Test
 	@SuppressWarnings("unchecked")

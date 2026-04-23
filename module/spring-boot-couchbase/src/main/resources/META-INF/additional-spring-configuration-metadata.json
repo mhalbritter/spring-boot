@@ -10,7 +10,7 @@
     {
       "name": "management.health.couchbase.timeout",
       "type": "java.time.Duration",
-      "description": "Timeout for the Couchbase health check."
+      "description": "Timeout for the Couchbase health check. Ignored for the default Couchbase indicators (timeout mode NONE; passive diagnostics only)."
     },
     {
       "name": "spring.couchbase.bootstrap-hosts",

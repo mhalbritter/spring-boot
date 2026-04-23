@@ -22,10 +22,14 @@ import com.couchbase.client.java.Cluster;
 import org.springframework.boot.health.contributor.AbstractHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutSupport;
 import org.springframework.util.Assert;
 
 /**
  * {@link HealthIndicator} for Couchbase.
+ * <p>
+ * This indicator uses {@link TimeoutSupport#NONE}: configured health timeouts do not
+ * apply. The check uses {@link Cluster#diagnostics() passive diagnostics} only.
  *
  * @author Eddú Meléndez
  * @author Stephane Nicoll
@@ -46,7 +50,12 @@ public class CouchbaseHealthIndicator extends AbstractHealthIndicator {
 	}
 
 	@Override
-	protected void doHealthCheck(Health.Builder builder) throws Exception {
+	public TimeoutSupport getTimeoutSupport() {
+		return TimeoutSupport.NONE;
+	}
+
+	@Override
+	protected void doHealthCheck(Health.Builder builder) {
 		DiagnosticsResult diagnostics = this.cluster.diagnostics();
 		new CouchbaseHealth(diagnostics).applyTo(builder);
 	}
