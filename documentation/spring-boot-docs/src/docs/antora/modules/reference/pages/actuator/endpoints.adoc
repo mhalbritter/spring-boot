@@ -727,6 +727,9 @@ NOTE: The `redis` indicator uses timeout mode `INTERRUPTION` when you use javado
 With javadoc:org.springframework.data.redis.connection.jedis.JedisConnectionFactory[] (or any other javadoc:org.springframework.data.redis.connection.RedisConnectionFactory[]), the indicator uses timeout mode `NONE`, so those properties do not bound how long that check can run.
 Use Lettuce if you want the Redis health check to participate in configured timeouts at all.
 
+NOTE: The `mongo` indicator uses timeout mode `NATIVE`, so configprop:management.health.mongodb.timeout[] and configprop:management.health.defaults.timeout[] bound command execution time.
+Values under one millisecond are rounded up to one millisecond.
+
 NOTE: The `jms` indicator uses timeout mode `NATIVE`, so configprop:management.health.jms.timeout[] and configprop:management.health.defaults.timeout[] bound how long `jakarta.jms.Connection#start()` may block by closing the connection when that limit is exceeded.
 When no timeout is configured, the indicator still uses a short internal watchdog for hung `jakarta.jms.Connection#start()` calls.
 
