@@ -33,6 +33,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.boot.health.contributor.AbstractTimeoutAwareHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutEnforcement;
 import org.springframework.util.Assert;
 
 /**
@@ -53,7 +54,7 @@ public class MongoHealthIndicator extends AbstractTimeoutAwareHealthIndicator {
 	private final MongoClient mongoClient;
 
 	public MongoHealthIndicator(MongoClient mongoClient) {
-		super("MongoDB health check failed");
+		super(TimeoutEnforcement.INDICATOR, "MongoDB health check failed");
 		Assert.notNull(mongoClient, "'mongoClient' must not be null");
 		this.mongoClient = mongoClient;
 	}

@@ -63,7 +63,7 @@ public final class Neo4jReactiveHealthIndicator extends AbstractTimeoutAwareReac
 	private final Neo4jHealthDetailsHandler healthDetailsHandler;
 
 	public Neo4jReactiveHealthIndicator(Driver driver) {
-		super("Neo4j health check failed");
+		super(TimeoutEnforcement.INDICATOR, "Neo4j health check failed");
 		this.driver = driver;
 		this.healthDetailsHandler = new Neo4jHealthDetailsHandler();
 	}

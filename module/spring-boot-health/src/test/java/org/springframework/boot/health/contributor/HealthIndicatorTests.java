@@ -17,11 +17,11 @@
 package org.springframework.boot.health.contributor;
 
 import java.time.Duration;
+import java.util.concurrent.TimeoutException;
 
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * Tests for {@link HealthIndicator}.
@@ -55,12 +55,17 @@ class HealthIndicatorTests {
 	}
 
 	@Test
-	void getHealthWithTimeoutThrowsWhenNotOverridden() {
-		assertThatExceptionOfType(UnsupportedOperationException.class)
-			.isThrownBy(() -> this.indicator.health(Duration.ofSeconds(1)))
-			.withMessageContaining("doesn't override health(Duration)");
-		assertThatExceptionOfType(UnsupportedOperationException.class)
-			.isThrownBy(() -> this.indicator.health(Duration.ofSeconds(1), true));
+	void getHealthWithTimeoutIgnoresTimeoutWhenNotOverridden() throws TimeoutException {
+		Health health = this.indicator.health(Duration.ofSeconds(1));
+		assertThat(health).isNotNull();
+		assertThat(health.getDetails()).containsEntry("spring", "boot");
+	}
+
+	@Test
+	void getHealthWithTimeoutWhenIncludeDetailsIsFalseReturnsHealthWithoutDetails() throws TimeoutException {
+		Health health = this.indicator.health(Duration.ofSeconds(1), false);
+		assertThat(health).isNotNull();
+		assertThat(health.getDetails()).isEmpty();
 	}
 
 }

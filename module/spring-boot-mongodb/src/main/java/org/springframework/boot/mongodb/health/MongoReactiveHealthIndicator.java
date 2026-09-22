@@ -62,7 +62,7 @@ public class MongoReactiveHealthIndicator extends AbstractTimeoutAwareReactiveHe
 	private final MongoClient mongoClient;
 
 	public MongoReactiveHealthIndicator(MongoClient mongoClient) {
-		super("Mongo health check failed");
+		super(TimeoutEnforcement.INDICATOR, "Mongo health check failed");
 		Assert.notNull(mongoClient, "'mongoClient' must not be null");
 		this.mongoClient = mongoClient;
 	}

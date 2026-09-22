@@ -69,6 +69,8 @@ public class HealthIndicatorExecutor implements DisposableBean {
 
 	private final HealthIndicatorTimeouts timeouts;
 
+	private final TimeoutEnforcementResolver timeoutEnforcements = new TimeoutEnforcementResolver();
+
 	private final PropertyResolver propertyResolver;
 
 	private boolean disposed;
@@ -138,10 +140,12 @@ public class HealthIndicatorExecutor implements DisposableBean {
 			return executeWithoutDeadline(indicatorName, includeDetails, threadingMode,
 					() -> indicator.health(includeDetails));
 		}
-		return switch (indicator.getTimeoutEnforcement()) {
-			case INDICATOR -> executeWithoutDeadline(indicatorName, includeDetails, threadingMode,
-					() -> indicator.health(timeout, includeDetails));
-			case FRAMEWORK -> executeOnExecutorService(indicator, indicatorName, timeout, includeDetails);
+		TimeoutEnforcement enforcement = this.timeoutEnforcements.resolve(indicator.getTimeoutEnforcement(), indicator);
+		Callable<@Nullable Health> check = this.timeoutEnforcements.acceptsTimeout(indicator)
+				? () -> indicator.health(timeout, includeDetails) : () -> indicator.health(includeDetails);
+		return switch (enforcement) {
+			case INDICATOR -> executeWithoutDeadline(indicatorName, includeDetails, threadingMode, check);
+			case FRAMEWORK -> executeOnExecutorService(indicatorName, timeout, includeDetails, check);
 		};
 	}
 
@@ -224,9 +228,17 @@ public class HealthIndicatorExecutor implements DisposableBean {
 				new SynchronousQueue<>(), threadFactory);
 	}
 
-	private CompletableFuture<@Nullable Health> executeOnExecutorService(HealthIndicator indicator,
-			String indicatorName, Duration timeout, boolean includeDetails) {
-		return submit(new Key(indicatorName, includeDetails), timeout, () -> indicator.health(includeDetails));
+	/**
+	 * Runs a check which this executor caps.
+	 * @param indicatorName the name of the indicator
+	 * @param timeout the timeout
+	 * @param includeDetails whether to include details
+	 * @param check the check to run
+	 * @return a future that completes with the health
+	 */
+	private CompletableFuture<@Nullable Health> executeOnExecutorService(String indicatorName, Duration timeout,
+			boolean includeDetails, Callable<@Nullable Health> check) {
+		return submit(new Key(indicatorName, includeDetails), timeout, check);
 	}
 
 	private CompletableFuture<@Nullable Health> submit(Key key, @Nullable Duration deadline,

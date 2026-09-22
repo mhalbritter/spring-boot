@@ -137,8 +137,8 @@ class DataSourceHealthIndicatorTests {
 	}
 
 	@Test
-	void getTimeoutEnforcementIsIndicator() {
-		assertThat(this.indicator.getTimeoutEnforcement()).isEqualTo(TimeoutEnforcement.INDICATOR);
+	void getTimeoutEnforcementIsFramework() {
+		assertThat(this.indicator.getTimeoutEnforcement()).isEqualTo(TimeoutEnforcement.FRAMEWORK);
 	}
 
 	@Test

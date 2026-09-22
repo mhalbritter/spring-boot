@@ -28,10 +28,11 @@ import reactor.core.publisher.Mono;
  * This is non-blocking contract that is meant to be used in a reactive application. See
  * {@link HealthIndicator} for the traditional contract.
  * <p>
- * A configured execution timeout is capped by Spring Boot by default. An implementation
- * which can bound the check with its own client-level timeout should override
- * {@link #getTimeoutEnforcement()} to return {@link TimeoutEnforcement#INDICATOR} and
- * {@link #health(Duration)} to apply it.
+ * A configured execution timeout is capped by Spring Boot by default and handed to
+ * {@link #health(Duration)}, which an implementation can override to bound the check with
+ * its own client-level timeout. An implementation which bounds the whole check that way
+ * should also override {@link #getTimeoutEnforcement()} to return
+ * {@link TimeoutEnforcement#INDICATOR}.
  *
  * @author Stephane Nicoll
  * @author Moritz Halbritter
@@ -74,10 +75,12 @@ public non-sealed interface ReactiveHealthIndicator extends ReactiveHealthContri
 	}
 
 	/**
-	 * Provide the indicator of health, bounded by the given timeout. Only called when
-	 * {@link #getTimeoutEnforcement()} returns {@link TimeoutEnforcement#INDICATOR},
-	 * which requires this method to be overridden. The effective limit may be rounded up
-	 * to the client's granularity, but must never be shorter than requested.
+	 * Provide the indicator of health, bounded by the given timeout. Called whenever a
+	 * timeout is configured. The effective limit may be rounded up to the client's
+	 * granularity, but must never be shorter than requested.
+	 * <p>
+	 * The default implementation ignores the timeout and calls {@link #health()}, which
+	 * leaves capping the check to Spring Boot.
 	 * @param timeout the timeout
 	 * @return a {@link Mono} that provides the {@link Health}, or signals a
 	 * {@link TimeoutException} if the timeout expired. Implementations must translate a
@@ -87,13 +90,15 @@ public non-sealed interface ReactiveHealthIndicator extends ReactiveHealthContri
 	 * @since 4.2.0
 	 */
 	default Mono<Health> health(Duration timeout) {
-		throw new UnsupportedOperationException(
-				"'%s' declares TimeoutEnforcement.INDICATOR but doesn't override health(Duration)"
-					.formatted(getClass().getName()));
+		return health();
 	}
 
 	/**
 	 * Provide the indicator of health, bounded by the given timeout.
+	 * <p>
+	 * The default implementation calls {@link #health(Duration)} and removes the details
+	 * itself, leaving an override of {@link #health(boolean)} unused. An implementation
+	 * which overrides both single-argument variants has to override this one as well.
 	 * @param timeout the timeout
 	 * @param includeDetails if details should be included or removed
 	 * @return a {@link Mono} that provides the {@link Health}, see

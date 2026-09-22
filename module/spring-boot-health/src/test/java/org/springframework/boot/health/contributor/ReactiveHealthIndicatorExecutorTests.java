@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.awaitility.Awaitility;
 import org.hamcrest.Matchers;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -124,22 +125,66 @@ class ReactiveHealthIndicatorExecutorTests {
 	}
 
 	@Test
-	void shouldNotPassTimeoutToFrameworkEnforcingIndicator() {
+	void shouldPassTimeoutToFrameworkEnforcingIndicator() {
 		setTimeout(LONG_TIMEOUT);
+		AtomicReference<@Nullable Duration> seen = new AtomicReference<>();
 		Health health = execute(new ReactiveHealthIndicator() {
 
 			@Override
 			public Mono<Health> health() {
-				return Mono.just(Health.up().build());
+				return fail("Did not expect health() to be called");
 			}
 
 			@Override
 			public Mono<Health> health(Duration timeout) {
-				return fail("Did not expect health(Duration) to be called");
+				seen.set(timeout);
+				return Mono.just(Health.up().build());
 			}
 
 		});
 		assertThat(health.getStatus()).isEqualTo(Status.UP);
+		assertThat(seen).hasValue(LONG_TIMEOUT);
+	}
+
+	@Test
+	void shouldUseHealthWithDetailsOfIndicatorWhichIgnoresTimeout() {
+		setTimeout(LONG_TIMEOUT);
+		Health health = execute(new ReactiveHealthIndicator() {
+
+			@Override
+			public Mono<Health> health(boolean includeDetails) {
+				return Mono.just(Health.up().withDetail("includeDetails", includeDetails).build());
+			}
+
+			@Override
+			public Mono<Health> health() {
+				return fail("Did not expect health() to be called");
+			}
+
+		});
+		assertThat(health.getDetails()).containsEntry("includeDetails", true);
+	}
+
+	@Test
+	void shouldCapMisdeclaredIndicatorWithFrameworkTimeout(CapturedOutput output) {
+		setTimeout(SHORT_TIMEOUT);
+		ReactiveHealthIndicator delayed = ExecutorTestSupport.delayed(Duration.ofSeconds(2));
+		Health health = execute(new ReactiveHealthIndicator() {
+
+			@Override
+			public TimeoutEnforcement getTimeoutEnforcement() {
+				return TimeoutEnforcement.INDICATOR;
+			}
+
+			@Override
+			public Mono<Health> health() {
+				return delayed.health();
+			}
+
+		});
+		assertThat(health.getStatus()).isEqualTo(Status.DOWN);
+		assertThat(health.getDetails()).containsEntry("reason", "timeout");
+		assertThat(output).contains("doesn't override health(Duration)");
 	}
 
 	@Test

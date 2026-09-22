@@ -49,6 +49,8 @@ public class ReactiveHealthIndicatorExecutor {
 
 	private final HealthIndicatorTimeouts timeouts;
 
+	private final TimeoutEnforcementResolver timeoutEnforcements = new TimeoutEnforcementResolver();
+
 	private final HealthIndicatorExecutor blockingExecutor;
 
 	/**
@@ -86,30 +88,34 @@ public class ReactiveHealthIndicatorExecutor {
 		if (timeout == null) {
 			return reactiveHealthIndicator.health(includeDetails);
 		}
-		return switch (reactiveHealthIndicator.getTimeoutEnforcement()) {
-			case INDICATOR -> reactiveHealthIndicator.health(timeout, includeDetails);
-			case FRAMEWORK -> joinOrStart(reactiveHealthIndicator, indicatorName, timeout, includeDetails);
+		TimeoutEnforcement enforcement = this.timeoutEnforcements
+			.resolve(reactiveHealthIndicator.getTimeoutEnforcement(), reactiveHealthIndicator);
+		Supplier<Mono<Health>> check = this.timeoutEnforcements.acceptsTimeout(reactiveHealthIndicator)
+				? () -> reactiveHealthIndicator.health(timeout, includeDetails)
+				: () -> reactiveHealthIndicator.health(includeDetails);
+		return switch (enforcement) {
+			case INDICATOR -> check.get();
+			case FRAMEWORK -> joinOrStart(check, indicatorName, timeout, includeDetails);
 		};
 	}
 
 	/**
 	 * Shares a single check between all callers of the same indicator.
-	 * @param indicator the indicator to execute
+	 * @param check the check to run
 	 * @param indicatorName the name of the indicator
 	 * @param timeout the timeout
 	 * @param includeDetails whether to include details
 	 * @return the shared health, or a {@code concurrency-limit} {@link Health#down()} if
 	 * the indicator has too many checks in flight
 	 */
-	private Mono<Health> joinOrStart(ReactiveHealthIndicator indicator, String indicatorName, Duration timeout,
+	private Mono<Health> joinOrStart(Supplier<Mono<Health>> check, String indicatorName, Duration timeout,
 			boolean includeDetails) {
 		Key key = new Key(indicatorName, includeDetails);
 		return Mono.defer(() -> {
 			Execution<SharedCheck> execution;
 			try {
 				Runnable onEnd = () -> this.inFlight.finished(key);
-				Supplier<Mono<Health>> starter = () -> indicator.health(includeDetails);
-				execution = this.inFlight.joinOrStart(key, timeout, () -> new SharedCheck(starter, timeout, onEnd));
+				execution = this.inFlight.joinOrStart(key, timeout, () -> new SharedCheck(check, timeout, onEnd));
 			}
 			catch (TooManyChecksInFlightException ex) {
 				return Mono.just(DownHealth.of(ex, DownReason.CONCURRENCY_LIMIT, includeDetails));

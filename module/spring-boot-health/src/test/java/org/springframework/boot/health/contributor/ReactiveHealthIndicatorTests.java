@@ -22,7 +22,6 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * Tests for {@link ReactiveHealthIndicator}.
@@ -64,12 +63,17 @@ class ReactiveHealthIndicatorTests {
 	}
 
 	@Test
-	void getHealthWithTimeoutThrowsWhenNotOverridden() {
-		assertThatExceptionOfType(UnsupportedOperationException.class)
-			.isThrownBy(() -> this.indicator.health(Duration.ofSeconds(1)))
-			.withMessageContaining("doesn't override health(Duration)");
-		assertThatExceptionOfType(UnsupportedOperationException.class)
-			.isThrownBy(() -> this.indicator.health(Duration.ofSeconds(1), true));
+	void getHealthWithTimeoutIgnoresTimeoutWhenNotOverridden() {
+		Health health = this.indicator.health(Duration.ofSeconds(1)).block();
+		assertThat(health).isNotNull();
+		assertThat(health.getDetails()).containsEntry("spring", "boot");
+	}
+
+	@Test
+	void getHealthWithTimeoutWhenIncludeDetailsIsFalseReturnsHealthWithoutDetails() {
+		Health health = this.indicator.health(Duration.ofSeconds(1), false).block();
+		assertThat(health).isNotNull();
+		assertThat(health.getDetails()).isEmpty();
 	}
 
 }

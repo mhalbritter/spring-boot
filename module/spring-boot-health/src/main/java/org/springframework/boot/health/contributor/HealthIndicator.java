@@ -24,10 +24,11 @@ import org.jspecify.annotations.Nullable;
 /**
  * Directly contributes {@link Health} information for specific component or subsystem.
  * <p>
- * A configured execution timeout is capped by Spring Boot by default. An implementation
- * which can bound the check with its own client-level timeout should override
- * {@link #getTimeoutEnforcement()} to return {@link TimeoutEnforcement#INDICATOR} and
- * {@link #health(Duration)} to apply it.
+ * A configured execution timeout is capped by Spring Boot by default and handed to
+ * {@link #health(Duration)}, which an implementation can override to bound the check with
+ * its own client-level timeout. An implementation which bounds the whole check that way
+ * should also override {@link #getTimeoutEnforcement()} to return
+ * {@link TimeoutEnforcement#INDICATOR}.
  *
  * @author Dave Syer
  * @author Phillip Webb
@@ -67,26 +68,28 @@ public non-sealed interface HealthIndicator extends HealthContributor {
 	}
 
 	/**
-	 * Return an indication of health, bounded by the given timeout. Only called when
-	 * {@link #getTimeoutEnforcement()} returns {@link TimeoutEnforcement#INDICATOR},
-	 * which requires this method to be overridden. The effective limit may be rounded up
-	 * to the client's granularity, but must never be shorter than requested.
+	 * Return an indication of health, bounded by the given timeout. Called whenever a
+	 * timeout is configured. The effective limit may be rounded up to the client's
+	 * granularity, but must never be shorter than requested.
+	 * <p>
+	 * The default implementation ignores the timeout and calls {@link #health()}, which
+	 * leaves capping the check to Spring Boot.
 	 * @param timeout the timeout
 	 * @return the health
-	 * @throws UnsupportedOperationException if the indicator doesn't bound the check
-	 * itself
 	 * @throws TimeoutException if the timeout expired. Implementations must translate a
 	 * driver-specific timeout exception into a {@link TimeoutException}
 	 * @since 4.2.0
 	 */
 	default @Nullable Health health(Duration timeout) throws TimeoutException {
-		throw new UnsupportedOperationException(
-				"'%s' declares TimeoutEnforcement.INDICATOR but doesn't override health(Duration)"
-					.formatted(getClass().getName()));
+		return health();
 	}
 
 	/**
 	 * Return an indication of health, bounded by the given timeout.
+	 * <p>
+	 * The default implementation calls {@link #health(Duration)} and removes the details
+	 * itself, leaving an override of {@link #health(boolean)} unused. An implementation
+	 * which overrides both single-argument variants has to override this one as well.
 	 * @param timeout the timeout
 	 * @param includeDetails if details should be included or removed
 	 * @return the health

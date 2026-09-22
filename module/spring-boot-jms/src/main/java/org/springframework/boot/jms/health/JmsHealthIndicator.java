@@ -81,7 +81,7 @@ public class JmsHealthIndicator extends AbstractTimeoutAwareHealthIndicator {
 	 * @since 4.2.0
 	 */
 	public JmsHealthIndicator(ConnectionFactory connectionFactory, Duration startTimeout) {
-		super("JMS health check failed");
+		super(TimeoutEnforcement.INDICATOR, "JMS health check failed");
 		Assert.notNull(startTimeout, "'startTimeout' must not be null");
 		Assert.isTrue(startTimeout.compareTo(Duration.ZERO) > 0, "'startTimeout' must be greater than 0");
 		this.connectionFactory = connectionFactory;

@@ -44,6 +44,14 @@ class ReactiveHealthIndicatorAdapter implements HealthIndicator {
 		this.delegate = delegate;
 	}
 
+	/**
+	 * Returns the adapted reactive indicator.
+	 * @return the adapted indicator
+	 */
+	ReactiveHealthIndicator getDelegate() {
+		return this.delegate;
+	}
+
 	@Override
 	public @Nullable Health health(boolean includeDetails) {
 		return this.delegate.health(includeDetails).block();

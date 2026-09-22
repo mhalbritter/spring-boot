@@ -108,7 +108,12 @@ class AbstractTimeoutAwareReactiveHealthIndicatorTests {
 		private final BiFunction<Health.Builder, @Nullable Duration, Mono<Health>> healthCheck;
 
 		private TestReactiveHealthIndicator(BiFunction<Health.Builder, @Nullable Duration, Mono<Health>> healthCheck) {
-			super("Test message");
+			this(TimeoutEnforcement.INDICATOR, healthCheck);
+		}
+
+		private TestReactiveHealthIndicator(TimeoutEnforcement timeoutEnforcement,
+				BiFunction<Health.Builder, @Nullable Duration, Mono<Health>> healthCheck) {
+			super(timeoutEnforcement, "Test message");
 			this.healthCheck = healthCheck;
 		}
 

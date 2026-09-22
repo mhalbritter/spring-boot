@@ -41,9 +41,11 @@ class AbstractTimeoutAwareHealthIndicatorTests {
 	private static final Duration TIMEOUT = Duration.ofSeconds(5);
 
 	@Test
-	void shouldEnforceTimeoutItself() {
-		assertThat(new TestHealthIndicator((builder, timeout) -> builder.up()).getTimeoutEnforcement())
-			.isEqualTo(TimeoutEnforcement.INDICATOR);
+	void shouldReturnGivenTimeoutEnforcement() {
+		assertThat(new TestHealthIndicator(TimeoutEnforcement.INDICATOR, (builder, timeout) -> builder.up())
+			.getTimeoutEnforcement()).isEqualTo(TimeoutEnforcement.INDICATOR);
+		assertThat(new TestHealthIndicator(TimeoutEnforcement.FRAMEWORK, (builder, timeout) -> builder.up())
+			.getTimeoutEnforcement()).isEqualTo(TimeoutEnforcement.FRAMEWORK);
 	}
 
 	@Test
@@ -92,7 +94,11 @@ class AbstractTimeoutAwareHealthIndicatorTests {
 		private final HealthCheck healthCheck;
 
 		private TestHealthIndicator(HealthCheck healthCheck) {
-			super("Test message");
+			this(TimeoutEnforcement.INDICATOR, healthCheck);
+		}
+
+		private TestHealthIndicator(TimeoutEnforcement timeoutEnforcement, HealthCheck healthCheck) {
+			super(timeoutEnforcement, "Test message");
 			this.healthCheck = healthCheck;
 		}
 

@@ -50,12 +50,12 @@ import org.springframework.util.StringUtils;
  * {@link HealthIndicator} that tests the status of a {@link DataSource} and optionally
  * runs a test query.
  * <p>
- * This indicator uses {@link TimeoutEnforcement#INDICATOR}: a configured health timeout
- * is applied to {@link Connection#isValid(int)} or, when a validation query is set, as
- * the {@link Statement#setQueryTimeout(int) query timeout}. JDBC only accepts whole
- * seconds, so the timeout is rounded up. Acquiring the connection is not covered and
- * stays bounded by the timeout of the connection pool, for example
- * {@code spring.datasource.hikari.connection-timeout}.
+ * A configured health timeout is applied to {@link Connection#isValid(int)} or, when a
+ * validation query is set, as the {@link Statement#setQueryTimeout(int) query timeout},
+ * rounded up to the whole seconds JDBC accepts. That leaves acquiring the connection
+ * unbounded, so this indicator stays capped by Spring Boot
+ * ({@link TimeoutEnforcement#FRAMEWORK}) and uses the JDBC timeouts only to have the
+ * driver abandon a check which the framework has already given up on.
  *
  * @author Dave Syer
  * @author Christian Dupuis
@@ -109,7 +109,7 @@ public class DataSourceHealthIndicator extends AbstractTimeoutAwareHealthIndicat
 	 * @param query the validation query to use (can be {@code null})
 	 */
 	public DataSourceHealthIndicator(@Nullable DataSource dataSource, @Nullable String query) {
-		super("DataSource health check failed");
+		super(TimeoutEnforcement.FRAMEWORK, "DataSource health check failed");
 		this.dataSource = dataSource;
 		this.query = query;
 		this.jdbcTemplate = (dataSource != null) ? new JdbcTemplate(dataSource) : null;

@@ -26,21 +26,24 @@ package org.springframework.boot.health.contributor;
 public enum TimeoutEnforcement {
 
 	/**
-	 * The indicator itself caps the check: Spring Boot passes the configured duration to
+	 * The indicator itself caps the whole check and relies on the duration passed to
 	 * {@link HealthIndicator#health(java.time.Duration, boolean)}, which the indicator
-	 * must override, and relies on it to honor the limit. Such a check runs on the thread
-	 * which asked for the health.
+	 * must override, to honor the limit. Such a check runs on the thread which asked for
+	 * the health.
 	 */
 	INDICATOR,
 
 	/**
-	 * Spring Boot caps the check and passes no duration to the indicator: a blocking
-	 * check runs on another thread and is interrupted
-	 * ({@link java.util.concurrent.Future#cancel(boolean)}) once the limit expires; a
-	 * reactive check is bounded with {@link reactor.core.publisher.Mono#timeout}, which
-	 * cancels the subscription. Both bound the result, not the work: a call which ignores
-	 * interruption or cancellation, typically a client blocked in a socket read, keeps
-	 * its thread until it returns.
+	 * Spring Boot caps the check. The configured duration is still passed to
+	 * {@link HealthIndicator#health(java.time.Duration, boolean)}, letting an indicator
+	 * bound only part of its check. A blocking check runs on another thread and is
+	 * interrupted ({@link java.util.concurrent.Future#cancel(boolean)}) once the limit
+	 * expires; a reactive check is bounded with
+	 * {@link reactor.core.publisher.Mono#timeout}, which cancels the subscription.
+	 * <p>
+	 * Both bound the result, not the work: a call which ignores interruption or
+	 * cancellation, typically a client blocked in a socket read, keeps its thread until
+	 * it returns.
 	 * <p>
 	 * Blocking checks run on a pool which caps how many threads one indicator can occupy,
 	 * in a reactive application as well.

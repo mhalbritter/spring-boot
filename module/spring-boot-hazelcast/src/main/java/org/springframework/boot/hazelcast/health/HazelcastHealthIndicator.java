@@ -28,6 +28,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.boot.health.contributor.AbstractTimeoutAwareHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.boot.health.contributor.TimeoutEnforcement;
 import org.springframework.util.Assert;
 
 /**
@@ -46,7 +47,7 @@ public class HazelcastHealthIndicator extends AbstractTimeoutAwareHealthIndicato
 	private final HazelcastInstance hazelcast;
 
 	public HazelcastHealthIndicator(HazelcastInstance hazelcast) {
-		super("Hazelcast health check failed");
+		super(TimeoutEnforcement.INDICATOR, "Hazelcast health check failed");
 		Assert.notNull(hazelcast, "'hazelcast' must not be null");
 		this.hazelcast = hazelcast;
 	}

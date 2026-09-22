@@ -39,6 +39,7 @@ import org.springframework.boot.health.contributor.AbstractTimeoutAwareHealthInd
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.boot.health.contributor.Status;
+import org.springframework.boot.health.contributor.TimeoutEnforcement;
 import org.springframework.boot.json.JsonParser;
 import org.springframework.boot.json.JsonParserFactory;
 import org.springframework.util.StreamUtils;
@@ -68,7 +69,7 @@ public class ElasticsearchRestClientHealthIndicator extends AbstractTimeoutAware
 	private final JsonParser jsonParser;
 
 	public ElasticsearchRestClientHealthIndicator(Rest5Client client) {
-		super("Elasticsearch health check failed");
+		super(TimeoutEnforcement.INDICATOR, "Elasticsearch health check failed");
 		this.client = client;
 		this.jsonParser = JsonParserFactory.getJsonParser();
 	}

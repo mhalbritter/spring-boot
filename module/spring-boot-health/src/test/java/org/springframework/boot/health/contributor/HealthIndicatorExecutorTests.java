@@ -191,23 +191,69 @@ class HealthIndicatorExecutorTests {
 	}
 
 	@Test
-	void shouldNotPassTimeoutToFrameworkEnforcingIndicator() {
+	void shouldPassTimeoutToFrameworkEnforcingIndicator() {
 		setTimeout(LONG_TIMEOUT);
+		AtomicReference<@Nullable Duration> seen = new AtomicReference<>();
 		Health result = execute(new HealthIndicator() {
 
 			@Override
 			public Health health() {
-				return Health.up().build();
+				return fail("Did not expect health() to be called");
 			}
 
 			@Override
 			public Health health(Duration timeout) {
-				return fail("Did not expect health(Duration) to be called");
+				seen.set(timeout);
+				return Health.up().build();
 			}
 
 		});
 		assertThat(result).isNotNull();
 		assertThat(result.getStatus()).isEqualTo(Status.UP);
+		assertThat(seen).hasValue(LONG_TIMEOUT);
+	}
+
+	@Test
+	void shouldUseHealthWithDetailsOfIndicatorWhichIgnoresTimeout() {
+		setTimeout(LONG_TIMEOUT);
+		Health result = execute(new HealthIndicator() {
+
+			@Override
+			public @Nullable Health health(boolean includeDetails) {
+				return Health.up().withDetail("includeDetails", includeDetails).build();
+			}
+
+			@Override
+			public Health health() {
+				return fail("Did not expect health() to be called");
+			}
+
+		});
+		assertThat(result).isNotNull();
+		assertThat(result.getDetails()).containsEntry("includeDetails", true);
+	}
+
+	@Test
+	void shouldCapMisdeclaredIndicatorWithFrameworkTimeout(CapturedOutput output) {
+		setTimeout(SHORT_TIMEOUT);
+		HealthIndicator sleeping = ExecutorTestSupport.sleeping(Duration.ofSeconds(2));
+		Health result = execute(new HealthIndicator() {
+
+			@Override
+			public TimeoutEnforcement getTimeoutEnforcement() {
+				return TimeoutEnforcement.INDICATOR;
+			}
+
+			@Override
+			public @Nullable Health health() {
+				return sleeping.health();
+			}
+
+		});
+		assertThat(result).isNotNull();
+		assertThat(result.getStatus()).isEqualTo(Status.DOWN);
+		assertThat(result.getDetails()).containsEntry("reason", "timeout");
+		assertThat(output).contains("doesn't override health(Duration)");
 	}
 
 	@Test

@@ -22,47 +22,65 @@ import java.util.function.Function;
 
 import org.jspecify.annotations.Nullable;
 
+import org.springframework.util.Assert;
+
 /**
- * Base {@link HealthIndicator} implementation for indicators which enforce a configured
- * timeout themselves ({@link TimeoutEnforcement#INDICATOR}).
+ * Base {@link HealthIndicator} implementation for indicators which use a configured
+ * timeout to bound their check at the client.
  * <p>
  * Implement {@link #doHealthCheck(Health.Builder, Duration)}; {@code timeout} is
- * {@code null} when no timeout is configured.
+ * {@code null} when no timeout is configured. An indicator which can bound the whole
+ * check declares {@link TimeoutEnforcement#INDICATOR} and is not capped by Spring Boot;
+ * one which can only bound part of it declares {@link TimeoutEnforcement#FRAMEWORK} and
+ * stays capped.
  *
  * @author Moritz Halbritter
  * @since 4.2.0
  */
 public abstract class AbstractTimeoutAwareHealthIndicator extends AbstractHealthIndicator {
 
+	private final TimeoutEnforcement timeoutEnforcement;
+
 	/**
 	 * Create a new {@link AbstractTimeoutAwareHealthIndicator} instance with a default
 	 * {@code healthCheckFailedMessage}.
+	 * @param timeoutEnforcement who caps a configured timeout
 	 */
-	protected AbstractTimeoutAwareHealthIndicator() {
+	protected AbstractTimeoutAwareHealthIndicator(TimeoutEnforcement timeoutEnforcement) {
 		super();
+		Assert.notNull(timeoutEnforcement, "'timeoutEnforcement' must not be null");
+		this.timeoutEnforcement = timeoutEnforcement;
 	}
 
 	/**
 	 * Create a new {@link AbstractTimeoutAwareHealthIndicator} instance with a specific
 	 * message to log when the health check fails.
+	 * @param timeoutEnforcement who caps a configured timeout
 	 * @param healthCheckFailedMessage the message to log on health check failure
 	 */
-	protected AbstractTimeoutAwareHealthIndicator(@Nullable String healthCheckFailedMessage) {
+	protected AbstractTimeoutAwareHealthIndicator(TimeoutEnforcement timeoutEnforcement,
+			@Nullable String healthCheckFailedMessage) {
 		super(healthCheckFailedMessage);
+		Assert.notNull(timeoutEnforcement, "'timeoutEnforcement' must not be null");
+		this.timeoutEnforcement = timeoutEnforcement;
 	}
 
 	/**
 	 * Create a new {@link AbstractTimeoutAwareHealthIndicator} instance with a specific
 	 * message to log when the health check fails.
+	 * @param timeoutEnforcement who caps a configured timeout
 	 * @param healthCheckFailedMessage the message to log on health check failure
 	 */
-	protected AbstractTimeoutAwareHealthIndicator(Function<Exception, @Nullable String> healthCheckFailedMessage) {
+	protected AbstractTimeoutAwareHealthIndicator(TimeoutEnforcement timeoutEnforcement,
+			Function<Exception, @Nullable String> healthCheckFailedMessage) {
 		super(healthCheckFailedMessage);
+		Assert.notNull(timeoutEnforcement, "'timeoutEnforcement' must not be null");
+		this.timeoutEnforcement = timeoutEnforcement;
 	}
 
 	@Override
 	public final TimeoutEnforcement getTimeoutEnforcement() {
-		return TimeoutEnforcement.INDICATOR;
+		return this.timeoutEnforcement;
 	}
 
 	@Override
