@@ -23,6 +23,7 @@ import java.util.concurrent.TimeoutException;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.transaction.TransactionOptions;
 import com.hazelcast.transaction.TransactionTimedOutException;
+import com.hazelcast.transaction.TransactionalTask;
 import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.health.contributor.AbstractTimeoutAwareHealthIndicator;
@@ -34,12 +35,13 @@ import org.springframework.util.Assert;
 /**
  * {@link HealthIndicator} for Hazelcast.
  * <p>
- * When a health timeout is configured, it is applied as the Hazelcast transaction timeout
- * for the transactional health probe.
+ * A configured health timeout is applied as the {@link TransactionOptions#setTimeout
+ * transaction timeout} of the transactional health probe.
  *
  * @author Dmytro Nosan
  * @author Stephane Nicoll
  * @author Tommy Karlsson
+ * @author Moritz Halbritter
  * @since 4.0.0
  */
 public class HazelcastHealthIndicator extends AbstractTimeoutAwareHealthIndicator {
@@ -47,7 +49,7 @@ public class HazelcastHealthIndicator extends AbstractTimeoutAwareHealthIndicato
 	private final HazelcastInstance hazelcast;
 
 	public HazelcastHealthIndicator(HazelcastInstance hazelcast) {
-		super(TimeoutEnforcement.INDICATOR, "Hazelcast health check failed");
+		super(TimeoutEnforcement.FRAMEWORK, "Hazelcast health check failed");
 		Assert.notNull(hazelcast, "'hazelcast' must not be null");
 		this.hazelcast = hazelcast;
 	}
@@ -58,20 +60,18 @@ public class HazelcastHealthIndicator extends AbstractTimeoutAwareHealthIndicato
 			builder.down();
 			return;
 		}
+		TransactionalTask<@Nullable Void> probe = (context) -> {
+			addDetails(builder);
+			return null;
+		};
 		if (timeout == null) {
-			this.hazelcast.executeTransaction((context) -> {
-				addDetails(builder);
-				return null;
-			});
+			this.hazelcast.executeTransaction(probe);
 			return;
 		}
 		TransactionOptions options = new TransactionOptions();
 		options.setTimeout(toTransactionTimeoutMillis(timeout), TimeUnit.MILLISECONDS);
 		try {
-			this.hazelcast.executeTransaction(options, (context) -> {
-				addDetails(builder);
-				return null;
-			});
+			this.hazelcast.executeTransaction(options, probe);
 		}
 		catch (TransactionTimedOutException ex) {
 			TimeoutException timeoutException = new TimeoutException(ex.getMessage());
@@ -85,15 +85,10 @@ public class HazelcastHealthIndicator extends AbstractTimeoutAwareHealthIndicato
 		builder.up().withDetail("name", this.hazelcast.getName()).withDetail("uuid", uuid);
 	}
 
-	/**
-	 * Converts a {@link Duration} to a positive transaction timeout in whole milliseconds
-	 * (minimum {@code 1}).
-	 * @param timeout the timeout
-	 * @return timeout in milliseconds
-	 */
 	private long toTransactionTimeoutMillis(Duration timeout) {
-		long millis = timeout.toMillis();
-		return Math.max(1, millis);
+		// A sub-millisecond timeout must not round down to 0, which Hazelcast reads as
+		// 'use the default timeout' of two minutes
+		return Math.max(1, timeout.toMillis());
 	}
 
 }

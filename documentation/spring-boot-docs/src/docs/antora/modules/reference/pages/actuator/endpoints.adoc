@@ -727,7 +727,8 @@ A timeout must be positive.
 A configured timeout is always honored; how the limit is applied depends on the indicator's javadoc:org.springframework.boot.health.contributor.TimeoutEnforcement[].
 `INDICATOR` passes the duration to the indicator, which honors it with stack-specific APIs, and runs the check on the thread which asked for the health.
 An indicator declaring `INDICATOR` has to override `health(Duration)`, otherwise it reports `DOWN` when a timeout is configured.
-`FRAMEWORK` enforces the limit from the outside without passing the duration to the indicator (thread interruption for blocking checks, javadoc:reactor.core.publisher.Mono#timeout(java.time.Duration)[] for reactive ones).
+`FRAMEWORK` enforces the limit from the outside (thread interruption for blocking checks, javadoc:reactor.core.publisher.Mono#timeout(java.time.Duration)[] for reactive ones) and runs the check on a thread of its own.
+The duration is passed to such an indicator as well, so that a check which can bound part of its work does so and fails early, but the limit which is guaranteed is the one the framework applies.
 An indicator which declares nothing uses `FRAMEWORK`.
 Blocking `FRAMEWORK` checks run on a dedicated thread pool.
 At most four `FRAMEWORK` executions of the same indicator run at the same time, which bounds the pool even when a check does not stop after its timeout has elapsed; further executions report `DOWN` with a detail `reason: "concurrency-limit"`.
@@ -755,14 +756,8 @@ An indicator may round the timeout up to the granularity of its client, so the e
 |===
 | Key | How the timeout is applied
 
-| `db`
-| JDBC query timeout, in whole seconds rounded up.
-
 | `elasticsearch`
 | Cancellation of the cluster health request once the timeout has elapsed.
-
-| `hazelcast`
-| Maximum lifespan of the transactional health check, in whole milliseconds.
 
 | `jms`
 | Watchdog which bounds how long `jakarta.jms.Connection#start()` may block, closing the connection when the limit is exceeded, with a granularity of one millisecond.
@@ -780,6 +775,14 @@ The `FRAMEWORK` indicators below block on a client of their own, which is where 
 [cols="2,6"]
 |===
 | Key | Client settings which limit blocking time
+
+| `db`
+| Connection pool settings such as `spring.datasource.hikari.connection-timeout`, and the login and socket timeouts of the JDBC driver.
+The health timeout is additionally applied as the JDBC query timeout, in whole seconds rounded up, which leaves acquiring the connection unbounded.
+
+| `hazelcast`
+| `hazelcast.client.invocation.timeout.seconds` for a client instance, `hazelcast.operation.call.timeout.millis` for a member.
+The health timeout is additionally applied as the maximum lifespan of the health check transaction, which Hazelcast compares against on commit only.
 
 | `ldap`
 | configprop:spring.ldap.base-environment[] (for example, `com.sun.jndi.ldap.connect.timeout` and `com.sun.jndi.ldap.read.timeout` entries for the JDK LDAP provider) or your LDAP `ContextSource` configuration.

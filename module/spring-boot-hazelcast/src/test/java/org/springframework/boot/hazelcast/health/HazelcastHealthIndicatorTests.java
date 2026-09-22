@@ -51,6 +51,7 @@ import static org.mockito.Mockito.mock;
  * @author Dmytro Nosan
  * @author Stephane Nicoll
  * @author Tommy Karlsson
+ * @author Moritz Halbritter
  */
 @WithResource(name = "hazelcast.xml", content = """
 		<hazelcast xmlns="http://www.hazelcast.com/schema/config"
@@ -105,7 +106,7 @@ class HazelcastHealthIndicatorTests {
 	}
 
 	@Test
-	void hazelcastLifecycleNotRunningWithTimeoutDoesNotCallTransaction() throws Exception {
+	void shouldNotStartTransactionWhenLifecycleIsNotRunningAndTimeoutIsConfigured() throws Exception {
 		HazelcastInstance hazelcast = mockHazelcastInstance(false);
 		Health health = new HazelcastHealthIndicator(hazelcast).health(Duration.ofSeconds(1));
 		assertThat(health.getStatus()).isEqualTo(Status.DOWN);
@@ -114,57 +115,75 @@ class HazelcastHealthIndicatorTests {
 	}
 
 	@Test
-	void getTimeoutEnforcementIsIndicator() {
+	void shouldBeCappedByFramework() {
+		// Hazelcast checks the transaction timeout on commit only, so it cannot abandon a
+		// blocked cluster invocation
 		HazelcastInstance hazelcast = mockHazelcastInstance(true);
 		assertThat(new HazelcastHealthIndicator(hazelcast).getTimeoutEnforcement())
-			.isEqualTo(TimeoutEnforcement.INDICATOR);
+			.isEqualTo(TimeoutEnforcement.FRAMEWORK);
 	}
 
 	@Test
-	@SuppressWarnings("unchecked")
 	void hazelcastDown() {
 		HazelcastInstance hazelcast = mockHazelcastInstance(true);
-		given(hazelcast.executeTransaction(any(TransactionalTask.class))).willThrow(new HazelcastException());
+		given(hazelcast.executeTransaction(this.<Void>anyTask())).willThrow(new HazelcastException());
 		Health health = new HazelcastHealthIndicator(hazelcast).health();
 		assertThat(health.getStatus()).isEqualTo(Status.DOWN);
 		then(hazelcast).should().getLifecycleService();
-		then(hazelcast).should().executeTransaction(any(TransactionalTask.class));
+		then(hazelcast).should().executeTransaction(this.<Void>anyTask());
 		then(hazelcast).shouldHaveNoMoreInteractions();
 	}
 
 	@Test
-	@SuppressWarnings("unchecked")
-	void nativeTimeoutUsesTransactionOptionsTimeout() throws Exception {
+	void shouldUseTimeoutAsTransactionTimeout() throws Exception {
 		HazelcastInstance hazelcast = mockHazelcastInstance(true);
 		Endpoint endpoint = mock(Endpoint.class);
 		given(endpoint.getUuid()).willReturn(UUID.randomUUID());
 		given(hazelcast.getLocalEndpoint()).willReturn(endpoint);
 		given(hazelcast.getName()).willReturn("mock-hazelcast");
 		ArgumentCaptor<TransactionOptions> optionsCaptor = ArgumentCaptor.forClass(TransactionOptions.class);
-		given(hazelcast.executeTransaction(optionsCaptor.capture(), any(TransactionalTask.class)))
-			.willAnswer((invocation) -> {
-				TransactionalTask<?> task = invocation.getArgument(1);
-				return task.execute(null);
-			});
+		given(hazelcast.executeTransaction(optionsCaptor.capture(), this.<Void>anyTask())).willAnswer((invocation) -> {
+			TransactionalTask<?> task = invocation.getArgument(1);
+			return task.execute(null);
+		});
 		Health health = new HazelcastHealthIndicator(hazelcast).health(Duration.ofSeconds(2));
 		assertThat(health.getStatus()).isEqualTo(Status.UP);
 		assertThat(health.getDetails()).containsOnlyKeys("name", "uuid");
 		assertThat(optionsCaptor.getValue().getTimeoutMillis()).isEqualTo(2000);
 		then(hazelcast).should().getLifecycleService();
-		then(hazelcast).should().executeTransaction(any(TransactionOptions.class), any(TransactionalTask.class));
+		then(hazelcast).should().executeTransaction(any(TransactionOptions.class), this.<Void>anyTask());
 		then(hazelcast).should().getLocalEndpoint();
 		then(hazelcast).should().getName();
 	}
 
 	@Test
-	@SuppressWarnings("unchecked")
-	void transactionTimedOutExceptionMapsToTimeoutException() {
+	void shouldRoundSubMillisecondTimeoutUpToOneMillisecond() throws Exception {
+		// Hazelcast reads a transaction timeout of 0 as 'use the default timeout'
 		HazelcastInstance hazelcast = mockHazelcastInstance(true);
-		given(hazelcast.executeTransaction(any(TransactionOptions.class), any(TransactionalTask.class)))
+		Endpoint endpoint = mock(Endpoint.class);
+		given(endpoint.getUuid()).willReturn(UUID.randomUUID());
+		given(hazelcast.getLocalEndpoint()).willReturn(endpoint);
+		ArgumentCaptor<TransactionOptions> optionsCaptor = ArgumentCaptor.forClass(TransactionOptions.class);
+		given(hazelcast.executeTransaction(optionsCaptor.capture(), this.<Void>anyTask())).willAnswer((invocation) -> {
+			TransactionalTask<?> task = invocation.getArgument(1);
+			return task.execute(null);
+		});
+		new HazelcastHealthIndicator(hazelcast).health(Duration.ofNanos(1));
+		assertThat(optionsCaptor.getValue().getTimeoutMillis()).isEqualTo(1);
+	}
+
+	@Test
+	void shouldMapTransactionTimedOutExceptionToTimeoutException() {
+		HazelcastInstance hazelcast = mockHazelcastInstance(true);
+		given(hazelcast.executeTransaction(any(TransactionOptions.class), this.<Void>anyTask()))
 			.willThrow(new TransactionTimedOutException("Transaction is timed-out!"));
 		assertThatExceptionOfType(TimeoutException.class)
 			.isThrownBy(() -> new HazelcastHealthIndicator(hazelcast).health(Duration.ofSeconds(1)))
 			.satisfies((ex) -> assertThat(ex).hasCauseInstanceOf(TransactionTimedOutException.class));
+	}
+
+	private <T> TransactionalTask<T> anyTask() {
+		return any();
 	}
 
 	private static HazelcastInstance mockHazelcastInstance(boolean isRunning) {
