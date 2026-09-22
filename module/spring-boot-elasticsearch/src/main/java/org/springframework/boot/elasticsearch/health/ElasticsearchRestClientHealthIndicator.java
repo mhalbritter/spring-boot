@@ -18,7 +18,6 @@ package org.springframework.boot.elasticsearch.health;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
@@ -82,13 +81,6 @@ public class ElasticsearchRestClientHealthIndicator extends AbstractTimeoutAware
 		handleResponse(builder, response);
 	}
 
-	/**
-	 * Performs the given request, cancelling it once the timeout has elapsed.
-	 * @param request the request to perform
-	 * @param timeout the timeout to apply
-	 * @return the response
-	 * @throws Exception if the request failed or timed out
-	 */
 	private Response performAsyncRequest(Request request, Duration timeout) throws Exception {
 		CompletableFuture<Response> result = new CompletableFuture<>();
 		Cancellable cancellable = this.client.performRequestAsync(request, new ResponseListener() {
@@ -115,28 +107,8 @@ public class ElasticsearchRestClientHealthIndicator extends AbstractTimeoutAware
 			throw ex;
 		}
 		catch (ExecutionException ex) {
-			throw asException(ex);
+			throw (ex.getCause() instanceof Exception cause) ? cause : ex;
 		}
-	}
-
-	/**
-	 * Returns the failure an {@link ExecutionException} stands for, reporting a timeout
-	 * of the client itself as a {@link TimeoutException}.
-	 * @param ex the execution exception
-	 * @return the failure to throw
-	 */
-	private Exception asException(ExecutionException ex) {
-		Throwable cause = (ex.getCause() != null) ? ex.getCause() : ex;
-		if (containsTimeoutCause(cause)) {
-			String message = (cause.getMessage() != null) ? cause.getMessage() : cause.toString();
-			TimeoutException timeoutException = new TimeoutException(message);
-			timeoutException.initCause(cause);
-			return timeoutException;
-		}
-		if (cause instanceof Error error) {
-			throw error;
-		}
-		return (cause instanceof Exception exception) ? exception : ex;
 	}
 
 	private void handleResponse(Health.Builder builder, Response response) throws IOException {
@@ -146,6 +118,8 @@ public class ElasticsearchRestClientHealthIndicator extends AbstractTimeoutAware
 			builder.withDetail("warnings", response.getWarnings());
 			return;
 		}
+		// Safe to read after the deadline has passed: the asynchronous response consumer
+		// hands over a fully buffered entity, so getContent() does no I/O
 		try (InputStream inputStream = response.getEntity().getContent()) {
 			parseClusterHealth(builder, StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8));
 		}
@@ -156,17 +130,6 @@ public class ElasticsearchRestClientHealthIndicator extends AbstractTimeoutAware
 		String status = (String) response.get(STATUS_FIELD);
 		builder.status((RED_STATUS.equals(status)) ? Status.OUT_OF_SERVICE : Status.UP);
 		builder.withDetails(response);
-	}
-
-	private boolean containsTimeoutCause(Throwable ex) {
-		Throwable current = ex;
-		while (current != null) {
-			if (current instanceof SocketTimeoutException) {
-				return true;
-			}
-			current = current.getCause();
-		}
-		return false;
 	}
 
 }

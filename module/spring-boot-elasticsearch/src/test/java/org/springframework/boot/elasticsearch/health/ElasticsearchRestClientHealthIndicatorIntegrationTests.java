@@ -47,7 +47,12 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  */
 class ElasticsearchRestClientHealthIndicatorIntegrationTests {
 
-	private static final Duration TIMEOUT = Duration.ofMillis(200);
+	// Large enough to never expire, even on a loaded machine
+	private static final Duration GENEROUS_TIMEOUT = Duration.ofSeconds(5);
+
+	private static final Duration SHORT_TIMEOUT = Duration.ofMillis(200);
+
+	private static final Duration SLOW_RESPONSE = Duration.ofSeconds(5);
 
 	private static final String CLUSTER_HEALTH_JSON = "{\"cluster_name\":\"elasticsearch\",\"status\":\"green\"}";
 
@@ -75,20 +80,20 @@ class ElasticsearchRestClientHealthIndicatorIntegrationTests {
 	@Test
 	void shouldBeUpWhenServerAnswersWithinTimeout() throws TimeoutException {
 		this.server.enqueue(clusterHealthResponse(Duration.ZERO));
-		Health health = this.indicator.health(TIMEOUT);
+		Health health = this.indicator.health(GENEROUS_TIMEOUT);
 		assertThat(health.getStatus()).isEqualTo(Status.UP);
 		assertThat(health.getDetails()).containsEntry("status", "green");
 	}
 
 	@Test
 	void shouldTimeOutWhenServerAnswersAfterTimeout() {
-		this.server.enqueue(clusterHealthResponse(TIMEOUT.multipliedBy(25)));
-		assertThatExceptionOfType(TimeoutException.class).isThrownBy(() -> this.indicator.health(TIMEOUT));
+		this.server.enqueue(clusterHealthResponse(SLOW_RESPONSE));
+		assertThatExceptionOfType(TimeoutException.class).isThrownBy(() -> this.indicator.health(SHORT_TIMEOUT));
 	}
 
 	@Test
 	void shouldWaitForSlowServerWhenNoTimeoutIsConfigured() {
-		this.server.enqueue(clusterHealthResponse(TIMEOUT.multipliedBy(2)));
+		this.server.enqueue(clusterHealthResponse(SHORT_TIMEOUT.multipliedBy(2)));
 		Health health = this.indicator.health();
 		assertThat(health.getStatus()).isEqualTo(Status.UP);
 	}

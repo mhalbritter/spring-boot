@@ -29,7 +29,6 @@ import co.elastic.clients.transport.rest5_client.low_level.Request;
 import co.elastic.clients.transport.rest5_client.low_level.Response;
 import co.elastic.clients.transport.rest5_client.low_level.ResponseListener;
 import co.elastic.clients.transport.rest5_client.low_level.Rest5Client;
-import org.apache.hc.client5.http.ConnectTimeoutException;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.HttpStatus;
 import org.apache.hc.core5.http.io.entity.BasicHttpEntity;
@@ -57,6 +56,7 @@ import static org.mockito.Mockito.never;
  *
  * @author Artsiom Yudovin
  * @author Filip Hrisafov
+ * @author Moritz Halbritter
  */
 class ElasticsearchRestClientHealthIndicatorTests {
 
@@ -74,7 +74,7 @@ class ElasticsearchRestClientHealthIndicatorTests {
 		Health health = this.elasticsearchRestClientHealthIndicator.health();
 		assertThat(health.getStatus()).isEqualTo(Status.UP);
 		assertHealthDetailsWithStatus(health.getDetails(), clusterStatus);
-		assertThat(requestCaptor.getValue().getOptions().getRequestConfig()).isNull();
+		assertThat(requestCaptor.getValue().getEndpoint()).isEqualTo("/_cluster/health/");
 	}
 
 	@Test
@@ -143,43 +143,20 @@ class ElasticsearchRestClientHealthIndicatorTests {
 		assertThat(health.getDetails()).contains(entry("error", "java.io.IOException: Couldn't connect"));
 	}
 
+	// Only this indicator enforces the deadline, so a timeout of the client itself is an
+	// ordinary failure in both cases.
+
 	@Test
-	void shouldMapSocketTimeoutToTimeoutException() throws Exception {
+	void shouldBeDownWhenSocketTimesOutWithConfiguredTimeout() throws Exception {
 		given(this.restClient.performRequestAsync(any(Request.class), any(ResponseListener.class)))
 			.willAnswer(answerWith(new SocketTimeoutException("timed out")));
-		assertThatExceptionOfType(TimeoutException.class)
-			.isThrownBy(() -> this.elasticsearchRestClientHealthIndicator.health(Duration.ofSeconds(1)))
-			.satisfies((ex) -> assertThat(ex).hasRootCauseInstanceOf(SocketTimeoutException.class));
-	}
-
-	@Test
-	void shouldMapConnectTimeoutToTimeoutException() throws Exception {
-		// Pins the client hierarchy the detection relies on: a ConnectTimeoutException is
-		// a
-		// SocketTimeoutException and therefore takes the same path.
-		assertThat(ConnectTimeoutException.class).isAssignableTo(SocketTimeoutException.class);
-		given(this.restClient.performRequestAsync(any(Request.class), any(ResponseListener.class)))
-			.willAnswer(answerWith(new ConnectTimeoutException("connect timed out")));
-		assertThatExceptionOfType(TimeoutException.class)
-			.isThrownBy(() -> this.elasticsearchRestClientHealthIndicator.health(Duration.ofSeconds(1)))
-			.satisfies((ex) -> assertThat(ex).hasRootCauseInstanceOf(ConnectTimeoutException.class));
-	}
-
-	@Test
-	void shouldMapWrappedSocketTimeoutToTimeoutException() throws Exception {
-		IOException wrapped = new IOException("wrapper", new SocketTimeoutException("read timed out"));
-		given(this.restClient.performRequestAsync(any(Request.class), any(ResponseListener.class)))
-			.willAnswer(answerWith(wrapped));
-		assertThatExceptionOfType(TimeoutException.class)
-			.isThrownBy(() -> this.elasticsearchRestClientHealthIndicator.health(Duration.ofSeconds(1)))
-			.satisfies((ex) -> assertThat(ex).hasRootCauseInstanceOf(SocketTimeoutException.class));
+		Health health = this.elasticsearchRestClientHealthIndicator.health(Duration.ofSeconds(1));
+		assertThat(health.getStatus()).isEqualTo(Status.DOWN);
+		assertThat(health.getDetails()).contains(entry("error", "java.net.SocketTimeoutException: timed out"));
 	}
 
 	@Test
 	void shouldBeDownWhenSocketTimesOutWithoutConfiguredTimeout() throws Exception {
-		// Without a configured timeout the indicator puts no deadline on the request, so
-		// a
-		// timeout of the client itself is an ordinary failure, not a health timeout.
 		given(this.restClient.performRequest(any(Request.class))).willThrow(new SocketTimeoutException("timed out"));
 		Health health = this.elasticsearchRestClientHealthIndicator.health();
 		assertThat(health.getStatus()).isEqualTo(Status.DOWN);
@@ -202,8 +179,7 @@ class ElasticsearchRestClientHealthIndicatorTests {
 
 	private Response clusterHealthResponse(String clusterStatus) {
 		BasicHttpEntity httpEntity = new BasicHttpEntity(
-				new ByteArrayInputStream(createJsonResult(HttpStatus.SC_OK, clusterStatus).getBytes()),
-				ContentType.APPLICATION_JSON);
+				new ByteArrayInputStream(createJsonResult(clusterStatus).getBytes()), ContentType.APPLICATION_JSON);
 		Response response = mock(Response.class);
 		given(response.getStatusCode()).willReturn(HttpStatus.SC_OK);
 		given(response.getEntity()).willReturn(httpEntity);
@@ -220,18 +196,16 @@ class ElasticsearchRestClientHealthIndicatorTests {
 				entry("unassigned_primary_shards", 10));
 	}
 
-	private String createJsonResult(int responseCode, String status) {
-		if (responseCode == HttpStatus.SC_OK) {
-			return String.format("{\"cluster_name\":\"elasticsearch\","
-					+ "\"status\":\"%s\",\"timed_out\":false,\"number_of_nodes\":1,"
-					+ "\"number_of_data_nodes\":1,\"active_primary_shards\":0,"
-					+ "\"active_shards\":0,\"relocating_shards\":0,\"initializing_shards\":0,"
-					+ "\"unassigned_shards\":0,\"delayed_unassigned_shards\":0,"
-					+ "\"number_of_pending_tasks\":0,\"number_of_in_flight_fetch\":0,"
-					+ "\"task_max_waiting_in_queue_millis\":0,\"active_shards_percent_as_number\":100.0,"
-					+ "\"unassigned_primary_shards\": 10 }", status);
-		}
-		return "{\n  \"error\": \"Server Error\",\n  \"status\": " + responseCode + "\n}";
+	private String createJsonResult(String status) {
+		return String.format(
+				"{\"cluster_name\":\"elasticsearch\"," + "\"status\":\"%s\",\"timed_out\":false,\"number_of_nodes\":1,"
+						+ "\"number_of_data_nodes\":1,\"active_primary_shards\":0,"
+						+ "\"active_shards\":0,\"relocating_shards\":0,\"initializing_shards\":0,"
+						+ "\"unassigned_shards\":0,\"delayed_unassigned_shards\":0,"
+						+ "\"number_of_pending_tasks\":0,\"number_of_in_flight_fetch\":0,"
+						+ "\"task_max_waiting_in_queue_millis\":0,\"active_shards_percent_as_number\":100.0,"
+						+ "\"unassigned_primary_shards\": 10 }",
+				status);
 	}
 
 }
