@@ -759,7 +759,7 @@ An indicator may round the timeout up to the granularity of its client, so the e
 | JDBC query timeout, in whole seconds rounded up.
 
 | `elasticsearch`
-| Connection request and response timeout of the cluster health request, in whole milliseconds.
+| Cancellation of the cluster health request once the timeout has elapsed.
 
 | `hazelcast`
 | Maximum lifespan of the transactional health check, in whole milliseconds.

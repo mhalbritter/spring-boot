@@ -24,15 +24,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
+import co.elastic.clients.transport.rest5_client.low_level.Cancellable;
 import co.elastic.clients.transport.rest5_client.low_level.Request;
 import co.elastic.clients.transport.rest5_client.low_level.Response;
+import co.elastic.clients.transport.rest5_client.low_level.ResponseListener;
 import co.elastic.clients.transport.rest5_client.low_level.Rest5Client;
 import org.apache.hc.client5.http.ConnectTimeoutException;
 import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.HttpStatus;
 import org.apache.hc.core5.http.io.entity.BasicHttpEntity;
-import org.apache.hc.core5.util.Timeout;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.stubbing.Answer;
 
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.Status;
@@ -43,7 +48,9 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 
 /**
  * Tests for {@link ElasticsearchRestClientHealthIndicator}.
@@ -58,37 +65,20 @@ class ElasticsearchRestClientHealthIndicatorTests {
 	private final ElasticsearchRestClientHealthIndicator elasticsearchRestClientHealthIndicator = new ElasticsearchRestClientHealthIndicator(
 			this.restClient);
 
-	@Test
-	void elasticsearchIsUp() throws IOException {
+	@ParameterizedTest
+	@ValueSource(strings = { "green", "yellow" })
+	void shouldBeUpWhenClusterStatusIsNotRed(String clusterStatus) throws IOException {
 		ArgumentCaptor<Request> requestCaptor = ArgumentCaptor.forClass(Request.class);
-		BasicHttpEntity httpEntity = new BasicHttpEntity(
-				new ByteArrayInputStream(createJsonResult(200, "green").getBytes()), ContentType.APPLICATION_JSON);
-		Response response = mock(Response.class);
-		given(response.getStatusCode()).willReturn(200);
-		given(response.getEntity()).willReturn(httpEntity);
+		Response response = clusterHealthResponse(clusterStatus);
 		given(this.restClient.performRequest(requestCaptor.capture())).willReturn(response);
-		org.springframework.boot.health.contributor.Health health = this.elasticsearchRestClientHealthIndicator
-			.health();
+		Health health = this.elasticsearchRestClientHealthIndicator.health();
 		assertThat(health.getStatus()).isEqualTo(Status.UP);
-		assertHealthDetailsWithStatus(health.getDetails(), "green");
+		assertHealthDetailsWithStatus(health.getDetails(), clusterStatus);
 		assertThat(requestCaptor.getValue().getOptions().getRequestConfig()).isNull();
 	}
 
 	@Test
-	void elasticsearchWithYellowStatusIsUp() throws IOException {
-		BasicHttpEntity httpEntity = new BasicHttpEntity(
-				new ByteArrayInputStream(createJsonResult(200, "yellow").getBytes()), ContentType.APPLICATION_JSON);
-		Response response = mock(Response.class);
-		given(response.getStatusCode()).willReturn(200);
-		given(response.getEntity()).willReturn(httpEntity);
-		given(this.restClient.performRequest(any(Request.class))).willReturn(response);
-		Health health = this.elasticsearchRestClientHealthIndicator.health();
-		assertThat(health.getStatus()).isEqualTo(Status.UP);
-		assertHealthDetailsWithStatus(health.getDetails(), "yellow");
-	}
-
-	@Test
-	void elasticsearchIsDown() throws IOException {
+	void shouldBeDownWhenRequestFails() throws IOException {
 		given(this.restClient.performRequest(any(Request.class))).willThrow(new IOException("Couldn't connect"));
 		Health health = this.elasticsearchRestClientHealthIndicator.health();
 		assertThat(health.getStatus()).isEqualTo(Status.DOWN);
@@ -96,24 +86,20 @@ class ElasticsearchRestClientHealthIndicatorTests {
 	}
 
 	@Test
-	void elasticsearchIsDownByResponseCode() throws IOException {
+	void shouldBeDownWhenResponseCodeIsNotOk() throws IOException {
 		Response response = mock(Response.class);
-		given(response.getStatusCode()).willReturn(500);
+		given(response.getStatusCode()).willReturn(HttpStatus.SC_INTERNAL_SERVER_ERROR);
 		given(response.getWarnings()).willReturn(List.of("Bad things happened"));
 		given(this.restClient.performRequest(any(Request.class))).willReturn(response);
 		Health health = this.elasticsearchRestClientHealthIndicator.health();
 		assertThat(health.getStatus()).isEqualTo(Status.DOWN);
-		assertThat(health.getDetails()).contains(entry("statusCode", 500),
+		assertThat(health.getDetails()).contains(entry("statusCode", HttpStatus.SC_INTERNAL_SERVER_ERROR),
 				entry("warnings", List.of("Bad things happened")));
 	}
 
 	@Test
-	void elasticsearchIsOutOfServiceByStatus() throws IOException {
-		BasicHttpEntity httpEntity = new BasicHttpEntity(
-				new ByteArrayInputStream(createJsonResult(200, "red").getBytes()), ContentType.APPLICATION_JSON);
-		Response response = mock(Response.class);
-		given(response.getStatusCode()).willReturn(200);
-		given(response.getEntity()).willReturn(httpEntity);
+	void shouldBeOutOfServiceWhenClusterStatusIsRed() throws IOException {
+		Response response = clusterHealthResponse("red");
 		given(this.restClient.performRequest(any(Request.class))).willReturn(response);
 		Health health = this.elasticsearchRestClientHealthIndicator.health();
 		assertThat(health.getStatus()).isEqualTo(Status.OUT_OF_SERVICE);
@@ -121,54 +107,107 @@ class ElasticsearchRestClientHealthIndicatorTests {
 	}
 
 	@Test
-	void getTimeoutEnforcementIsIndicator() {
+	void shouldEnforceTimeoutItself() {
 		assertThat(this.elasticsearchRestClientHealthIndicator.getTimeoutEnforcement())
 			.isEqualTo(TimeoutEnforcement.INDICATOR);
 	}
 
 	@Test
-	void elasticsearchIsUpWithConfiguredTimeout() throws Exception {
-		ArgumentCaptor<Request> requestCaptor = ArgumentCaptor.forClass(Request.class);
-		BasicHttpEntity httpEntity = new BasicHttpEntity(
-				new ByteArrayInputStream(createJsonResult(200, "green").getBytes()), ContentType.APPLICATION_JSON);
-		Response response = mock(Response.class);
-		given(response.getStatusCode()).willReturn(200);
-		given(response.getEntity()).willReturn(httpEntity);
-		given(this.restClient.performRequest(requestCaptor.capture())).willReturn(response);
+	void shouldSendRequestAsynchronouslyWhenTimeoutIsConfigured() throws Exception {
+		Response response = clusterHealthResponse("green");
+		given(this.restClient.performRequestAsync(any(Request.class), any(ResponseListener.class)))
+			.willAnswer(answerWith(response));
 		Health health = this.elasticsearchRestClientHealthIndicator.health(Duration.ofSeconds(5));
 		assertThat(health.getStatus()).isEqualTo(Status.UP);
 		assertHealthDetailsWithStatus(health.getDetails(), "green");
-		assertThat(requestCaptor.getValue().getOptions().getRequestConfig()).isNotNull();
-		assertThat(requestCaptor.getValue().getOptions().getRequestConfig().getConnectionRequestTimeout())
-			.isEqualTo(Timeout.ofMilliseconds(5000));
-		assertThat(requestCaptor.getValue().getOptions().getRequestConfig().getResponseTimeout())
-			.isEqualTo(Timeout.ofMilliseconds(5000));
+		then(this.restClient).should(never()).performRequest(any(Request.class));
 	}
 
 	@Test
-	void elasticsearchSocketTimeoutMapsToTimeoutException() throws Exception {
-		given(this.restClient.performRequest(any(Request.class))).willThrow(new SocketTimeoutException("timed out"));
+	void shouldCancelRequestWhichExceedsTimeout() {
+		Cancellable cancellable = mock(Cancellable.class);
+		// A request which never answers, so only the timeout ends the check.
+		given(this.restClient.performRequestAsync(any(Request.class), any(ResponseListener.class)))
+			.willReturn(cancellable);
+		assertThatExceptionOfType(TimeoutException.class)
+			.isThrownBy(() -> this.elasticsearchRestClientHealthIndicator.health(Duration.ofMillis(50)));
+		then(cancellable).should().cancel();
+	}
+
+	@Test
+	void shouldReportFailureOfAsynchronousRequest() throws Exception {
+		given(this.restClient.performRequestAsync(any(Request.class), any(ResponseListener.class)))
+			.willAnswer(answerWith(new IOException("Couldn't connect")));
+		Health health = this.elasticsearchRestClientHealthIndicator.health(Duration.ofSeconds(5));
+		assertThat(health.getStatus()).isEqualTo(Status.DOWN);
+		assertThat(health.getDetails()).contains(entry("error", "java.io.IOException: Couldn't connect"));
+	}
+
+	@Test
+	void shouldMapSocketTimeoutToTimeoutException() throws Exception {
+		given(this.restClient.performRequestAsync(any(Request.class), any(ResponseListener.class)))
+			.willAnswer(answerWith(new SocketTimeoutException("timed out")));
 		assertThatExceptionOfType(TimeoutException.class)
 			.isThrownBy(() -> this.elasticsearchRestClientHealthIndicator.health(Duration.ofSeconds(1)))
 			.satisfies((ex) -> assertThat(ex).hasRootCauseInstanceOf(SocketTimeoutException.class));
 	}
 
 	@Test
-	void elasticsearchConnectTimeoutMapsToTimeoutException() throws Exception {
-		given(this.restClient.performRequest(any(Request.class)))
-			.willThrow(new ConnectTimeoutException("connect timed out"));
+	void shouldMapConnectTimeoutToTimeoutException() throws Exception {
+		// Pins the client hierarchy the detection relies on: a ConnectTimeoutException is
+		// a
+		// SocketTimeoutException and therefore takes the same path.
+		assertThat(ConnectTimeoutException.class).isAssignableTo(SocketTimeoutException.class);
+		given(this.restClient.performRequestAsync(any(Request.class), any(ResponseListener.class)))
+			.willAnswer(answerWith(new ConnectTimeoutException("connect timed out")));
 		assertThatExceptionOfType(TimeoutException.class)
 			.isThrownBy(() -> this.elasticsearchRestClientHealthIndicator.health(Duration.ofSeconds(1)))
 			.satisfies((ex) -> assertThat(ex).hasRootCauseInstanceOf(ConnectTimeoutException.class));
 	}
 
 	@Test
-	void elasticsearchWrappedSocketTimeoutMapsToTimeoutException() throws Exception {
+	void shouldMapWrappedSocketTimeoutToTimeoutException() throws Exception {
 		IOException wrapped = new IOException("wrapper", new SocketTimeoutException("read timed out"));
-		given(this.restClient.performRequest(any(Request.class))).willThrow(wrapped);
+		given(this.restClient.performRequestAsync(any(Request.class), any(ResponseListener.class)))
+			.willAnswer(answerWith(wrapped));
 		assertThatExceptionOfType(TimeoutException.class)
 			.isThrownBy(() -> this.elasticsearchRestClientHealthIndicator.health(Duration.ofSeconds(1)))
 			.satisfies((ex) -> assertThat(ex).hasRootCauseInstanceOf(SocketTimeoutException.class));
+	}
+
+	@Test
+	void shouldBeDownWhenSocketTimesOutWithoutConfiguredTimeout() throws Exception {
+		// Without a configured timeout the indicator puts no deadline on the request, so
+		// a
+		// timeout of the client itself is an ordinary failure, not a health timeout.
+		given(this.restClient.performRequest(any(Request.class))).willThrow(new SocketTimeoutException("timed out"));
+		Health health = this.elasticsearchRestClientHealthIndicator.health();
+		assertThat(health.getStatus()).isEqualTo(Status.DOWN);
+		assertThat(health.getDetails()).contains(entry("error", "java.net.SocketTimeoutException: timed out"));
+	}
+
+	private Answer<Cancellable> answerWith(Response response) {
+		return (invocation) -> {
+			invocation.getArgument(1, ResponseListener.class).onSuccess(response);
+			return mock(Cancellable.class);
+		};
+	}
+
+	private Answer<Cancellable> answerWith(Exception failure) {
+		return (invocation) -> {
+			invocation.getArgument(1, ResponseListener.class).onFailure(failure);
+			return mock(Cancellable.class);
+		};
+	}
+
+	private Response clusterHealthResponse(String clusterStatus) {
+		BasicHttpEntity httpEntity = new BasicHttpEntity(
+				new ByteArrayInputStream(createJsonResult(HttpStatus.SC_OK, clusterStatus).getBytes()),
+				ContentType.APPLICATION_JSON);
+		Response response = mock(Response.class);
+		given(response.getStatusCode()).willReturn(HttpStatus.SC_OK);
+		given(response.getEntity()).willReturn(httpEntity);
+		return response;
 	}
 
 	private void assertHealthDetailsWithStatus(Map<String, Object> details, String status) {
@@ -182,7 +221,7 @@ class ElasticsearchRestClientHealthIndicatorTests {
 	}
 
 	private String createJsonResult(int responseCode, String status) {
-		if (responseCode == 200) {
+		if (responseCode == HttpStatus.SC_OK) {
 			return String.format("{\"cluster_name\":\"elasticsearch\","
 					+ "\"status\":\"%s\",\"timed_out\":false,\"number_of_nodes\":1,"
 					+ "\"number_of_data_nodes\":1,\"active_primary_shards\":0,"

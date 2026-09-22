@@ -22,15 +22,17 @@ import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import co.elastic.clients.transport.rest5_client.low_level.Cancellable;
 import co.elastic.clients.transport.rest5_client.low_level.Request;
-import co.elastic.clients.transport.rest5_client.low_level.RequestOptions;
 import co.elastic.clients.transport.rest5_client.low_level.Response;
+import co.elastic.clients.transport.rest5_client.low_level.ResponseListener;
 import co.elastic.clients.transport.rest5_client.low_level.Rest5Client;
-import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.core5.http.HttpStatus;
-import org.apache.hc.core5.util.Timeout;
 import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.health.contributor.AbstractTimeoutAwareHealthIndicator;
@@ -44,8 +46,8 @@ import org.springframework.util.StreamUtils;
 /**
  * {@link HealthIndicator} for an Elasticsearch cluster using a {@link Rest5Client}.
  * <p>
- * When a health timeout is configured, it is applied on the request for the connection
- * lease request and the response.
+ * When a health timeout is configured, the cluster health request is sent asynchronously
+ * and cancelled once the timeout has elapsed.
  *
  * @author Artsiom Yudovin
  * @author Brian Clozel
@@ -56,6 +58,8 @@ import org.springframework.util.StreamUtils;
 public class ElasticsearchRestClientHealthIndicator extends AbstractTimeoutAwareHealthIndicator {
 
 	private static final String CLUSTER_HEALTH_ENDPOINT = "/_cluster/health/";
+
+	private static final String STATUS_FIELD = "status";
 
 	private static final String RED_STATUS = "red";
 
@@ -71,46 +75,67 @@ public class ElasticsearchRestClientHealthIndicator extends AbstractTimeoutAware
 
 	@Override
 	protected void doHealthCheck(Health.Builder builder, @Nullable Duration timeout) throws Exception {
-		if (timeout == null) {
-			Response response = this.client.performRequest(new Request("GET", CLUSTER_HEALTH_ENDPOINT));
-			handleResponse(builder, response);
-			return;
-		}
-		Request request = createClusterHealthRequest(timeout);
-		try {
-			handleResponse(builder, this.client.performRequest(request));
-		}
-		catch (SocketTimeoutException ex) {
-			throw createTimeoutException(ex);
-		}
-		catch (IOException ex) {
-			if (containsTimeoutCause(ex)) {
-				throw createTimeoutException(ex);
-			}
-			throw ex;
-		}
-	}
-
-	private Request createClusterHealthRequest(Duration timeout) {
 		Request request = new Request("GET", CLUSTER_HEALTH_ENDPOINT);
-		Timeout clientTimeout = Timeout.ofMilliseconds(toTimeoutMillis(timeout));
-		RequestConfig requestConfig = RequestConfig.custom()
-			.setConnectionRequestTimeout(clientTimeout)
-			.setResponseTimeout(clientTimeout)
-			.build();
-		request.setOptions(RequestOptions.DEFAULT.toBuilder().setRequestConfig(requestConfig).build());
-		return request;
+		Response response = (timeout != null) ? performAsyncRequest(request, timeout)
+				: this.client.performRequest(request);
+		handleResponse(builder, response);
 	}
 
 	/**
-	 * Converts a {@link Duration} to a positive HTTP client timeout in whole milliseconds
-	 * (minimum {@code 1}).
-	 * @param timeout the timeout
-	 * @return timeout in milliseconds
+	 * Performs the given request, cancelling it once the timeout has elapsed.
+	 * @param request the request to perform
+	 * @param timeout the timeout to apply
+	 * @return the response
+	 * @throws Exception if the request failed or timed out
 	 */
-	private long toTimeoutMillis(Duration timeout) {
-		long millis = timeout.toMillis();
-		return Math.max(1, millis);
+	private Response performAsyncRequest(Request request, Duration timeout) throws Exception {
+		CompletableFuture<Response> result = new CompletableFuture<>();
+		Cancellable cancellable = this.client.performRequestAsync(request, new ResponseListener() {
+
+			@Override
+			public void onSuccess(Response response) {
+				result.complete(response);
+			}
+
+			@Override
+			public void onFailure(Exception ex) {
+				result.completeExceptionally(ex);
+			}
+
+		});
+		try {
+			return result.get(timeout.toNanos(), TimeUnit.NANOSECONDS);
+		}
+		catch (TimeoutException | InterruptedException ex) {
+			cancellable.cancel();
+			if (ex instanceof InterruptedException) {
+				Thread.currentThread().interrupt();
+			}
+			throw ex;
+		}
+		catch (ExecutionException ex) {
+			throw asException(ex);
+		}
+	}
+
+	/**
+	 * Returns the failure an {@link ExecutionException} stands for, reporting a timeout
+	 * of the client itself as a {@link TimeoutException}.
+	 * @param ex the execution exception
+	 * @return the failure to throw
+	 */
+	private Exception asException(ExecutionException ex) {
+		Throwable cause = (ex.getCause() != null) ? ex.getCause() : ex;
+		if (containsTimeoutCause(cause)) {
+			String message = (cause.getMessage() != null) ? cause.getMessage() : cause.toString();
+			TimeoutException timeoutException = new TimeoutException(message);
+			timeoutException.initCause(cause);
+			return timeoutException;
+		}
+		if (cause instanceof Error error) {
+			throw error;
+		}
+		return (cause instanceof Exception exception) ? exception : ex;
 	}
 
 	private void handleResponse(Health.Builder builder, Response response) throws IOException {
@@ -127,7 +152,7 @@ public class ElasticsearchRestClientHealthIndicator extends AbstractTimeoutAware
 
 	private void parseClusterHealth(Health.Builder builder, String json) {
 		Map<String, Object> response = this.jsonParser.parseMap(json);
-		String status = (String) response.get("status");
+		String status = (String) response.get(STATUS_FIELD);
 		builder.status((RED_STATUS.equals(status)) ? Status.OUT_OF_SERVICE : Status.UP);
 		builder.withDetails(response);
 	}
@@ -141,12 +166,6 @@ public class ElasticsearchRestClientHealthIndicator extends AbstractTimeoutAware
 			current = current.getCause();
 		}
 		return false;
-	}
-
-	private TimeoutException createTimeoutException(Exception cause) {
-		TimeoutException timeoutException = new TimeoutException(cause.getMessage());
-		timeoutException.initCause(cause);
-		return timeoutException;
 	}
 
 }
