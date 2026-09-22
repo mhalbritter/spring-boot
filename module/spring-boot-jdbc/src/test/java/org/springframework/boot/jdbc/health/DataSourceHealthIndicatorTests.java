@@ -17,6 +17,8 @@
 package org.springframework.boot.jdbc.health;
 
 import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLTimeoutException;
 import java.sql.Statement;
@@ -34,6 +36,7 @@ import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.Status;
 import org.springframework.boot.health.contributor.TimeoutEnforcement;
 import org.springframework.boot.jdbc.EmbeddedDatabaseConnection;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
@@ -44,13 +47,13 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
 
 /**
  * Tests for {@link DataSourceHealthIndicator}.
  *
  * @author Dave Syer
  * @author Stephane Nicoll
+ * @author Moritz Halbritter
  */
 class DataSourceHealthIndicatorTests {
 
@@ -116,7 +119,7 @@ class DataSourceHealthIndicatorTests {
 		this.indicator.setDataSource(dataSource);
 		Health health = this.indicator.health();
 		assertThat(health.getDetails()).containsKey("database");
-		then(connection).should(times(2)).close();
+		then(connection).should().close();
 	}
 
 	@Test
@@ -161,6 +164,7 @@ class DataSourceHealthIndicatorTests {
 		this.indicator.setDataSource(dataSource);
 		Health health = Objects.requireNonNull(this.indicator.health(Duration.ofMillis(500), true));
 		assertThat(health.getStatus()).isEqualTo(Status.DOWN);
+		then(connection).should().isValid(1);
 	}
 
 	@Test
@@ -189,6 +193,98 @@ class DataSourceHealthIndicatorTests {
 		assertThat(health.getStatus()).isEqualTo(Status.UP);
 		assertThat(health.getDetails()).containsOnly(entry("database", "HSQL Database Engine"), entry("result", 0L),
 				entry("validationQuery", customValidationQuery));
+	}
+
+	@Test
+	void shouldRoundSubSecondTimeoutUpToOneSecond() throws Exception {
+		DataSource dataSource = mock(DataSource.class);
+		Connection connection = mock(Connection.class);
+		given(connection.isValid(1)).willReturn(true);
+		given(connection.getMetaData()).willReturn(this.dataSource.getConnection().getMetaData());
+		given(dataSource.getConnection()).willReturn(connection);
+		this.indicator.setDataSource(dataSource);
+		Health health = Objects.requireNonNull(this.indicator.health(Duration.ofMillis(1), true));
+		assertThat(health.getStatus()).isEqualTo(Status.UP);
+		then(connection).should().isValid(1);
+	}
+
+	@Test
+	void shouldUseSingleConnectionWhenValidationQueryIsSet() throws Exception {
+		DataSource dataSource = mock(DataSource.class);
+		Connection connection = mock(Connection.class);
+		Statement statement = mock(Statement.class);
+		given(connection.getMetaData()).willReturn(this.dataSource.getConnection().getMetaData());
+		given(connection.createStatement()).willReturn(statement);
+		ResultSet resultSet = singleValueResultSet(1L);
+		given(statement.executeQuery(anyString())).willReturn(resultSet);
+		given(dataSource.getConnection()).willReturn(connection);
+		this.indicator.setDataSource(dataSource);
+		this.indicator.setQuery("SELECT 1");
+		Health health = Objects.requireNonNull(this.indicator.health(Duration.ofSeconds(3), true));
+		assertThat(health.getStatus()).isEqualTo(Status.UP);
+		then(dataSource).should().getConnection();
+		then(statement).should().setQueryTimeout(3);
+	}
+
+	@Test
+	void shouldNotSetQueryTimeoutWhenNoTimeoutIsGiven() throws Exception {
+		DataSource dataSource = mock(DataSource.class);
+		Connection connection = mock(Connection.class);
+		Statement statement = mock(Statement.class);
+		given(connection.getMetaData()).willReturn(this.dataSource.getConnection().getMetaData());
+		given(connection.createStatement()).willReturn(statement);
+		ResultSet resultSet = singleValueResultSet(1L);
+		given(statement.executeQuery(anyString())).willReturn(resultSet);
+		given(dataSource.getConnection()).willReturn(connection);
+		this.indicator.setDataSource(dataSource);
+		this.indicator.setQuery("SELECT 1");
+		Health health = this.indicator.health();
+		assertThat(health.getStatus()).isEqualTo(Status.UP);
+		then(statement).should().setQueryTimeout(0);
+	}
+
+	@Test
+	void shouldNotReportTimeoutWhenDriverTimesOutWithoutTimeoutBeingGiven() throws Exception {
+		DataSource dataSource = mock(DataSource.class);
+		Connection connection = mock(Connection.class);
+		Statement statement = mock(Statement.class);
+		given(connection.getMetaData()).willReturn(this.dataSource.getConnection().getMetaData());
+		given(connection.createStatement()).willReturn(statement);
+		given(statement.executeQuery(anyString())).willThrow(new SQLTimeoutException("Query timed out"));
+		given(dataSource.getConnection()).willReturn(connection);
+		this.indicator.setDataSource(dataSource);
+		this.indicator.setQuery("SELECT 1");
+		Health health = this.indicator.health();
+		assertThat(health.getStatus()).isEqualTo(Status.DOWN);
+		assertThat(health.getDetails()).extractingByKey("error")
+			.asString()
+			.startsWith(QueryTimeoutException.class.getName());
+	}
+
+	@Test
+	void shouldKeepTimeoutCause() throws Exception {
+		DataSource dataSource = mock(DataSource.class);
+		Connection connection = mock(Connection.class);
+		Statement statement = mock(Statement.class);
+		given(connection.getMetaData()).willReturn(this.dataSource.getConnection().getMetaData());
+		given(connection.createStatement()).willReturn(statement);
+		given(statement.executeQuery(anyString())).willThrow(new SQLTimeoutException("Query timed out"));
+		given(dataSource.getConnection()).willReturn(connection);
+		this.indicator.setDataSource(dataSource);
+		this.indicator.setQuery("SELECT 1");
+		assertThatExceptionOfType(TimeoutException.class)
+			.isThrownBy(() -> this.indicator.health(Duration.ofMillis(500), true))
+			.withCauseInstanceOf(QueryTimeoutException.class);
+	}
+
+	private ResultSet singleValueResultSet(Object value) throws SQLException {
+		ResultSet resultSet = mock(ResultSet.class);
+		ResultSetMetaData metaData = mock(ResultSetMetaData.class);
+		given(metaData.getColumnCount()).willReturn(1);
+		given(resultSet.getMetaData()).willReturn(metaData);
+		given(resultSet.next()).willReturn(true, false);
+		given(resultSet.getObject(1)).willReturn(value);
+		return resultSet;
 	}
 
 }

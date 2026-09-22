@@ -20,6 +20,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
@@ -33,12 +34,14 @@ import org.springframework.boot.health.contributor.AbstractTimeoutAwareHealthInd
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.boot.health.contributor.Status;
+import org.springframework.boot.health.contributor.TimeoutEnforcement;
 import org.springframework.dao.QueryTimeoutException;
 import org.springframework.dao.support.DataAccessUtils;
 import org.springframework.jdbc.IncorrectResultSetColumnCountException;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.RowMapperResultSetExtractor;
 import org.springframework.jdbc.support.JdbcUtils;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -46,19 +49,42 @@ import org.springframework.util.StringUtils;
 /**
  * {@link HealthIndicator} that tests the status of a {@link DataSource} and optionally
  * runs a test query.
+ * <p>
+ * This indicator uses {@link TimeoutEnforcement#INDICATOR}: a configured health timeout
+ * is applied to {@link Connection#isValid(int)} or, when a validation query is set, as
+ * the {@link Statement#setQueryTimeout(int) query timeout}. JDBC only accepts whole
+ * seconds, so the timeout is rounded up. Acquiring the connection is not covered and
+ * stays bounded by the timeout of the connection pool, for example
+ * {@code spring.datasource.hikari.connection-timeout}.
  *
  * @author Dave Syer
  * @author Christian Dupuis
  * @author Andy Wilkinson
  * @author Stephane Nicoll
  * @author Arthur Kalimullin
+ * @author Moritz Halbritter
  * @since 4.0.0
  */
 public class DataSourceHealthIndicator extends AbstractTimeoutAwareHealthIndicator implements InitializingBean {
 
+	/**
+	 * Value which tells JDBC not to apply a timeout.
+	 */
+	private static final int NO_TIMEOUT = 0;
+
+	/**
+	 * Shortest timeout JDBC can express, {@link #NO_TIMEOUT} being taken.
+	 */
+	private static final int MIN_TIMEOUT_SECONDS = 1;
+
+	private static final RowMapperResultSetExtractor<Object> RESULT_SET_EXTRACTOR = new RowMapperResultSetExtractor<>(
+			new SingleColumnRowMapper());
+
 	private @Nullable DataSource dataSource;
 
 	private @Nullable String query;
+
+	private @Nullable JdbcTemplate jdbcTemplate;
 
 	/**
 	 * Create a new {@link DataSourceHealthIndicator} instance.
@@ -86,6 +112,7 @@ public class DataSourceHealthIndicator extends AbstractTimeoutAwareHealthIndicat
 		super("DataSource health check failed");
 		this.dataSource = dataSource;
 		this.query = query;
+		this.jdbcTemplate = (dataSource != null) ? new JdbcTemplate(dataSource) : null;
 	}
 
 	@Override
@@ -97,59 +124,68 @@ public class DataSourceHealthIndicator extends AbstractTimeoutAwareHealthIndicat
 	protected void doHealthCheck(Health.Builder builder, @Nullable Duration timeout) throws Exception {
 		if (this.dataSource == null) {
 			builder.up().withDetail("database", "unknown");
+			return;
 		}
-		else {
-			int timeoutSeconds = (timeout != null) ? toSeconds(timeout) : 0;
-			doDataSourceHealthCheck(builder, new JdbcTemplate(this.dataSource), timeoutSeconds);
-		}
+		Assert.state(this.jdbcTemplate != null, "'jdbcTemplate' must not be null");
+		doDataSourceHealthCheck(builder, this.jdbcTemplate, timeout);
 	}
 
-	private void doDataSourceHealthCheck(Health.Builder builder, JdbcTemplate jdbcTemplate, int timeoutSeconds)
+	private void doDataSourceHealthCheck(Health.Builder builder, JdbcTemplate jdbcTemplate, @Nullable Duration timeout)
 			throws TimeoutException {
-		builder.up().withDetail("database", getProduct(jdbcTemplate));
+		int timeoutSeconds = (timeout != null) ? toSeconds(timeout) : NO_TIMEOUT;
+		try {
+			// Both checks share one connection so that the health check needs a single
+			// acquisition from the pool
+			jdbcTemplate.execute((ConnectionCallback<@Nullable Void>) (connection) -> {
+				checkConnection(builder, connection, timeoutSeconds);
+				return null;
+			});
+		}
+		catch (QueryTimeoutException ex) {
+			// Without a health timeout the driver timed out on its own, which is a
+			// failure of the check rather than of this indicator
+			if (timeout == null) {
+				throw ex;
+			}
+			TimeoutException timeoutException = new TimeoutException(ex.getMessage());
+			timeoutException.initCause(ex);
+			throw timeoutException;
+		}
+	}
+
+	private void checkConnection(Health.Builder builder, Connection connection, int timeoutSeconds)
+			throws SQLException {
+		builder.up().withDetail("database", connection.getMetaData().getDatabaseProductName());
 		String validationQuery = this.query;
-		if (StringUtils.hasText(validationQuery)) {
-			builder.withDetail("validationQuery", validationQuery);
-			jdbcTemplate.setQueryTimeout(timeoutSeconds);
-			try {
-				// Avoid calling getObject as it breaks MySQL on Java 7 and later
-				List<Object> results = jdbcTemplate.query(validationQuery, new SingleColumnRowMapper());
-				Object result = DataAccessUtils.requiredSingleResult(results);
-				builder.withDetail("result", result);
-			}
-			catch (QueryTimeoutException ex) {
-				throw new TimeoutException(ex.getMessage());
-			}
-		}
-		else {
+		if (!StringUtils.hasText(validationQuery)) {
 			builder.withDetail("validationQuery", "isValid()");
-			boolean valid = isConnectionValid(jdbcTemplate, timeoutSeconds);
-			builder.status((valid) ? Status.UP : Status.DOWN);
+			builder.status(connection.isValid(timeoutSeconds) ? Status.UP : Status.DOWN);
+			return;
 		}
+		builder.withDetail("validationQuery", validationQuery);
+		builder.withDetail("result", runValidationQuery(connection, validationQuery, timeoutSeconds));
 	}
 
-	private String getProduct(JdbcTemplate jdbcTemplate) {
-		return jdbcTemplate.execute((ConnectionCallback<String>) this::getProduct);
-	}
-
-	private String getProduct(Connection connection) throws SQLException {
-		return connection.getMetaData().getDatabaseProductName();
-	}
-
-	private Boolean isConnectionValid(JdbcTemplate jdbcTemplate, int timeoutSeconds) {
-		return jdbcTemplate.execute((ConnectionCallback<Boolean>) (connection) -> connection.isValid(timeoutSeconds));
+	private Object runValidationQuery(Connection connection, String validationQuery, int timeoutSeconds)
+			throws SQLException {
+		try (Statement statement = connection.createStatement()) {
+			statement.setQueryTimeout(timeoutSeconds);
+			try (ResultSet resultSet = statement.executeQuery(validationQuery)) {
+				List<Object> results = RESULT_SET_EXTRACTOR.extractData(resultSet);
+				return DataAccessUtils.requiredSingleResult(results);
+			}
+		}
 	}
 
 	/**
-	 * Converts a {@link Duration} to a positive JDBC timeout in whole seconds (rounded up
-	 * from milliseconds, minimum {@code 1}) for {@link Connection#isValid(int)} and query
-	 * timeout.
+	 * Converts a {@link Duration} to a JDBC timeout. JDBC takes whole seconds and treats
+	 * {@code 0} as no timeout, so anything below a second has to be rounded up to one.
 	 * @param timeout the timeout
 	 * @return timeout in seconds
 	 */
 	private int toSeconds(Duration timeout) {
-		long seconds = (timeout.toMillis() + 999) / 1000;
-		return (int) Math.max(1, seconds);
+		long seconds = timeout.getSeconds() + ((timeout.getNano() > 0) ? 1 : 0);
+		return (int) Math.min(Math.max(seconds, MIN_TIMEOUT_SECONDS), Integer.MAX_VALUE);
 	}
 
 	/**
@@ -158,6 +194,7 @@ public class DataSourceHealthIndicator extends AbstractTimeoutAwareHealthIndicat
 	 */
 	public void setDataSource(DataSource dataSource) {
 		this.dataSource = dataSource;
+		this.jdbcTemplate = new JdbcTemplate(dataSource);
 	}
 
 	/**
@@ -189,6 +226,7 @@ public class DataSourceHealthIndicator extends AbstractTimeoutAwareHealthIndicat
 			if (columns != 1) {
 				throw new IncorrectResultSetColumnCountException(1, columns);
 			}
+			// Avoid calling getObject as it breaks MySQL on Java 7 and later
 			Object result = JdbcUtils.getResultSetValue(rs, 1);
 			Assert.state(result != null, "'result' must not be null");
 			return result;
