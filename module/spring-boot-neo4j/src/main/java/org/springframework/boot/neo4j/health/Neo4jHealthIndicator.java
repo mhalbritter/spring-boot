@@ -34,7 +34,7 @@ import org.neo4j.driver.exceptions.SessionExpiredException;
 import org.neo4j.driver.exceptions.TransactionTerminatedException;
 import org.neo4j.driver.summary.ResultSummary;
 
-import org.springframework.boot.health.contributor.AbstractTimeoutEnforcingHealthIndicator;
+import org.springframework.boot.health.contributor.AbstractTimeoutAwareHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.TimeoutEnforcement;
 
@@ -52,7 +52,7 @@ import org.springframework.boot.health.contributor.TimeoutEnforcement;
  * @author Michael J. Simons
  * @since 4.0.0
  */
-public class Neo4jHealthIndicator extends AbstractTimeoutEnforcingHealthIndicator {
+public class Neo4jHealthIndicator extends AbstractTimeoutAwareHealthIndicator {
 
 	private static final Log logger = LogFactory.getLog(Neo4jHealthIndicator.class);
 

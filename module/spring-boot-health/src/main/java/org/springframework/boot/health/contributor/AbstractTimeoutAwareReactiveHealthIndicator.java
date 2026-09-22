@@ -25,40 +25,39 @@ import reactor.core.publisher.Mono;
 
 /**
  * Base {@link ReactiveHealthIndicator} implementation for indicators which enforce a
- * configured timeout themselves ({@link TimeoutEnforcement#INDICATOR}), encapsulating
- * creation of {@link Health} instance and error handling.
+ * configured timeout themselves ({@link TimeoutEnforcement#INDICATOR}).
  * <p>
  * Implement {@link #doHealthCheck(Health.Builder, Duration)}; {@code timeout} is
- * {@code null} when no timeout is configured and non-null otherwise.
+ * {@code null} when no timeout is configured.
  *
  * @author Moritz Halbritter
  * @since 4.2.0
  */
-public abstract class AbstractTimeoutEnforcingReactiveHealthIndicator extends AbstractReactiveHealthIndicator {
+public abstract class AbstractTimeoutAwareReactiveHealthIndicator extends AbstractReactiveHealthIndicator {
 
 	/**
-	 * Create a new {@link AbstractTimeoutEnforcingReactiveHealthIndicator} instance with
-	 * a default {@code healthCheckFailedMessage}.
+	 * Create a new {@link AbstractTimeoutAwareReactiveHealthIndicator} instance with a
+	 * default {@code healthCheckFailedMessage}.
 	 */
-	protected AbstractTimeoutEnforcingReactiveHealthIndicator() {
+	protected AbstractTimeoutAwareReactiveHealthIndicator() {
 		super();
 	}
 
 	/**
-	 * Create a new {@link AbstractTimeoutEnforcingReactiveHealthIndicator} instance with
-	 * a specific message to log when the health check fails.
+	 * Create a new {@link AbstractTimeoutAwareReactiveHealthIndicator} instance with a
+	 * specific message to log when the health check fails.
 	 * @param healthCheckFailedMessage the message to log on health check failure
 	 */
-	protected AbstractTimeoutEnforcingReactiveHealthIndicator(@Nullable String healthCheckFailedMessage) {
+	protected AbstractTimeoutAwareReactiveHealthIndicator(@Nullable String healthCheckFailedMessage) {
 		super(healthCheckFailedMessage);
 	}
 
 	/**
-	 * Create a new {@link AbstractTimeoutEnforcingReactiveHealthIndicator} instance with
-	 * a specific message to log when the health check fails.
+	 * Create a new {@link AbstractTimeoutAwareReactiveHealthIndicator} instance with a
+	 * specific message to log when the health check fails.
 	 * @param healthCheckFailedMessage the message to log on health check failure
 	 */
-	protected AbstractTimeoutEnforcingReactiveHealthIndicator(
+	protected AbstractTimeoutAwareReactiveHealthIndicator(
 			Function<Throwable, @Nullable String> healthCheckFailedMessage) {
 		super(healthCheckFailedMessage);
 	}

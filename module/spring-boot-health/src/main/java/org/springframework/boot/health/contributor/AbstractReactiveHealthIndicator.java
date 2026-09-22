@@ -31,7 +31,7 @@ import org.springframework.util.StringUtils;
  * {@link Health} instance and error handling.
  * <p>
  * To bound the check with the client's own timeout, extend
- * {@link AbstractTimeoutEnforcingReactiveHealthIndicator} instead.
+ * {@link AbstractTimeoutAwareReactiveHealthIndicator} instead.
  *
  * @author Stephane Nicoll
  * @author Nikolay Rybak

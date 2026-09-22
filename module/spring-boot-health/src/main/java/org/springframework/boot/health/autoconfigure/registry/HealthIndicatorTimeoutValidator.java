@@ -23,19 +23,16 @@ import org.springframework.boot.health.contributor.CompositeHealthContributor;
 import org.springframework.boot.health.contributor.CompositeReactiveHealthContributor;
 import org.springframework.boot.health.contributor.HealthContributors;
 import org.springframework.boot.health.contributor.HealthIndicatorTimeouts;
+import org.springframework.boot.health.contributor.HealthIndicatorTimeouts.InvalidTimeoutException;
 import org.springframework.boot.health.contributor.ReactiveHealthContributors;
 import org.springframework.boot.health.registry.HealthContributorRegistry;
 import org.springframework.boot.health.registry.ReactiveHealthContributorRegistry;
-import org.springframework.core.env.Environment;
+import org.springframework.core.env.PropertyResolver;
 
 /**
  * Resolves the timeout of every registered health indicator once, at startup, so that a
  * misconfigured value is reported while the application is starting instead of on the
  * first request to the health endpoint.
- * <p>
- * Only names which are registered can be checked. A timeout configured under a name which
- * matches no indicator is never read, so it cannot be validated here and stays without
- * effect.
  *
  * @author Moritz Halbritter
  */
@@ -49,9 +46,9 @@ class HealthIndicatorTimeoutValidator implements InitializingBean {
 
 	private final @Nullable ReactiveHealthContributorRegistry reactiveRegistry;
 
-	HealthIndicatorTimeoutValidator(Environment environment, HealthContributorRegistry registry,
+	HealthIndicatorTimeoutValidator(PropertyResolver propertyResolver, HealthContributorRegistry registry,
 			@Nullable ReactiveHealthContributorRegistry reactiveRegistry) {
-		this.timeouts = new HealthIndicatorTimeouts(environment);
+		this.timeouts = new HealthIndicatorTimeouts(propertyResolver);
 		this.registry = registry;
 		this.reactiveRegistry = reactiveRegistry;
 	}
@@ -90,9 +87,7 @@ class HealthIndicatorTimeoutValidator implements InitializingBean {
 		try {
 			this.timeouts.get(indicatorName);
 		}
-		catch (RuntimeException ex) {
-			// The property resolver reports the value and the target type, but not which
-			// indicator asked for it.
+		catch (InvalidTimeoutException ex) {
 			throw new IllegalStateException(
 					"Invalid timeout configured for health indicator '%s'".formatted(indicatorName), ex);
 		}

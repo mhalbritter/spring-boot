@@ -65,15 +65,17 @@ public class HealthEndpointWebExtension extends HealthEndpointSupport<Health, He
 	 * logging should occur
 	 * @deprecated since 4.2.0 for removal in 4.4.0 in favor of
 	 * {@link #HealthEndpointWebExtension(HealthContributorRegistry, ReactiveHealthContributorRegistry, HealthEndpointGroups, Duration, HealthIndicatorExecutor)}.
-	 * Indicators run without an execution timeout, as the configured timeouts cannot be
-	 * read from here.
 	 */
 	@Deprecated(since = "4.2.0", forRemoval = true)
 	public HealthEndpointWebExtension(HealthContributorRegistry registry,
 			@Nullable ReactiveHealthContributorRegistry fallbackRegistry, HealthEndpointGroups groups,
 			@Nullable Duration slowContributorLoggingThreshold) {
 		this(registry, fallbackRegistry, groups, slowContributorLoggingThreshold,
-				new HealthIndicatorExecutor(new PropertySourcesPropertyResolver(new MutablePropertySources())));
+				new HealthIndicatorExecutor(noopPropertyResolver()));
+	}
+
+	private static PropertySourcesPropertyResolver noopPropertyResolver() {
+		return new PropertySourcesPropertyResolver(new MutablePropertySources());
 	}
 
 	/**

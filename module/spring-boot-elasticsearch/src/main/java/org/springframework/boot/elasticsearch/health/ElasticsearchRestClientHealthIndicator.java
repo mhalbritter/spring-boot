@@ -33,7 +33,7 @@ import org.apache.hc.core5.http.HttpStatus;
 import org.apache.hc.core5.util.Timeout;
 import org.jspecify.annotations.Nullable;
 
-import org.springframework.boot.health.contributor.AbstractTimeoutEnforcingHealthIndicator;
+import org.springframework.boot.health.contributor.AbstractTimeoutAwareHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.boot.health.contributor.Status;
@@ -53,7 +53,7 @@ import org.springframework.util.StreamUtils;
  * @author Moritz Halbritter
  * @since 4.0.0
  */
-public class ElasticsearchRestClientHealthIndicator extends AbstractTimeoutEnforcingHealthIndicator {
+public class ElasticsearchRestClientHealthIndicator extends AbstractTimeoutAwareHealthIndicator {
 
 	private static final String CLUSTER_HEALTH_ENDPOINT = "/_cluster/health/";
 

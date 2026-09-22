@@ -25,7 +25,7 @@ import com.hazelcast.transaction.TransactionOptions;
 import com.hazelcast.transaction.TransactionTimedOutException;
 import org.jspecify.annotations.Nullable;
 
-import org.springframework.boot.health.contributor.AbstractTimeoutEnforcingHealthIndicator;
+import org.springframework.boot.health.contributor.AbstractTimeoutAwareHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.util.Assert;
@@ -41,7 +41,7 @@ import org.springframework.util.Assert;
  * @author Tommy Karlsson
  * @since 4.0.0
  */
-public class HazelcastHealthIndicator extends AbstractTimeoutEnforcingHealthIndicator {
+public class HazelcastHealthIndicator extends AbstractTimeoutAwareHealthIndicator {
 
 	private final HazelcastInstance hazelcast;
 

@@ -65,15 +65,17 @@ public class ReactiveHealthEndpointWebExtension
 	 * logging should occur
 	 * @deprecated since 4.2.0 for removal in 4.4.0 in favor of
 	 * {@link #ReactiveHealthEndpointWebExtension(ReactiveHealthContributorRegistry, HealthContributorRegistry, HealthEndpointGroups, Duration, ReactiveHealthIndicatorExecutor)}.
-	 * Indicators run without an execution timeout, as the configured timeouts cannot be
-	 * read from here.
 	 */
 	@Deprecated(since = "4.2.0", forRemoval = true)
 	public ReactiveHealthEndpointWebExtension(ReactiveHealthContributorRegistry registry,
 			@Nullable HealthContributorRegistry fallbackRegistry, HealthEndpointGroups groups,
 			@Nullable Duration slowContributorLoggingThreshold) {
-		this(registry, fallbackRegistry, groups, slowContributorLoggingThreshold, new ReactiveHealthIndicatorExecutor(
-				new HealthIndicatorExecutor(new PropertySourcesPropertyResolver(new MutablePropertySources()))));
+		this(registry, fallbackRegistry, groups, slowContributorLoggingThreshold,
+				new ReactiveHealthIndicatorExecutor(new HealthIndicatorExecutor(noopPropertyResolver())));
+	}
+
+	private static PropertySourcesPropertyResolver noopPropertyResolver() {
+		return new PropertySourcesPropertyResolver(new MutablePropertySources());
 	}
 
 	/**

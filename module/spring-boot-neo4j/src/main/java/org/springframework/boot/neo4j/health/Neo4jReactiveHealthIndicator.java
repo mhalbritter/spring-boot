@@ -35,7 +35,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
-import org.springframework.boot.health.contributor.AbstractTimeoutEnforcingReactiveHealthIndicator;
+import org.springframework.boot.health.contributor.AbstractTimeoutAwareReactiveHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.TimeoutEnforcement;
 import org.springframework.util.Assert;
@@ -54,7 +54,7 @@ import org.springframework.util.Assert;
  * @author Phillip Webb
  * @since 4.0.0
  */
-public final class Neo4jReactiveHealthIndicator extends AbstractTimeoutEnforcingReactiveHealthIndicator {
+public final class Neo4jReactiveHealthIndicator extends AbstractTimeoutAwareReactiveHealthIndicator {
 
 	private static final Log logger = LogFactory.getLog(Neo4jReactiveHealthIndicator.class);
 

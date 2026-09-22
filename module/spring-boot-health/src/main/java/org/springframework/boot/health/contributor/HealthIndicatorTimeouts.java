@@ -36,10 +36,6 @@ import org.springframework.util.Assert;
  * An indicator is named by its path in the contributor tree, so a leaf of a composite is
  * configured under the path of that leaf, with {@code /} written as {@code .}:
  * {@code management.health.mycomposite.myleaf.timeout}.
- * <p>
- * A timeout is resolved once per indicator and then kept, so a change made after the
- * first health check is not picked up. Every other property in this namespace behaves the
- * same way.
  *
  * @author Moritz Halbritter
  * @since 4.2.0
@@ -52,15 +48,11 @@ public class HealthIndicatorTimeouts {
 
 	private final PropertyResolver propertyResolver;
 
-	// Resolving means walking every property source twice, once for the indicator and
-	// once for the fallback, which a health check would otherwise pay for on every
-	// request. Empty means the indicator has no timeout.
 	private final Map<String, Optional<Duration>> resolved = new ConcurrentHashMap<>();
 
 	/**
 	 * Creates a new instance.
-	 * @param propertyResolver the property resolver to read the timeouts from. A resolver
-	 * without property sources configures no timeout at all.
+	 * @param propertyResolver the property resolver to read the timeouts from
 	 */
 	public HealthIndicatorTimeouts(PropertyResolver propertyResolver) {
 		Assert.notNull(propertyResolver, "'propertyResolver' must not be null");
@@ -75,21 +67,21 @@ public class HealthIndicatorTimeouts {
 	 * positive
 	 */
 	public @Nullable Duration get(String indicatorName) {
-		// A failure is not remembered, so it is reported again on the next request
-		// instead of once.
 		return this.resolved.computeIfAbsent(indicatorName, this::resolve).orElse(null);
 	}
 
 	private Optional<Duration> resolve(String indicatorName) {
-		String indicatorProperty = TIMEOUT_PROPERTY_TEMPLATE
-			.formatted(indicatorName.toLowerCase(Locale.ROOT).replace('/', '.'));
-		Duration indicatorValue = getProperty(indicatorProperty);
-		String propertyUsed = (indicatorValue != null) ? indicatorProperty : DEFAULT_TIMEOUT_PROPERTY;
-		Duration value = (indicatorValue != null) ? indicatorValue : getProperty(DEFAULT_TIMEOUT_PROPERTY);
-		if (value != null && value.compareTo(Duration.ZERO) <= 0) {
-			throw new InvalidTimeoutException(propertyUsed, value);
+		String property = TIMEOUT_PROPERTY_TEMPLATE.formatted(indicatorName.toLowerCase(Locale.ROOT).replace('/', '.'));
+		Duration value = getProperty(property);
+		Duration effectiveValue = (value != null) ? value : getProperty(DEFAULT_TIMEOUT_PROPERTY);
+		if (effectiveValue == null) {
+			return Optional.empty();
 		}
-		return Optional.ofNullable(value);
+		if (effectiveValue.compareTo(Duration.ZERO) <= 0) {
+			String propertyUsed = (value != null) ? property : DEFAULT_TIMEOUT_PROPERTY;
+			throw new InvalidTimeoutException(propertyUsed, effectiveValue);
+		}
+		return Optional.of(effectiveValue);
 	}
 
 	private @Nullable Duration getProperty(String property) {

@@ -81,13 +81,6 @@ class ReactiveHealthIndicatorAdapter implements HealthIndicator {
 		}
 	}
 
-	/**
-	 * Strips the wrappers a blocking call can add around the original failure, for
-	 * example Reactor's own exceptions or a {@link CompletionException} raised by a
-	 * delegate that bridges a {@link java.util.concurrent.CompletableFuture}.
-	 * @param ex the exception thrown by the blocking call
-	 * @return the unwrapped exception
-	 */
 	private Throwable findTimeout(Throwable ex) {
 		Throwable candidate = Exceptions.unwrap(ex);
 		while ((candidate instanceof CompletionException || candidate instanceof ExecutionException)

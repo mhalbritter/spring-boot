@@ -34,7 +34,7 @@ import org.springframework.util.StringUtils;
  * status.
  * <p>
  * To bound the check with the client's own timeout, extend
- * {@link AbstractTimeoutEnforcingHealthIndicator} instead.
+ * {@link AbstractTimeoutAwareHealthIndicator} instead.
  *
  * @author Christian Dupuis
  * @since 4.0.0

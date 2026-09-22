@@ -24,40 +24,39 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Base {@link HealthIndicator} implementation for indicators which enforce a configured
- * timeout themselves ({@link TimeoutEnforcement#INDICATOR}), encapsulating creation of
- * {@link Health} instance and error handling.
+ * timeout themselves ({@link TimeoutEnforcement#INDICATOR}).
  * <p>
  * Implement {@link #doHealthCheck(Health.Builder, Duration)}; {@code timeout} is
- * {@code null} when no timeout is configured and non-null otherwise.
+ * {@code null} when no timeout is configured.
  *
  * @author Moritz Halbritter
  * @since 4.2.0
  */
-public abstract class AbstractTimeoutEnforcingHealthIndicator extends AbstractHealthIndicator {
+public abstract class AbstractTimeoutAwareHealthIndicator extends AbstractHealthIndicator {
 
 	/**
-	 * Create a new {@link AbstractTimeoutEnforcingHealthIndicator} instance with a
-	 * default {@code healthCheckFailedMessage}.
+	 * Create a new {@link AbstractTimeoutAwareHealthIndicator} instance with a default
+	 * {@code healthCheckFailedMessage}.
 	 */
-	protected AbstractTimeoutEnforcingHealthIndicator() {
+	protected AbstractTimeoutAwareHealthIndicator() {
 		super();
 	}
 
 	/**
-	 * Create a new {@link AbstractTimeoutEnforcingHealthIndicator} instance with a
-	 * specific message to log when the health check fails.
+	 * Create a new {@link AbstractTimeoutAwareHealthIndicator} instance with a specific
+	 * message to log when the health check fails.
 	 * @param healthCheckFailedMessage the message to log on health check failure
 	 */
-	protected AbstractTimeoutEnforcingHealthIndicator(@Nullable String healthCheckFailedMessage) {
+	protected AbstractTimeoutAwareHealthIndicator(@Nullable String healthCheckFailedMessage) {
 		super(healthCheckFailedMessage);
 	}
 
 	/**
-	 * Create a new {@link AbstractTimeoutEnforcingHealthIndicator} instance with a
-	 * specific message to log when the health check fails.
+	 * Create a new {@link AbstractTimeoutAwareHealthIndicator} instance with a specific
+	 * message to log when the health check fails.
 	 * @param healthCheckFailedMessage the message to log on health check failure
 	 */
-	protected AbstractTimeoutEnforcingHealthIndicator(Function<Exception, @Nullable String> healthCheckFailedMessage) {
+	protected AbstractTimeoutAwareHealthIndicator(Function<Exception, @Nullable String> healthCheckFailedMessage) {
 		super(healthCheckFailedMessage);
 	}
 

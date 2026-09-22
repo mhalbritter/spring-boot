@@ -17,7 +17,8 @@
 package org.springframework.boot.health.contributor;
 
 /**
- * Where {@link HealthIndicatorExecutor} runs a check which it puts no deadline on.
+ * Where {@link HealthIndicatorExecutor} runs a blocking check which it puts no deadline
+ * on.
  *
  * @author Moritz Halbritter
  */
@@ -31,7 +32,7 @@ enum ThreadingMode {
 
 	/**
 	 * Run the check on the executor's pool, which caps how many threads an indicator can
-	 * occupy. Used by the reactive bridge, where the calling thread is an event loop.
+	 * occupy. Used by the reactive adapter, where the calling thread is an event loop.
 	 */
 	POOL
 

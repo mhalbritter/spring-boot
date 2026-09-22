@@ -29,7 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.convert.DurationStyle;
-import org.springframework.boot.health.contributor.AbstractTimeoutEnforcingHealthIndicator;
+import org.springframework.boot.health.contributor.AbstractTimeoutAwareHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.boot.health.contributor.TimeoutEnforcement;
@@ -51,7 +51,7 @@ import org.springframework.util.Assert;
  * @author Moritz Halbritter
  * @since 4.0.0
  */
-public class JmsHealthIndicator extends AbstractTimeoutEnforcingHealthIndicator {
+public class JmsHealthIndicator extends AbstractTimeoutAwareHealthIndicator {
 
 	/**
 	 * Default timeout to use when starting a connection for the health check.

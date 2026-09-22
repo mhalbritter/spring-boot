@@ -62,14 +62,15 @@ public class GrpcServerHealth {
 	 * @param components the components used to provide the server health
 	 * @deprecated since 4.2.0 for removal in 4.4.0 in favor of
 	 * {@link #GrpcServerHealth(HealthContributorRegistry, ReactiveHealthContributorRegistry, HealthCheckedGrpcComponents, HealthIndicatorExecutor)}.
-	 * Indicators run without an execution timeout, as the configured timeouts cannot be
-	 * read from here.
 	 */
 	@Deprecated(since = "4.2.0", forRemoval = true)
 	public GrpcServerHealth(HealthContributorRegistry registry,
 			@Nullable ReactiveHealthContributorRegistry fallbackRegistry, HealthCheckedGrpcComponents components) {
-		this(registry, fallbackRegistry, components,
-				new HealthIndicatorExecutor(new PropertySourcesPropertyResolver(new MutablePropertySources())));
+		this(registry, fallbackRegistry, components, new HealthIndicatorExecutor(noopPropertyResolver()));
+	}
+
+	private static PropertySourcesPropertyResolver noopPropertyResolver() {
+		return new PropertySourcesPropertyResolver(new MutablePropertySources());
 	}
 
 	/**

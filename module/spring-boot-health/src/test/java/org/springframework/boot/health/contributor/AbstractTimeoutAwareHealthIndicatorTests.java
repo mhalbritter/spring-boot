@@ -31,12 +31,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
- * Tests for {@link AbstractTimeoutEnforcingHealthIndicator}.
+ * Tests for {@link AbstractTimeoutAwareHealthIndicator}.
  *
  * @author Moritz Halbritter
  */
 @ExtendWith(OutputCaptureExtension.class)
-class AbstractTimeoutEnforcingHealthIndicatorTests {
+class AbstractTimeoutAwareHealthIndicatorTests {
 
 	private static final Duration TIMEOUT = Duration.ofSeconds(5);
 
@@ -87,7 +87,7 @@ class AbstractTimeoutEnforcingHealthIndicatorTests {
 		assertThat(output).contains("Test message").contains("Test exception");
 	}
 
-	private static final class TestHealthIndicator extends AbstractTimeoutEnforcingHealthIndicator {
+	private static final class TestHealthIndicator extends AbstractTimeoutAwareHealthIndicator {
 
 		private final HealthCheck healthCheck;
 

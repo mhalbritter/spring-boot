@@ -22,8 +22,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
-import org.jspecify.annotations.Nullable;
-
 /**
  * Registry of the health checks which are currently running. A caller which finds a check
  * of the same indicator already in flight joins it instead of starting a second one, so
@@ -33,6 +31,12 @@ import org.jspecify.annotations.Nullable;
  * starts a new execution rather than joining a check which may never return. Each
  * execution holds a permit until its check reports that it ended, which caps how many
  * executions of the same indicator can pile up.
+ * <p>
+ * Only a check with a deadline is shared. A check without one has no point at which it
+ * turns stale, so joining it would hand every later caller to a check which may never
+ * return: an indicator which hangs once would never answer again, not even when a new
+ * check would succeed. Such a check is therefore started through {@link #start} and takes
+ * a permit without becoming joinable, so it is bounded by the permits alone.
  *
  * <pre>
  * timeout 5s, blocking check which ignores interruption
@@ -45,15 +49,7 @@ import org.jspecify.annotations.Nullable;
  * ...  probe n  no permit left, reports DOWN
  * </pre>
  * <p>
- * How much the cap is worth depends on how faithfully a check reports its end. A blocking
- * check ends when its thread returns, so one which ignores interruption cannot be
- * restarted without limit. A reactive check ends when it is cancelled at the deadline,
- * which is the only signal a reactive source gives, so one which ignores cancellation
- * returns its permit while its work continues and can be restarted on every probe.
- * <p>
- * Every caller of an execution observes the same result at the same moment, because the
- * execution is bounded once, when it starts. Nothing here knows about the individual
- * callers.
+ * Every caller of an execution observes the same result at the same moment.
  * <p>
  * An ended execution is replaced by the next caller rather than removed, so the size of
  * the execution registry is bounded by the contributors which are registered: at most one
@@ -68,19 +64,10 @@ class InFlightExecutions<T extends InFlightExecutions.Check> {
 
 	private final Map<Key, Execution<T>> executions = new ConcurrentHashMap<>();
 
-	// Number of checks in flight, keyed like the executions themselves. A slow indicator
-	// whose check cannot be stopped keeps holding resources after its timeout has been
-	// reported, so without a cap every probe adds another stuck execution until the
-	// shared executor is exhausted and unrelated indicators start failing. Callers which
-	// ask for details and callers which do not get a budget each, because only the
-	// former are authorized: sharing one budget lets an unauthorized caller use up the
-	// executions of an authorized one. A key without a check in flight has no entry.
 	private final Map<Key, Integer> inFlightCounts = new ConcurrentHashMap<>();
 
 	private final int maxExecutionsPerKey;
 
-	// A deadline needs a monotonic source. A java.time.Clock is wall-clock and can jump
-	// backwards or forwards, which would turn a running check stale at once or never.
 	private final LongSupplier nanoTime;
 
 	InFlightExecutions() {
@@ -95,55 +82,65 @@ class InFlightExecutions<T extends InFlightExecutions.Check> {
 	/**
 	 * Joins the check which is already running for the given key, or starts a new one.
 	 * @param key the key of the check
-	 * @param timeout the timeout of the check, which defines when it turns stale, or
-	 * {@code null} for a check which is joinable until it ends
-	 * @param starter creates a new check. Runs under the lock of the key, so it must do
-	 * no more than create it: the check is started afterwards, through
-	 * {@link Check#start()}.
+	 * @param timeout the timeout of the check
+	 * @param starter creates a new check
 	 * @return the execution to wait for
 	 * @throws TooManyChecksInFlightException if the indicator has too many checks in
 	 * flight
 	 */
-	Execution<T> join(Key key, @Nullable Duration timeout, Supplier<T> starter) throws TooManyChecksInFlightException {
-		// Only the decision who runs the check needs the lock of the key. Running it does
-		// not, and must not: a check which ends while it is being started would re-enter
-		// this registry, and a slow start would hold up every other key in the same bin.
-		Created<T> created = new Created<>();
+	Execution<T> joinOrStart(Key key, Duration timeout, Supplier<T> starter) throws TooManyChecksInFlightException {
+		boolean[] created = new boolean[1];
 		Execution<T> execution = this.executions.compute(key, (ignored, existing) -> {
-			if (existing != null && canJoin(existing)) {
+			if (existing != null && existing.canJoin(this.nanoTime.getAsLong())) {
 				return existing;
 			}
 			if (!tryAcquire(key)) {
-				// Throwing leaves the mapping as it is, so a check which is still running
-				// stays joinable for the next caller.
 				throw new TooManyChecksInFlightException(key.indicatorName(), this.maxExecutionsPerKey);
 			}
-			created.check = create(key, starter);
-			return new Execution<>(created.check, deadline(timeout));
+			T check = create(key, starter);
+			created[0] = true;
+			return new Execution<>(check, deadline(timeout));
 		});
-		if (created.check != null) {
-			start(key, created.check);
+		if (created[0]) {
+			startJoinable(key, execution);
 		}
 		return execution;
 	}
 
 	/**
+	 * Starts a check which no other caller can join, taking a permit for it.
+	 * @param key the key of the check
+	 * @param starter creates the check
+	 * @return the started check
+	 * @throws TooManyChecksInFlightException if the indicator has too many checks in
+	 * flight
+	 */
+	T start(Key key, Supplier<T> starter) throws TooManyChecksInFlightException {
+		if (!tryAcquire(key)) {
+			throw new TooManyChecksInFlightException(key.indicatorName(), this.maxExecutionsPerKey);
+		}
+		T check = create(key, starter);
+		try {
+			check.start();
+		}
+		catch (RuntimeException ex) {
+			release(key);
+			throw ex;
+		}
+		return check;
+	}
+
+	/**
 	 * Signals that a check has ended and returns its permit. Must be called once the
-	 * check itself has ended, not once its result has been reported: a blocking check
-	 * which ignores interruption keeps its thread long after the last caller gave up on
-	 * it.
+	 * check itself has ended.
 	 * @param key the key of the check
 	 */
 	void finished(Key key) {
 		release(key);
 	}
 
-	private boolean canJoin(Execution<T> execution) {
-		return !execution.check().hasEnded() && !execution.isStale(this.nanoTime.getAsLong());
-	}
-
-	private @Nullable Long deadline(@Nullable Duration timeout) {
-		return (timeout != null) ? this.nanoTime.getAsLong() + timeout.toNanos() : null;
+	private long deadline(Duration timeout) {
+		return this.nanoTime.getAsLong() + timeout.toNanos();
 	}
 
 	private T create(Key key, Supplier<T> starter) {
@@ -156,25 +153,28 @@ class InFlightExecutions<T extends InFlightExecutions.Check> {
 		}
 	}
 
-	private void start(Key key, T check) {
+	private void startJoinable(Key key, Execution<T> execution) {
 		try {
-			check.start();
+			execution.check().start();
 		}
 		catch (RuntimeException ex) {
-			// Nobody may join a check which never ran.
-			this.executions.remove(key);
+			this.executions.remove(key, execution);
 			release(key);
 			throw ex;
 		}
 	}
 
 	private boolean tryAcquire(Key key) {
-		int[] inFlight = new int[1];
+		boolean[] acquired = new boolean[1];
 		this.inFlightCounts.compute(key, (ignored, count) -> {
-			inFlight[0] = (count != null) ? count : 0;
-			return (inFlight[0] < this.maxExecutionsPerKey) ? inFlight[0] + 1 : inFlight[0];
+			int inFlight = (count != null) ? count : 0;
+			if (inFlight >= this.maxExecutionsPerKey) {
+				return inFlight;
+			}
+			acquired[0] = true;
+			return inFlight + 1;
 		});
-		return inFlight[0] < this.maxExecutionsPerKey;
+		return acquired[0];
 	}
 
 	private void release(Key key) {
@@ -187,10 +187,7 @@ class InFlightExecutions<T extends InFlightExecutions.Check> {
 	interface Check {
 
 		/**
-		 * Starts the check. Called once, by the caller which created it, after the
-		 * registry knows about it: another caller can therefore join the check before it
-		 * has been started, which is why it must be joinable from the moment it is
-		 * created.
+		 * Starts the check. Called once, by the caller which created it.
 		 */
 		void start();
 
@@ -199,18 +196,6 @@ class InFlightExecutions<T extends InFlightExecutions.Check> {
 		 * @return whether the check has ended
 		 */
 		boolean hasEnded();
-
-	}
-
-	/**
-	 * The check which the calling thread created, if it is the one which has to start it.
-	 * Carries it out of the registry update.
-	 *
-	 * @param <T> type of the running check
-	 */
-	private static final class Created<T extends Check> {
-
-		private @Nullable T check;
 
 	}
 
@@ -243,13 +228,18 @@ class InFlightExecutions<T extends InFlightExecutions.Check> {
 	 * @param <T> type of the running check
 	 * @param check the running check
 	 * @param deadline the point in time, on the {@code nanoTime} scale, at which the
-	 * check turns stale, or {@code null} for a check which stays joinable until it ends,
-	 * so that a check which never returns occupies one thread instead of one per caller
+	 * check turns stale
 	 */
-	record Execution<T extends Check>(T check, @Nullable Long deadline) {
+	record Execution<T extends Check>(T check, long deadline) {
 
-		private boolean isStale(long now) {
-			return this.deadline != null && now - this.deadline >= 0;
+		/**
+		 * Whether another caller may join this execution. A check which has ended has
+		 * nothing left to report, and one past its deadline is considered abandoned.
+		 * @param now the current time, on the {@code nanoTime} scale
+		 * @return whether the execution can be joined
+		 */
+		private boolean canJoin(long now) {
+			return !this.check.hasEnded() && now - this.deadline < 0;
 		}
 
 	}

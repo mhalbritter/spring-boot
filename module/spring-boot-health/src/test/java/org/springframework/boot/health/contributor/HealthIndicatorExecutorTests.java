@@ -40,9 +40,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import reactor.core.publisher.Mono;
 
 import org.springframework.boot.health.contributor.ExecutorTestSupport.TimeoutEnforcingIndicator;
+import org.springframework.boot.health.contributor.InFlightExecutions.Check;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.mock.env.MockEnvironment;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
@@ -126,6 +128,17 @@ class HealthIndicatorExecutorTests {
 		Health result = execute(adaptTimingOutReactiveIndicator());
 		assertThat(result).isNotNull();
 		assertThat(result.getStatus()).isEqualTo(Status.DOWN);
+		assertThat(result.getDetails()).containsEntry("reason", "timeout");
+	}
+
+	@Test
+	void shouldReportTimeoutBehindSeveralWrappers() {
+		// A reactive indicator backed by a future reports the timeout wrapped twice: the
+		// future wraps it in a CompletionException, Mono#block() in a ReactiveException.
+		CompletableFuture<Health> timingOut = new CompletableFuture<Health>().orTimeout(50, TimeUnit.MILLISECONDS);
+		ReactiveHealthIndicator reactive = () -> Mono.fromFuture(timingOut);
+		Health result = execute(reactive.asHealthContributor());
+		assertThat(result).isNotNull();
 		assertThat(result.getDetails()).containsEntry("reason", "timeout");
 	}
 
@@ -235,6 +248,35 @@ class HealthIndicatorExecutorTests {
 			assertThat(joined.join()).isNotNull().extracting(Health::getStatus).isEqualTo(Status.UP);
 			assertThat(started).hasValue(1);
 		}, blocked);
+	}
+
+	@Test
+	void shouldNotJoinCheckWithoutDeadline() throws Exception {
+		CountDownLatch blocked = new CountDownLatch(1);
+		CountDownLatch firstStarted = new CountDownLatch(1);
+		AtomicBoolean firstCall = new AtomicBoolean(true);
+		// A check which hangs on its first call and works on every later one.
+		HealthIndicator indicator = () -> {
+			if (firstCall.compareAndSet(true, false)) {
+				firstStarted.countDown();
+				ExecutorTestSupport.awaitUninterruptibly(blocked);
+			}
+			return Health.up().build();
+		};
+		try {
+			CompletableFuture<@Nullable Health> stuck = this.executor.execute(indicator, "test", true,
+					ThreadingMode.POOL);
+			assertThat(firstStarted.await(5, TimeUnit.SECONDS)).isTrue();
+			// The hanging check has no deadline, so it never turns stale: joining it
+			// would wedge the indicator for the lifetime of the application.
+			Health result = this.executor.execute(indicator, "test", true, ThreadingMode.POOL).get(5, TimeUnit.SECONDS);
+			assertThat(result).isNotNull();
+			assertThat(result.getStatus()).isEqualTo(Status.UP);
+			assertThat(stuck).isNotDone();
+		}
+		finally {
+			blocked.countDown();
+		}
 	}
 
 	@Test
@@ -350,6 +392,63 @@ class HealthIndicatorExecutorTests {
 		finally {
 			blocked.countDown();
 		}
+	}
+
+	@Test
+	void shouldNotLeakInterruptToNextCheckOnSameThread() {
+		setTimeout(SHORT_TIMEOUT);
+		CountDownLatch blocked = new CountDownLatch(1);
+		CountDownLatch ended = new CountDownLatch(1);
+		AtomicReference<Thread> timedOutThread = new AtomicReference<>();
+		// Times out, is cancelled and returns with the interrupt of that cancellation.
+		HealthIndicator uninterruptible = () -> {
+			timedOutThread.set(Thread.currentThread());
+			ExecutorTestSupport.awaitUninterruptibly(blocked);
+			ended.countDown();
+			return Health.up().build();
+		};
+		AtomicReference<Thread> reusedThread = new AtomicReference<>();
+		AtomicBoolean interrupted = new AtomicBoolean();
+		HealthIndicator recording = () -> {
+			reusedThread.set(Thread.currentThread());
+			interrupted.set(Thread.currentThread().isInterrupted());
+			return Health.up().build();
+		};
+		try {
+			assertThat(execute(uninterruptible)).isNotNull()
+				.satisfies((health) -> assertThat(health.getDetails()).containsEntry("reason", "timeout"));
+			blocked.countDown();
+			ExecutorTestSupport.await(ended);
+			// The pool keeps its threads, so the next check of any indicator can run on
+			// the thread which was interrupted.
+			Awaitility.await().atMost(Duration.ofSeconds(5)).until(() -> {
+				execute(recording);
+				return reusedThread.get() == timedOutThread.get();
+			});
+			assertThat(interrupted).isFalse();
+		}
+		finally {
+			blocked.countDown();
+		}
+	}
+
+	@Test
+	void shouldCompleteCallersWhenReturningPermitFails() throws Exception {
+		setTimeout(LONG_TIMEOUT);
+		InFlightExecutions<Check> failing = new InFlightExecutions<>() {
+
+			@Override
+			void finished(Key key) {
+				throw new IllegalStateException("boom");
+			}
+
+		};
+		ReflectionTestUtils.setField(this.executor, "inFlight", failing);
+		CompletableFuture<@Nullable Health> result = this.executor.execute(Health.up()::build, "test", true);
+		// A check which cannot return its permit still has callers waiting for it.
+		Health health = result.get(2, TimeUnit.SECONDS);
+		assertThat(health).isNotNull();
+		assertThat(health.getStatus()).isEqualTo(Status.UP);
 	}
 
 	@Test

@@ -35,8 +35,8 @@ import org.springframework.boot.health.actuate.endpoint.HealthEndpointGroups;
 import org.springframework.boot.health.actuate.endpoint.HealthEndpointWebExtension;
 import org.springframework.boot.health.actuate.endpoint.ReactiveHealthEndpointWebExtension;
 import org.springframework.boot.health.autoconfigure.registry.HealthContributorNameGenerator;
-import org.springframework.boot.health.contributor.AbstractTimeoutEnforcingHealthIndicator;
-import org.springframework.boot.health.contributor.AbstractTimeoutEnforcingReactiveHealthIndicator;
+import org.springframework.boot.health.contributor.AbstractTimeoutAwareHealthIndicator;
+import org.springframework.boot.health.contributor.AbstractTimeoutAwareReactiveHealthIndicator;
 import org.springframework.boot.health.contributor.CompositeHealthContributor;
 import org.springframework.boot.health.contributor.CompositeReactiveHealthContributor;
 import org.springframework.boot.health.contributor.Health;
@@ -260,14 +260,14 @@ class HealthEndpointWebIntegrationTests {
 			WebTestClient client) {
 		Duration timeout = Duration.ofSeconds(10);
 		AtomicReference<@Nullable Duration> enforced = new AtomicReference<>();
-		HealthIndicator selfEnforcing = new AbstractTimeoutEnforcingHealthIndicator() {
+		HealthIndicator selfEnforcing = new AbstractTimeoutAwareHealthIndicator() {
 			@Override
 			protected void doHealthCheck(Health.Builder builder, @Nullable Duration timeout) {
 				enforced.set(timeout);
 				builder.up();
 			}
 		};
-		ReactiveHealthIndicator reactiveSelfEnforcing = new AbstractTimeoutEnforcingReactiveHealthIndicator() {
+		ReactiveHealthIndicator reactiveSelfEnforcing = new AbstractTimeoutAwareReactiveHealthIndicator() {
 			@Override
 			protected Mono<Health> doHealthCheck(Health.Builder builder, @Nullable Duration timeout) {
 				enforced.set(timeout);

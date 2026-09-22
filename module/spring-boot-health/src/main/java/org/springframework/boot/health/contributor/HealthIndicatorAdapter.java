@@ -28,8 +28,8 @@ import org.springframework.util.Assert;
  * safely invoked in a reactive environment, keeping its {@link TimeoutEnforcement}.
  * <p>
  * {@link ReactiveHealthIndicatorExecutor} recognizes the adapter and runs the blocking
- * indicator on a pool which caps how many threads it can occupy, instead of borrowing a
- * thread of the application's shared scheduler for as long as the check takes.
+ * indicator on a pool which caps how many threads it can occupy, instead of using a
+ * thread of the application's shared scheduler.
  *
  * @author Stephane Nicoll
  * @author Moritz Halbritter

@@ -29,7 +29,7 @@ import javax.sql.DataSource;
 import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.boot.health.contributor.AbstractTimeoutEnforcingHealthIndicator;
+import org.springframework.boot.health.contributor.AbstractTimeoutAwareHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.boot.health.contributor.Status;
@@ -54,7 +54,7 @@ import org.springframework.util.StringUtils;
  * @author Arthur Kalimullin
  * @since 4.0.0
  */
-public class DataSourceHealthIndicator extends AbstractTimeoutEnforcingHealthIndicator implements InitializingBean {
+public class DataSourceHealthIndicator extends AbstractTimeoutAwareHealthIndicator implements InitializingBean {
 
 	private @Nullable DataSource dataSource;
 

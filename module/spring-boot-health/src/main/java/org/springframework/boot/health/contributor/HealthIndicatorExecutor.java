@@ -40,7 +40,6 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.boot.health.contributor.HealthIndicatorTimeouts.InvalidTimeoutException;
 import org.springframework.boot.health.contributor.InFlightExecutions.Check;
-import org.springframework.boot.health.contributor.InFlightExecutions.Execution;
 import org.springframework.boot.health.contributor.InFlightExecutions.Key;
 import org.springframework.boot.health.contributor.InFlightExecutions.TooManyChecksInFlightException;
 import org.springframework.boot.thread.Threading;
@@ -78,8 +77,7 @@ public class HealthIndicatorExecutor implements DisposableBean {
 
 	/**
 	 * Creates a new instance.
-	 * @param propertyResolver the property resolver to read the timeouts and the
-	 * threading from
+	 * @param propertyResolver the property resolver
 	 */
 	public HealthIndicatorExecutor(PropertyResolver propertyResolver) {
 		Assert.notNull(propertyResolver, "'propertyResolver' must not be null");
@@ -88,9 +86,7 @@ public class HealthIndicatorExecutor implements DisposableBean {
 	}
 
 	/**
-	 * Returns the timeouts this executor applies, so that a
-	 * {@link ReactiveHealthIndicatorExecutor} in front of it resolves a timeout the same
-	 * way and from the same cache.
+	 * Returns the timeouts this executor applies.
 	 * @return the timeouts
 	 */
 	HealthIndicatorTimeouts getTimeouts() {
@@ -103,12 +99,8 @@ public class HealthIndicatorExecutor implements DisposableBean {
 	 * executor or a call after {@link #destroy()} completes the future with
 	 * {@link Health#down()} and a {@code reason} detail instead.
 	 * <p>
-	 * The {@code reason} and the exception are details, so a caller which does not ask
-	 * for details is told no more than {@link Health#down()}.
-	 * <p>
-	 * Only a {@link TimeoutEnforcement#FRAMEWORK} check runs on another thread, and
-	 * nothing waits for it. Every other check runs on the calling thread and the returned
-	 * future is already completed.
+	 * This overload runs every check on the calling thread and returns an already
+	 * completed future, except a {@link TimeoutEnforcement#FRAMEWORK} one.
 	 * @param indicator the indicator to execute
 	 * @param indicatorName the name of the indicator
 	 * @param includeDetails whether to include details
@@ -122,11 +114,14 @@ public class HealthIndicatorExecutor implements DisposableBean {
 	/**
 	 * Executes a {@link HealthIndicator} as
 	 * {@link #execute(HealthIndicator, String, boolean)} does, but lets the caller decide
-	 * where a check without a {@link TimeoutEnforcement#FRAMEWORK} deadline runs.
+	 * where a check runs.
+	 * <p>
+	 * A {@link TimeoutEnforcement#FRAMEWORK} check ignores the threading mode: it always
+	 * runs on the executor's pool.
 	 * @param indicator the indicator to execute
 	 * @param indicatorName the name of the indicator
 	 * @param includeDetails whether to include details
-	 * @param threadingMode where a check without a framework deadline runs
+	 * @param threadingMode where a check without a deadline of this executor runs
 	 * @return a future that completes with the health
 	 */
 	CompletableFuture<@Nullable Health> execute(HealthIndicator indicator, String indicatorName, boolean includeDetails,
@@ -159,8 +154,6 @@ public class HealthIndicatorExecutor implements DisposableBean {
 	 * @param check the check to run
 	 * @return a future that completes with the health
 	 */
-	// On the pool such a check stays joinable until it ends, so one which never returns
-	// occupies a single thread instead of one per caller.
 	private CompletableFuture<@Nullable Health> executeWithoutDeadline(String indicatorName, boolean includeDetails,
 			ThreadingMode threadingMode, Callable<@Nullable Health> check) {
 		return switch (threadingMode) {
@@ -245,9 +238,16 @@ public class HealthIndicatorExecutor implements DisposableBean {
 		catch (ExecutorDisposedException ex) {
 			return CompletableFuture.completedFuture(DownHealth.of(ex, DownReason.DISPOSED, key.includeDetails()));
 		}
-		Execution<AsyncCheck> execution;
+		AsyncCheck asyncCheck;
 		try {
-			execution = this.inFlight.join(key, deadline, () -> start(executorService, key, deadline, check));
+			if (deadline == null) {
+				asyncCheck = this.inFlight.start(key, () -> newCheck(executorService, key, null, check));
+			}
+			else {
+				asyncCheck = this.inFlight
+					.joinOrStart(key, deadline, () -> newCheck(executorService, key, deadline, check))
+					.check();
+			}
 		}
 		catch (TooManyChecksInFlightException ex) {
 			return CompletableFuture
@@ -257,7 +257,7 @@ public class HealthIndicatorExecutor implements DisposableBean {
 			return CompletableFuture.completedFuture(
 					DownHealth.logged(logger, ex, DownReason.REJECTED, key.indicatorName(), key.includeDetails()));
 		}
-		return execution.check().result().<@Nullable Health>handle((health, ex) -> toHealth(health, ex, key));
+		return asyncCheck.result().<@Nullable Health>handle((health, ex) -> toHealth(health, ex, key));
 	}
 
 	private @Nullable Health toHealth(@Nullable Health health, @Nullable Throwable ex, Key key) {
@@ -277,11 +277,6 @@ public class HealthIndicatorExecutor implements DisposableBean {
 	 * @param ex the failure
 	 * @return the timeout, or {@code null} if the failure is not one
 	 */
-	// A checked TimeoutException cannot cross an API which does not declare it, so an
-	// adapted reactive indicator reports it wrapped in the RuntimeException
-	// Mono#block() throws. Without unwrapping, the same indicator answers
-	// reason: "timeout" in a reactive application and reason: "execution-failed" in a
-	// servlet one.
 	static @Nullable TimeoutException asTimeout(Throwable ex) {
 		if (ex instanceof TimeoutException timeout) {
 			return timeout;
@@ -289,11 +284,8 @@ public class HealthIndicatorExecutor implements DisposableBean {
 		return (ex.getCause() instanceof TimeoutException timeout) ? timeout : null;
 	}
 
-	private AsyncCheck start(ExecutorService executorService, Key key, @Nullable Duration deadline,
+	private AsyncCheck newCheck(ExecutorService executorService, Key key, @Nullable Duration deadline,
 			Callable<@Nullable Health> check) {
-		// The task ends its own execution: a timeout completes the callers while the task
-		// can still hold the thread we are capping, and a cancelled task which ignores
-		// interruption never stops holding it.
 		return new AsyncCheck(executorService, check, () -> this.inFlight.finished(key), deadline);
 	}
 
@@ -323,8 +315,7 @@ public class HealthIndicatorExecutor implements DisposableBean {
 
 	/**
 	 * A check which runs on the executor service and completes a result which every
-	 * caller joined to it observes. Nothing waits for that result: the worker which runs
-	 * the check completes it.
+	 * caller joined to it observes.
 	 */
 	private static final class AsyncCheck implements Check {
 
@@ -356,9 +347,6 @@ public class HealthIndicatorExecutor implements DisposableBean {
 			if (this.timeout == null) {
 				return;
 			}
-			// One timer for the whole execution, rounded up, so that the
-			// result never completes before the execution turns stale, which would leave
-			// the next caller joining a check nobody is going to restart.
 			this.result.orTimeout(toMillisRoundedUp(this.timeout), TimeUnit.MILLISECONDS)
 				.whenComplete((health, ex) -> cancelOnTimeout(ex));
 		}
@@ -392,7 +380,15 @@ public class HealthIndicatorExecutor implements DisposableBean {
 			catch (Throwable ex) {
 				error = ex;
 			}
-			this.onEnd.run();
+			try {
+				this.onEnd.run();
+			}
+			finally {
+				complete(health, error);
+			}
+		}
+
+		private void complete(@Nullable Health health, @Nullable Throwable error) {
 			if (error != null) {
 				this.result.completeExceptionally(error);
 				return;

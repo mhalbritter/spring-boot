@@ -33,7 +33,6 @@ import org.jspecify.annotations.Nullable;
  * @author Phillip Webb
  * @author Moritz Halbritter
  * @since 4.0.0
- * @see TimeoutEnforcement
  */
 @FunctionalInterface
 public non-sealed interface HealthIndicator extends HealthContributor {
@@ -77,9 +76,7 @@ public non-sealed interface HealthIndicator extends HealthContributor {
 	 * @throws UnsupportedOperationException if the indicator doesn't bound the check
 	 * itself
 	 * @throws TimeoutException if the timeout expired. Implementations must translate a
-	 * driver-specific timeout exception into a {@link TimeoutException}: it is the only
-	 * exception mapped to {@link Status#DOWN} with a {@code reason: "timeout"} detail,
-	 * any other maps to an ordinary {@link Status#DOWN}.
+	 * driver-specific timeout exception into a {@link TimeoutException}
 	 * @since 4.2.0
 	 */
 	default @Nullable Health health(Duration timeout) throws TimeoutException {

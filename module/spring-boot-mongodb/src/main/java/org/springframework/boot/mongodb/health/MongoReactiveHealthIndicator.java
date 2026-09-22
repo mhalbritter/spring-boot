@@ -33,7 +33,7 @@ import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import org.springframework.boot.health.contributor.AbstractTimeoutEnforcingReactiveHealthIndicator;
+import org.springframework.boot.health.contributor.AbstractTimeoutAwareReactiveHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.TimeoutEnforcement;
 import org.springframework.util.Assert;
@@ -53,7 +53,7 @@ import org.springframework.util.Assert;
  * @author Moritz Halbritter
  * @since 4.0.0
  */
-public class MongoReactiveHealthIndicator extends AbstractTimeoutEnforcingReactiveHealthIndicator {
+public class MongoReactiveHealthIndicator extends AbstractTimeoutAwareReactiveHealthIndicator {
 
 	private static final String ADMIN_DATABASE = "admin";
 

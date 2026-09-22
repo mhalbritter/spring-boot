@@ -41,9 +41,6 @@ final class DownHealth {
 	 * @param includeDetails whether to include details
 	 * @return the health
 	 */
-	// Nothing else strips this health: an indicator strips its own in
-	// health(boolean), but this one is built here and would otherwise expose an
-	// exception message to a caller which may not see details.
 	static Health of(Throwable ex, DownReason reason, boolean includeDetails) {
 		Health health = Health.down(ex).withDetail(REASON_DETAIL, reason.value()).build();
 		return includeDetails ? health : health.withoutDetails();
@@ -59,9 +56,6 @@ final class DownHealth {
 	 * @param includeDetails whether to include details
 	 * @return the health
 	 */
-	// The response carries the exception as a detail only, so with details switched off
-	// the log is the only place left which records what went wrong. Logging at warn
-	// follows AbstractHealthIndicator, which does the same for its own failures.
 	static Health logged(Log logger, Throwable ex, DownReason reason, String indicatorName, boolean includeDetails) {
 		logger.warn(LogMessage.format("Health indicator %s failed", indicatorName), ex);
 		return of(ex, reason, includeDetails);

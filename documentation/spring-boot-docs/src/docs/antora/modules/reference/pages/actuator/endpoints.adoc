@@ -708,12 +708,21 @@ Additional javadoc:org.springframework.boot.health.contributor.HealthIndicator[]
 
 These can be disabled by using the configprop:management.endpoint.health.probes.enabled[] configuration property.
 
+
+
+[[actuator.endpoints.health.timeouts]]
+=== Health Indicator Timeouts
+
 You can run health indicators with a maximum execution time.
 You can set a default timeout for all indicators with configprop:management.health.defaults.timeout[].
 To configure a timeout for a specific indicator, use `management.health.key.timeout`, where `key` is the indicator name (for example, `db`, `redis`, `cassandra`, etc.) from the xref:actuator/endpoints.adoc#actuator.endpoints.health.auto-configured-health-indicators[auto-configured indicators table] above.
 For nested composite indicators, the `/` path separator in the indicator name is replaced with `.` in the property name (for example, a nested indicator named `datasource/primary` is configured with `management.health.datasource.primary.timeout`).
 When a health check exceeds its timeout, that indicator reports status `DOWN` with a detail `reason: "timeout"`.
 A timeout must be positive.
+
+
+[[actuator.endpoints.health.timeouts.enforcement]]
+==== How the Timeout Is Enforced
 
 A configured timeout is always honored; how the limit is applied depends on the indicator's javadoc:org.springframework.boot.health.contributor.TimeoutEnforcement[].
 `INDICATOR` passes the duration to the indicator, which honors it with stack-specific APIs, and runs the check on the thread which asked for the health.
@@ -723,6 +732,7 @@ An indicator which declares nothing uses `FRAMEWORK`.
 Blocking `FRAMEWORK` checks run on a dedicated thread pool.
 At most four `FRAMEWORK` executions of the same indicator run at the same time, which bounds the pool even when a check does not stop after its timeout has elapsed; further executions report `DOWN` with a detail `reason: "concurrency-limit"`.
 Callers which see details and callers which do not are counted separately, so that a caller which is not authorized to see details cannot use up the executions of one which is.
+While a `FRAMEWORK` execution is running, callers requesting the same indicator do not start their own; they attach to that running execution and share its result instead of counting against the limit again.
 
 WARNING: Because probes share a check, a `FRAMEWORK` check must not depend on who asked for the health.
 A shared check carries nothing of its caller: a reactive one runs with an empty Reactor context and a blocking one on a pool thread, so an indicator which reads the security context, a tenant, or anything else bound to the caller sees none of it.
@@ -732,6 +742,10 @@ WARNING: A health timeout bounds the reported result, not the work behind it.
 It cannot stop a check which ignores interruption, e.g. blocking client stuck in a socket read: the response is `DOWN` after the configured duration, but the thread running that check stays occupied until the read returns, if it ever does.
 Configure connect and read timeouts on the client itself (socket, driver, or connection pool), and treat the health timeout as an additional safety net rather than the primary limit.
 Concurrent probes share one such stuck check, but a probe arriving after the timeout has elapsed starts a new one, so a hanging dependency parks up to eight threads per indicator, four for the callers which see details and four for those which do not, before further probes are rejected with `reason: "concurrency-limit"`.
+
+
+[[actuator.endpoints.health.timeouts.auto-configured-indicators]]
+==== Timeouts of the Auto-configured Indicators
 
 The following auto-configured indicators enforce the timeout themselves (`INDICATOR`), by handing it to the client they use.
 Every other indicator is bounded by the framework (`FRAMEWORK`).

@@ -22,6 +22,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -235,12 +236,16 @@ class ReactiveHealthIndicatorExecutorTests {
 	}
 
 	@Test
-	void shouldJoinAdaptedBlockingIndicatorWithoutDeadline() {
+	void shouldNotJoinAdaptedBlockingIndicatorWithoutDeadline() {
 		CountDownLatch blocked = new CountDownLatch(1);
 		AtomicInteger started = new AtomicInteger();
+		AtomicBoolean firstCall = new AtomicBoolean(true);
+		// A check which hangs on its first call and works on every later one.
 		HealthIndicator blocking = () -> {
 			started.incrementAndGet();
-			ExecutorTestSupport.awaitUninterruptibly(blocked);
+			if (firstCall.compareAndSet(true, false)) {
+				ExecutorTestSupport.awaitUninterruptibly(blocked);
+			}
 			return Health.up().build();
 		};
 		ReactiveHealthIndicator adapted = adapt(blocking);
@@ -248,12 +253,34 @@ class ReactiveHealthIndicatorExecutorTests {
 		try {
 			this.executor.execute(adapted, "test", true).subscribe(healths::add);
 			awaitStarted(started, 1);
-			this.executor.execute(adapted, "test", true).subscribe(healths::add);
+			// The hanging check has no deadline, so it never turns stale: joining it
+			// would wedge the indicator for the lifetime of the application.
+			assertThat(execute(adapted).getStatus()).isEqualTo(Status.UP);
+			assertThat(healths).isEmpty();
+		}
+		finally {
 			blocked.countDown();
-			Awaitility.await().atMost(Duration.ofSeconds(5)).until(() -> healths.size() == 2);
-			// Without a deadline the execution stays joinable, so a check which never
-			// returns occupies one thread however often it is probed.
-			assertThat(started).hasValue(1);
+		}
+	}
+
+	@Test
+	void shouldApplyConcurrencyLimitToAdaptedBlockingIndicatorWithoutDeadline() {
+		CountDownLatch blocked = new CountDownLatch(1);
+		AtomicInteger started = new AtomicInteger();
+		HealthIndicator uninterruptible = () -> {
+			started.incrementAndGet();
+			ExecutorTestSupport.awaitUninterruptibly(blocked);
+			return Health.up().build();
+		};
+		ReactiveHealthIndicator adapted = adapt(uninterruptible);
+		try {
+			for (int i = 0; i < InFlightExecutions.MAX_EXECUTIONS_PER_KEY; i++) {
+				this.executor.execute(adapted, "test", true).subscribe();
+			}
+			awaitStarted(started, InFlightExecutions.MAX_EXECUTIONS_PER_KEY);
+			// Unshared checks are bounded by the permits alone, so an indicator which
+			// hangs reports DOWN instead of taking another thread on every probe.
+			assertThat(execute(adapted).getDetails()).containsEntry("reason", "concurrency-limit");
 		}
 		finally {
 			blocked.countDown();

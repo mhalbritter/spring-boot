@@ -63,56 +63,86 @@ class InFlightExecutionsTests {
 
 	@Test
 	void shouldStartCheckWhenNoneIsRunning() {
-		assertThat(join(KEY)).isNotNull();
+		assertThat(joinOrStart(KEY)).isNotNull();
 		assertThat(this.started).hasValue(1);
 	}
 
 	@Test
 	void shouldJoinRunningCheck() {
-		Execution<TestCheck> first = join(KEY);
-		Execution<TestCheck> second = join(KEY);
+		Execution<TestCheck> first = joinOrStart(KEY);
+		Execution<TestCheck> second = joinOrStart(KEY);
 		assertThat(second).isSameAs(first);
 		assertThat(this.started).hasValue(1);
 	}
 
 	@Test
-	void shouldStayJoinableWithoutDeadline() {
-		Execution<TestCheck> execution = join(KEY, null);
-		this.clock.addAndGet(TIMEOUT.multipliedBy(100).toNanos());
-		assertThat(join(KEY, null)).isSameAs(execution);
-		assertThat(this.started).hasValue(1);
+	void shouldNotJoinCheckStartedWithoutDeadline() {
+		TestCheck check = start(KEY);
+		assertThat(start(KEY)).isNotSameAs(check);
+		assertThat(joinOrStart(KEY).check()).isNotSameAs(check);
+		assertThat(this.started).hasValue(3);
 	}
 
 	@Test
-	void shouldStartNewExecutionWhenCheckWithoutDeadlineEnds() {
-		Execution<TestCheck> execution = join(KEY, null);
-		execution.check().end();
-		assertThat(join(KEY, null)).isNotSameAs(execution);
-		assertThat(this.started).hasValue(2);
+	void shouldFailWhenIndicatorHasTooManyChecksStartedWithoutDeadline() {
+		for (int i = 0; i < MAX_EXECUTIONS_PER_KEY; i++) {
+			assertThat(start(KEY)).isNotNull();
+		}
+		assertThatExceptionOfType(TooManyChecksInFlightException.class).isThrownBy(() -> start(KEY));
+		assertThat(this.started).hasValue(MAX_EXECUTIONS_PER_KEY);
+	}
+
+	@Test
+	void shouldKeepNewerExecutionWhenCheckFailsToStart() {
+		AtomicReference<Execution<TestCheck>> replacement = new AtomicReference<>();
+		assertThatIllegalStateException()
+			.isThrownBy(() -> this.executions.joinOrStart(KEY, TIMEOUT, () -> new TestCheck(() -> {
+				// The execution turns stale and is replaced before its check fails.
+				this.clock.addAndGet(TIMEOUT.toNanos());
+				replacement.set(joinOrStart(KEY));
+				throw new IllegalStateException("Unable to start");
+			})));
+		assertThat(joinOrStart(KEY)).isSameAs(replacement.get());
+	}
+
+	@Test
+	void shouldReturnPermitWhenStarterOfCheckWithoutDeadlineFails() {
+		assertThatIllegalStateException().isThrownBy(() -> this.executions.start(KEY, () -> {
+			throw new IllegalStateException("Unable to start");
+		}));
+		assertThat(start(KEY)).isNotNull();
+	}
+
+	@Test
+	void shouldReturnPermitWhenCheckWithoutDeadlineFailsToStart() {
+		assertThatIllegalStateException().isThrownBy(() -> this.executions.start(KEY, () -> new TestCheck(() -> {
+			throw new IllegalStateException("Unable to start");
+		})));
+		assertThat(start(KEY)).isNotNull();
 	}
 
 	@Test
 	void shouldNotJoinCheckOfOtherIncludeDetails() {
-		Execution<TestCheck> withDetails = join(KEY);
-		Execution<TestCheck> withoutDetails = join(new Key(KEY.indicatorName(), false));
+		Execution<TestCheck> withDetails = joinOrStart(KEY);
+		Execution<TestCheck> withoutDetails = joinOrStart(new Key(KEY.indicatorName(), false));
 		assertThat(withoutDetails).isNotSameAs(withDetails);
 		assertThat(this.started).hasValue(2);
 	}
 
 	@Test
 	void shouldStartNewCheckWhenRunningOneIsStale() {
-		Execution<TestCheck> first = join(KEY);
+		Execution<TestCheck> first = joinOrStart(KEY);
 		this.clock.addAndGet(TIMEOUT.toNanos());
-		Execution<TestCheck> second = join(KEY);
+		Execution<TestCheck> second = joinOrStart(KEY);
 		assertThat(second).isNotSameAs(first);
 		assertThat(this.started).hasValue(2);
 	}
 
 	@Test
 	void shouldStartNewCheckWhenRunningOneHasEnded() {
-		Execution<TestCheck> first = join(KEY);
+		Execution<TestCheck> first = joinOrStart(KEY);
 		first.check().end();
-		Execution<TestCheck> second = join(KEY);
+		Execution<TestCheck> second = joinOrStart(KEY);
 		assertThat(second).isNotSameAs(first);
 		assertThat(this.started).hasValue(2);
 	}
@@ -120,7 +150,7 @@ class InFlightExecutionsTests {
 	@Test
 	void shouldFailWhenIndicatorHasTooManyChecksInFlight() {
 		saturate(KEY);
-		assertThatExceptionOfType(TooManyChecksInFlightException.class).isThrownBy(() -> join(KEY))
+		assertThatExceptionOfType(TooManyChecksInFlightException.class).isThrownBy(() -> joinOrStart(KEY))
 			.withMessage("Health indicator test already has 4 checks in flight");
 		assertThat(this.started).hasValue(MAX_EXECUTIONS_PER_KEY);
 	}
@@ -128,58 +158,60 @@ class InFlightExecutionsTests {
 	@Test
 	void shouldApplyLimitPerIndicatorName() {
 		saturate(KEY);
-		assertThat(join(new Key("other", true))).isNotNull();
+		assertThat(joinOrStart(new Key("other", true))).isNotNull();
 	}
 
 	@Test
 	void shouldApplyLimitPerIncludeDetails() {
 		saturate(KEY);
-		assertThat(join(new Key(KEY.indicatorName(), false))).isNotNull();
+		assertThat(joinOrStart(new Key(KEY.indicatorName(), false))).isNotNull();
 	}
 
 	@Test
 	void shouldReturnPermitWhenCheckHasFinished() {
 		saturate(KEY);
 		this.executions.finished(KEY);
-		assertThat(join(KEY)).isNotNull();
+		assertThat(joinOrStart(KEY)).isNotNull();
 	}
 
 	@Test
 	void shouldStartCheckOutsideRegistryUpdate() {
 		AtomicReference<Execution<TestCheck>> joinedWhileStarting = new AtomicReference<>();
-		Execution<TestCheck> execution = this.executions.join(KEY, TIMEOUT,
-				() -> new TestCheck(() -> joinedWhileStarting.set(join(KEY))));
+		Execution<TestCheck> execution = this.executions.joinOrStart(KEY, TIMEOUT,
+				() -> new TestCheck(() -> joinedWhileStarting.set(joinOrStart(KEY))));
 		assertThat(joinedWhileStarting.get()).isSameAs(execution);
 		assertThat(this.started).hasValue(0);
 	}
 
 	@Test
 	void shouldReturnPermitWhenStarterFails() {
-		assertThatIllegalStateException().isThrownBy(() -> this.executions.join(KEY, TIMEOUT, () -> {
+		assertThatIllegalStateException().isThrownBy(() -> this.executions.joinOrStart(KEY, TIMEOUT, () -> {
 			throw new IllegalStateException("Unable to start");
 		}));
-		assertThat(join(KEY)).isNotNull();
+		assertThat(joinOrStart(KEY)).isNotNull();
 	}
 
 	@Test
 	void shouldNotRetainStateOfIndicatorsWithoutChecksInFlight() {
 		for (int i = 0; i < 100; i++) {
 			Key key = new Key("indicator-" + i, true);
-			join(key);
+			joinOrStart(key);
 			this.executions.finished(key);
 		}
 		assertThat(this.executions).extracting("inFlightCounts", InstanceOfAssertFactories.MAP).isEmpty();
 	}
 
-	private Execution<TestCheck> join(Key key) {
-		return join(key, TIMEOUT);
+	private Execution<TestCheck> joinOrStart(Key key) {
+		return this.executions.joinOrStart(key, TIMEOUT, this::newCheck);
 	}
 
-	private Execution<TestCheck> join(Key key, @Nullable Duration timeout) {
-		return this.executions.join(key, timeout, () -> {
-			this.started.incrementAndGet();
-			return new TestCheck();
-		});
+	private TestCheck start(Key key) {
+		return this.executions.start(key, this::newCheck);
+	}
+
+	private TestCheck newCheck() {
+		this.started.incrementAndGet();
+		return new TestCheck();
 	}
 
 	/**
@@ -189,7 +221,7 @@ class InFlightExecutionsTests {
 	 */
 	private void saturate(Key key) {
 		for (int i = 0; i < MAX_EXECUTIONS_PER_KEY; i++) {
-			join(key);
+			joinOrStart(key);
 			this.clock.addAndGet(TIMEOUT.toNanos());
 		}
 	}

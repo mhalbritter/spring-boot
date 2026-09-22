@@ -18,12 +18,7 @@ package org.springframework.boot.health.contributor;
 
 /**
  * Declares who caps a configured execution timeout for a {@link HealthIndicator} or
- * {@link ReactiveHealthIndicator}, and therefore where the check runs. See
- * {@link HealthIndicator#getTimeoutEnforcement()} and
- * {@link ReactiveHealthIndicator#getTimeoutEnforcement()}.
- * <p>
- * An indicator which declares nothing is capped by Spring Boot ({@link #FRAMEWORK}), so a
- * configured timeout is always honored.
+ * {@link ReactiveHealthIndicator}, and therefore where the check runs.
  *
  * @author Moritz Halbritter
  * @since 4.2.0
@@ -45,8 +40,7 @@ public enum TimeoutEnforcement {
 	 * reactive check is bounded with {@link reactor.core.publisher.Mono#timeout}, which
 	 * cancels the subscription. Both bound the result, not the work: a call which ignores
 	 * interruption or cancellation, typically a client blocked in a socket read, keeps
-	 * its thread until it returns. Configure the timeouts of that client too and treat
-	 * this limit as a safety net.
+	 * its thread until it returns.
 	 * <p>
 	 * Blocking checks run on a pool which caps how many threads one indicator can occupy,
 	 * in a reactive application as well.

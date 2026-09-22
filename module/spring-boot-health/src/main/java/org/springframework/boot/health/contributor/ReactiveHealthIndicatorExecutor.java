@@ -53,8 +53,7 @@ public class ReactiveHealthIndicatorExecutor {
 
 	/**
 	 * Creates a new instance.
-	 * @param blockingExecutor the executor to run adapted blocking indicators on, and the
-	 * source of the configured timeouts
+	 * @param blockingExecutor the executor to run adapted blocking indicators on
 	 */
 	public ReactiveHealthIndicatorExecutor(HealthIndicatorExecutor blockingExecutor) {
 		Assert.notNull(blockingExecutor, "'blockingExecutor' must not be null");
@@ -67,9 +66,6 @@ public class ReactiveHealthIndicatorExecutor {
 	 * throws and never signals an error: a timeout, an invalid timeout configuration or
 	 * any other failure of the indicator is turned into {@link Health#down()} with a
 	 * {@code reason} detail.
-	 * <p>
-	 * The {@code reason} and the exception are details, so a caller which does not ask
-	 * for details is told no more than {@link Health#down()}.
 	 * @param reactiveHealthIndicator the indicator to execute
 	 * @param indicatorName the name of the indicator
 	 * @param includeDetails whether to include details
@@ -97,9 +93,7 @@ public class ReactiveHealthIndicatorExecutor {
 	}
 
 	/**
-	 * Shares a single check between all callers of the same indicator, bounded by a
-	 * timeout the framework applies: the indicator is not told about it and is asked for
-	 * its health as if none was configured.
+	 * Shares a single check between all callers of the same indicator.
 	 * @param indicator the indicator to execute
 	 * @param indicatorName the name of the indicator
 	 * @param timeout the timeout
@@ -113,16 +107,13 @@ public class ReactiveHealthIndicatorExecutor {
 		return Mono.defer(() -> {
 			Execution<SharedCheck> execution;
 			try {
-				execution = this.inFlight.join(key, timeout,
-						() -> new SharedCheck(() -> indicator.health(includeDetails), timeout,
-								() -> this.inFlight.finished(key)));
+				Runnable onEnd = () -> this.inFlight.finished(key);
+				Supplier<Mono<Health>> starter = () -> indicator.health(includeDetails);
+				execution = this.inFlight.joinOrStart(key, timeout, () -> new SharedCheck(starter, timeout, onEnd));
 			}
 			catch (TooManyChecksInFlightException ex) {
 				return Mono.just(DownHealth.of(ex, DownReason.CONCURRENCY_LIMIT, includeDetails));
 			}
-			// The check is bounded by its own deadline, so a caller only subscribes to
-			// the shared result: all callers of a check report the same health at the
-			// same moment.
 			return execution.check().health();
 		});
 	}
@@ -134,11 +125,6 @@ public class ReactiveHealthIndicatorExecutor {
 	 * @param includeDetails whether to include details
 	 * @return the health
 	 */
-	// The pool of the blocking executor caps how many threads an indicator can occupy,
-	// whereas the adapter subscribes on Schedulers.boundedElastic(), where a check which
-	// blocks forever takes a thread of the scheduler the whole application shares, on
-	// every probe. Delegating also makes an indicator answer the same way in a servlet
-	// and in a reactive application.
 	private Mono<Health> executeBlocking(HealthIndicatorAdapter adapted, String indicatorName, boolean includeDetails) {
 		return Mono.fromFuture(() -> this.blockingExecutor.execute(adapted.getDelegate(), indicatorName, includeDetails,
 				ThreadingMode.POOL));
@@ -160,13 +146,10 @@ public class ReactiveHealthIndicatorExecutor {
 	}
 
 	/**
-	 * A check which is subscribed to once, when it is created, and whose result is
+	 * A check which is subscribed to once, when it is started, and whose result is
 	 * replayed to every caller joined to it.
 	 * <p>
-	 * The check runs with an empty {@link Context}: it is shared between callers, so
-	 * handing it the context of whichever caller happened to start it would report one
-	 * caller's result to another. A blocking check runs on a pool thread and carries
-	 * nothing of its caller either.
+	 * The check runs with an empty {@link Context}.
 	 */
 	private static final class SharedCheck implements Check {
 
@@ -194,10 +177,6 @@ public class ReactiveHealthIndicatorExecutor {
 			}).subscribe(this.result::tryEmitValue, this.result::tryEmitError, this.result::tryEmitEmpty);
 		}
 
-		/**
-		 * Returns the result of the check.
-		 * @return the result
-		 */
 		private Mono<Health> health() {
 			return this.result.asMono();
 		}

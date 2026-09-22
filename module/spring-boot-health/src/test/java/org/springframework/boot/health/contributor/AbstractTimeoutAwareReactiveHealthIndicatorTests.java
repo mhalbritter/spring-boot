@@ -33,12 +33,12 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link AbstractTimeoutEnforcingReactiveHealthIndicator}.
+ * Tests for {@link AbstractTimeoutAwareReactiveHealthIndicator}.
  *
  * @author Moritz Halbritter
  */
 @ExtendWith(OutputCaptureExtension.class)
-class AbstractTimeoutEnforcingReactiveHealthIndicatorTests {
+class AbstractTimeoutAwareReactiveHealthIndicatorTests {
 
 	private static final Duration TIMEOUT = Duration.ofSeconds(5);
 
@@ -103,7 +103,7 @@ class AbstractTimeoutEnforcingReactiveHealthIndicatorTests {
 		assertThat(output).contains("Test message").contains("Test exception");
 	}
 
-	private static final class TestReactiveHealthIndicator extends AbstractTimeoutEnforcingReactiveHealthIndicator {
+	private static final class TestReactiveHealthIndicator extends AbstractTimeoutAwareReactiveHealthIndicator {
 
 		private final BiFunction<Health.Builder, @Nullable Duration, Mono<Health>> healthCheck;
 
