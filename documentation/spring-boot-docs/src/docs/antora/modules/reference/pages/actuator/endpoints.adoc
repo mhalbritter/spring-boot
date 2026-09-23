@@ -759,10 +759,6 @@ An indicator may round the timeout up to the granularity of its client, so the e
 | `elasticsearch`
 | Cancellation of the cluster health request once the timeout has elapsed.
 
-| `jms`
-| Watchdog which bounds how long `jakarta.jms.Connection#start()` may block, closing the connection when the limit is exceeded, with a granularity of one millisecond.
-When no timeout is configured, a five second watchdog still guards hung calls.
-
 | `mongodb`
 | Command execution time, in whole milliseconds.
 
@@ -783,6 +779,10 @@ The health timeout is additionally applied as the JDBC query timeout, in whole s
 | `hazelcast`
 | `hazelcast.client.invocation.timeout.seconds` for a client instance, `hazelcast.operation.call.timeout.millis` for a member.
 The health timeout is additionally applied as the maximum lifespan of the health check transaction, which Hazelcast compares against on commit only.
+
+| `jms`
+| The connection and transport settings of your JMS `ConnectionFactory`.
+The indicator additionally closes the connection if `jakarta.jms.Connection#start()` or `jakarta.jms.Connection#getMetaData()` has not returned within the health timeout, or within five seconds when no timeout is configured.
 
 | `ldap`
 | configprop:spring.ldap.base-environment[] (for example, `com.sun.jndi.ldap.connect.timeout` and `com.sun.jndi.ldap.read.timeout` entries for the JDK LDAP provider) or your LDAP `ContextSource` configuration.
